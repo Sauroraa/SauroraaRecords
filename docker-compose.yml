@@ -1,7 +1,6 @@
 services:
   nginx:
     image: nginx:1.27-alpine
-    container_name: sauroraa-nginx
     depends_on:
       - frontend
       - backend
@@ -15,7 +14,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sauroraa-frontend
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -26,7 +24,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sauroraa-backend
     env_file:
       - ./.env
       - ./backend/.env
@@ -46,7 +43,6 @@ services:
 
   mariadb:
     image: mariadb:11
-    container_name: sauroraa-mariadb
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=${MARIADB_DATABASE}
@@ -58,12 +54,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: sauroraa-redis
     restart: unless-stopped
 
   adminer:
     image: adminer:4
-    container_name: sauroraa-adminer
     depends_on:
       - mariadb
     ports:
@@ -76,7 +70,6 @@ services:
     build:
       context: ./cron-service
       dockerfile: Dockerfile
-    container_name: sauroraa-cron
     env_file:
       - ./.env
       - ./backend/.env
@@ -90,7 +83,6 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-01-20T14-49-07Z
-    container_name: sauroraa-minio
     command: server /data --console-address ":9001"
     environment:
       - MINIO_ROOT_USER=minio
