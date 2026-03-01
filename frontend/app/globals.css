@@ -2,14 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --bg: #07070c;
+    --text: #f8f9ff;
+    --muted: #9ca3af;
+    --accent: #c2ff2a;
+    --accent2: #5de4ff;
+  }
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  background: #090912;
-  color: #ffffff;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-space), sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-orbitron), sans-serif;
+  letter-spacing: 0.02em;
 }

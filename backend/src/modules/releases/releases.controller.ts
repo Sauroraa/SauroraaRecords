@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ReleaseType, UserRole } from "@prisma/client";
 import { IsEnum, IsNumberString, IsOptional, IsString } from "class-validator";
+import { z } from "zod";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
@@ -55,15 +56,23 @@ export class ReleasesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ARTIST, UserRole.ADMIN)
   create(@Body() dto: CreateReleaseDto) {
+    const parsed = z
+      .object({
+        slug: z.string().min(3),
+        title: z.string().min(2),
+        audioPath: z.string().min(3)
+      })
+      .parse(dto);
+
     return this.prisma.release.create({
       data: {
         artistId: dto.artistId,
-        slug: dto.slug,
-        title: dto.title,
+        slug: parsed.slug,
+        title: parsed.title,
         description: dto.description,
         price: dto.price,
         type: dto.type,
-        audioPath: dto.audioPath,
+        audioPath: parsed.audioPath,
         coverPath: dto.coverPath
       }
     });

@@ -31,6 +31,7 @@ model User {
   createdAt    DateTime @default(now())
   artist       Artist?
   orders       Order[]
+  refreshTokens RefreshToken[]
 }
 
 model Artist {
@@ -89,4 +90,13 @@ model ArtistRevenue {
   artist     Artist        @relation(fields: [artistId], references: [id], onDelete: Cascade)
 
   @@unique([artistId, month])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

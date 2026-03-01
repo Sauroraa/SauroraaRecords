@@ -1,54 +1,69 @@
 # SAURORAA RECORDS
 
-Production-ready monorepo scaffold for a Dockerized label platform:
+Production-ready platform for `sauroraarecords.be`:
 
-- `frontend`: Next.js 14 (App Router, TypeScript, Tailwind)
-- `backend`: NestJS + Prisma (MariaDB)
-- `cron-service`: monthly artist revenue/facturation worker
-- `nginx`: reverse proxy + static cache + gzip + API routing
-- `docker-compose.yml`: full local/prod-like orchestration
+- Immersive frontend: Next.js 14 + TypeScript + Tailwind + Framer Motion + React Three Fiber + Zustand + React Query + Recharts + Stripe JS
+- API backend: NestJS + Prisma + MariaDB + JWT access/refresh tokens
+- Billing worker: monthly cron service with PDF invoice generation
+- Dockerized services: `nginx`, `frontend`, `backend`, `mariadb`, `redis`, `cron-service`, optional `adminer` and `minio`
 
-## Quick Start
+## Core Architecture
 
-1. Copy env files:
-   - `cp .env.example .env`
-   - `cp frontend/.env.example frontend/.env.local`
-   - `cp backend/.env.example backend/.env`
-2. Run stack:
-   - `docker compose up -d --build`
-   - Optional tools: `docker compose --profile tools up -d`
-   - Optional S3-compatible storage: `docker compose --profile storage up -d`
-3. Open:
-   - Frontend: `https://sauroraarecords.be`
-   - API health: `https://sauroraarecords.be/api/health`
-   - Adminer (optional): `http://localhost:8080`
+- Client -> Nginx host (`sites-enabled`) -> container Nginx (`127.0.0.1:3100`) -> Next frontend + Nest API
+- Nest API -> MariaDB + Redis + storage (local/S3)
+- Cron service runs monthly payout calculations and invoice artifacts
 
 ## Services
 
-- `nginx`: entrypoint on 80/443
-- `frontend`: Next.js app on 3000
-- `backend`: NestJS API on 4000
-- `mariadb`: primary DB
-- `redis`: optional cache/session/rate-limit backend
-- `adminer`: optional DB UI
-- `cron-service`: monthly payout/invoice job
-- `minio`: optional S3-compatible object storage
+- `nginx`: internal reverse proxy exposed on `127.0.0.1:3100`
+- `frontend`: Next.js runtime on 3000
+- `backend`: NestJS runtime on 4000
+- `mariadb`: primary SQL datastore
+- `redis`: cache and future queue/rate-limit support
+- `cron-service`: monthly invoice/revenue worker
+- `adminer`: optional database panel (`--profile tools`)
+- `minio`: optional S3-compatible storage (`--profile storage`)
 
-## Backend Modules (base)
+## Feature Set
 
-- Auth (`/api/auth`)
-- Users (`/api/users`)
-- Artists (`/api/artists`)
-- Releases (`/api/releases`)
-- Orders (`/api/orders`)
-- Revenue (`/api/revenue`)
-- Health (`/api/health`)
+- Auth:
+  - Register/login
+  - Access token + refresh token rotation
+  - Logout token invalidation
+- Artist area:
+  - Release management skeleton
+  - Sales/revenue analytics views
+- Admin area:
+  - User/release/revenue operation views
+  - Commission and invoice actions
+- Commerce:
+  - Stripe JS checkout integration point
+  - Revenue split logic (90/10) supported in data model + cron
 
-## Notes
+## Local Build
 
-- This is a strong starter architecture and code skeleton.
-- Payment/invoice internals (Stripe checkout, PDF rendering, mail transport) are wired as extension points and can be completed safely per your production credentials.
-- Multi-site recommended setup:
-  - Docker stack binds only to `127.0.0.1:3100` (no direct 80/443 exposure).
-  - System Nginx handles `sites-enabled` virtual hosts and TLS for all domains.
-  - Example vhost: `nginx/host-site.sauroraarecords.be.conf`
+1. Copy env files:
+   - `cp .env.example .env`
+   - `cp backend/.env.example backend/.env`
+   - `cp frontend/.env.example frontend/.env.local`
+2. Build and run:
+   - `docker compose up -d --build`
+3. Health:
+   - `curl http://127.0.0.1:3100/api/health`
+
+## Debian 12 Production (multi-site safe)
+
+1. Keep host Nginx on public `80/443` for all domains.
+2. Use this project only on loopback (`127.0.0.1:3100`).
+3. Enable site config:
+   - copy `nginx/host-site.sauroraarecords.be.conf` to `/etc/nginx/sites-available/`
+   - symlink into `/etc/nginx/sites-enabled/`
+   - `nginx -t && systemctl reload nginx`
+
+## Security Baseline
+
+- Helmet headers enabled in Nest
+- Global DTO validation enabled
+- Global throttling enabled (`@nestjs/throttler`)
+- JWT role guard for protected endpoints
+- TLS termination through host Nginx + Let’s Encrypt certificates

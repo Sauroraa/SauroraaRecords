@@ -1,9 +1,14 @@
-import { Shell } from "@/components/shell";
+import { CatalogGrid } from "@/components/catalog-grid";
+import { Card } from "@/components/ui/card";
 
 export default function CatalogPage() {
   return (
-    <Shell title="Catalog">
-      <p className="text-white/80">Browse all releases and filter by artist, type, and price.</p>
-    </Shell>
+    <section className="space-y-4">
+      <Card>
+        <h1 className="text-3xl font-bold">Catalog</h1>
+        <p className="text-white/70">Browse exclusive releases by Sauroraa artists.</p>
+      </Card>
+      <CatalogGrid />
+    </section>
   );
 }

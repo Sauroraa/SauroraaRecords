@@ -38,8 +38,66 @@ export class AuthService {
     return this.buildTokens(user.id, user.email, user.role);
   }
 
-  private buildTokens(sub: string, email: string, role: UserRole) {
-    const accessToken = this.jwtService.sign({ sub, email, role });
-    return { accessToken };
+  async refresh(refreshToken: string) {
+    const payload = await this.jwtService
+      .verifyAsync<{ sub: string; type?: string }>(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET || "change_me_refresh"
+      })
+      .catch(() => {
+        throw new UnauthorizedException("Invalid refresh token");
+      });
+
+    if (payload.type !== "refresh") throw new UnauthorizedException("Invalid token type");
+    const userId = payload.sub;
+
+    const tokenRows = await this.prisma.refreshToken.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5
+    });
+
+    const matched = await this.findMatchingToken(tokenRows.map((row) => row.tokenHash), refreshToken);
+    if (!matched) throw new UnauthorizedException("Invalid refresh token");
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException("User not found");
+
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    return this.buildTokens(user.id, user.email, user.role);
+  }
+
+  async logout(userId: string) {
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    return { success: true };
+  }
+
+  private async buildTokens(sub: string, email: string, role: UserRole) {
+    const accessToken = await this.jwtService.signAsync(
+      { sub, email, role },
+      { secret: process.env.JWT_SECRET || "change_me_jwt", expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m" }
+    );
+    const refreshToken = await this.jwtService.signAsync(
+      { sub, email, role, type: "refresh" },
+      { secret: process.env.JWT_REFRESH_SECRET || "change_me_refresh", expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d" }
+    );
+
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: sub,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
+      }
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  private async findMatchingToken(hashes: string[], candidate: string) {
+    for (const hash of hashes) {
+      const ok = await bcrypt.compare(candidate, hash);
+      if (ok) return true;
+    }
+    return false;
   }
 }
