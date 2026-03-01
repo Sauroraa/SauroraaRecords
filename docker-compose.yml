@@ -1,0 +1,110 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sauroraa-nginx
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "${APP_PORT:-3100}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sauroraa-frontend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_BASE=/api
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sauroraa-backend
+    env_file:
+      - ./.env
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
+      - REDIS_URL=redis://redis:6379
+      - STORAGE_MODE=${STORAGE_MODE:-local}
+      - LOCAL_STORAGE_PATH=/data/uploads
+    depends_on:
+      - mariadb
+      - redis
+    restart: unless-stopped
+    volumes:
+      - uploads_data:/data/uploads
+
+  mariadb:
+    image: mariadb:11
+    container_name: sauroraa-mariadb
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sauroraa-redis
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    container_name: sauroraa-adminer
+    depends_on:
+      - mariadb
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    profiles:
+      - tools
+
+  cron-service:
+    build:
+      context: ./cron-service
+      dockerfile: Dockerfile
+    container_name: sauroraa-cron
+    env_file:
+      - ./.env
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
+      - COMMISSION_RATE=${COMMISSION_RATE}
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    container_name: sauroraa-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio123
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    profiles:
+      - storage
+
+volumes:
+  db_data:
+  uploads_data:
+  minio_data:
