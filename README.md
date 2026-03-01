@@ -19,8 +19,8 @@ Production-ready monorepo scaffold for a Dockerized label platform:
    - Optional tools: `docker compose --profile tools up -d`
    - Optional S3-compatible storage: `docker compose --profile storage up -d`
 3. Open:
-   - Frontend: `http://localhost:3100`
-   - API health: `http://localhost:3100/api/health`
+   - Frontend: `https://sauroraarecords.be`
+   - API health: `https://sauroraarecords.be/api/health`
    - Adminer (optional): `http://localhost:8080`
 
 ## Services
@@ -48,4 +48,10 @@ Production-ready monorepo scaffold for a Dockerized label platform:
 
 - This is a strong starter architecture and code skeleton.
 - Payment/invoice internals (Stripe checkout, PDF rendering, mail transport) are wired as extension points and can be completed safely per your production credentials.
-- For HTTPS in production, attach certbot or your existing TLS termination and update `nginx/default.conf` accordingly.
+- First TLS issuance on Debian 12 (host):
+  - `sudo apt update && sudo apt install -y certbot`
+  - `sudo systemctl stop nginx || true`
+  - `sudo docker compose down || true`
+  - `sudo certbot certonly --standalone -d sauroraarecords.be -d www.sauroraarecords.be -m admin@sauroraarecords.be --agree-tos --no-eff-email`
+  - `sudo mkdir -p /var/www/certbot`
+  - `docker compose up -d --build`
