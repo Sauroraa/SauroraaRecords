@@ -48,10 +48,7 @@ Production-ready monorepo scaffold for a Dockerized label platform:
 
 - This is a strong starter architecture and code skeleton.
 - Payment/invoice internals (Stripe checkout, PDF rendering, mail transport) are wired as extension points and can be completed safely per your production credentials.
-- First TLS issuance on Debian 12 (host):
-  - `sudo apt update && sudo apt install -y certbot`
-  - `sudo systemctl stop nginx || true`
-  - `sudo docker compose down || true`
-  - `sudo certbot certonly --standalone -d sauroraarecords.be -d www.sauroraarecords.be -m admin@sauroraarecords.be --agree-tos --no-eff-email`
-  - `sudo mkdir -p /var/www/certbot`
-  - `docker compose up -d --build`
+- Multi-site recommended setup:
+  - Docker stack binds only to `127.0.0.1:3100` (no direct 80/443 exposure).
+  - System Nginx handles `sites-enabled` virtual hosts and TLS for all domains.
+  - Example vhost: `nginx/host-site.sauroraarecords.be.conf`
