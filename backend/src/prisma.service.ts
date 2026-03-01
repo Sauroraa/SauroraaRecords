@@ -8,7 +8,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async enableShutdownHooks(app: INestApplication) {
-    this.$on("beforeExit", async () => {
+    // Prisma v6 typing can narrow $on event to never in some TS setups.
+    (this as any).$on("beforeExit", async () => {
       await app.close();
     });
   }
