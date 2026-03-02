@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Bell, ShoppingBag, LogOut, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,17 +8,11 @@ import { ReactNode, useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useNotificationsStore } from "@/store/notifications-store";
+import { useLanguage, type Locale } from "@/context/language-context";
 import { GlobalPlayer } from "./global-player";
 import { CartDrawer } from "./cart-drawer";
 
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/catalog", label: "Releases" },
-  { href: "/dubpacks", label: "Dubpacks" },
-  { href: "/shop", label: "Shop" },
-  { href: "/rankings", label: "Rankings" },
-  { href: "/pricing", label: "Pricing" }
-];
+const LOCALES: Locale[] = ["fr", "en", "nl"];
 
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -26,35 +20,50 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const { user, logout, fetchMe } = useAuthStore();
   const { items, toggleCart } = useCartStore();
   const { unreadCount, fetchUnread } = useNotificationsStore();
+  const { locale, setLocale, t } = useLanguage();
 
-  useEffect(() => {
-    void fetchMe();
-  }, [fetchMe]);
-
-  useEffect(() => {
-    if (user) void fetchUnread();
-  }, [user, fetchUnread]);
+  useEffect(() => { void fetchMe(); }, [fetchMe]);
+  useEffect(() => { if (user) void fetchUnread(); }, [user, fetchUnread]);
 
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
 
+  const navItems = [
+    { href: "/", label: t.nav.home },
+    { href: "/catalog", label: t.nav.releases },
+    { href: "/dubpacks", label: t.nav.dubpacks },
+    { href: "/shop", label: t.nav.shop },
+    { href: "/rankings", label: t.nav.rankings },
+    { href: "/pricing", label: t.nav.pricing }
+  ];
+
   const cartCount = items.length;
+
+  const dashboardHref =
+    user?.role === "ARTIST" ? "/dashboard/artist" :
+    user?.role === "ADMIN" ? "/dashboard/admin" :
+    user?.role === "AGENCY" ? "/dashboard/agency" :
+    user?.role === "STAFF" ? "/dashboard/staff" :
+    "/dashboard";
 
   return (
     <div className="min-h-screen bg-bg text-cream">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-violet-radial" />
 
+      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-[rgba(255,255,255,0.06)] bg-bg/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          {/* Logo */}
           <Link
             href="/"
-            className="text-sm font-semibold tracking-[0.2em] text-cream/80 uppercase hover:text-cream transition-colors"
+            className="text-sm font-semibold tracking-[0.2em] text-cream/80 uppercase hover:text-cream transition-colors font-space"
           >
             Sauroraa Records
           </Link>
 
+          {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive =
@@ -80,17 +89,43 @@ export function SiteShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
+          {/* Right section */}
           <div className="flex items-center gap-2">
+            {/* Language switcher */}
+            <div className="hidden sm:flex items-center gap-0.5 rounded-full border border-[rgba(255,255,255,0.1)] bg-surface px-1 py-0.5">
+              {LOCALES.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider transition-all ${
+                    locale === l
+                      ? "bg-violet text-white"
+                      : "text-cream/40 hover:text-cream/70"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* Cart */}
             <button
               onClick={toggleCart}
               className="relative p-2 text-cream/50 hover:text-cream/80 transition-colors"
             >
               <ShoppingBag className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white">
-                  {cartCount}
-                </span>
-              )}
+              <AnimatePresence>
+                {cartCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white"
+                  >
+                    {cartCount}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
 
             {user ? (
@@ -100,26 +135,23 @@ export function SiteShell({ children }: { children: ReactNode }) {
                   className="relative p-2 text-cream/50 hover:text-cream/80 transition-colors"
                 >
                   <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
+                  <AnimatePresence>
+                    {unreadCount > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white"
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Link>
 
                 <div className="flex items-center gap-1 pl-2 border-l border-[rgba(255,255,255,0.08)]">
                   <Link
-                    href={
-                      user.role === "ARTIST"
-                        ? "/dashboard/artist"
-                        : user.role === "ADMIN"
-                          ? "/dashboard/admin"
-                          : user.role === "AGENCY"
-                            ? "/dashboard/agency"
-                            : user.role === "STAFF"
-                              ? "/dashboard/staff"
-                              : "/dashboard"
-                    }
+                    href={dashboardHref}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm text-cream/60 hover:text-cream transition-colors"
                   >
                     <LayoutDashboard className="h-4 w-4" />
@@ -139,13 +171,13 @@ export function SiteShell({ children }: { children: ReactNode }) {
                   href="/login"
                   className="px-3 py-2 text-sm text-cream/55 hover:text-cream/85 transition-colors"
                 >
-                  Login
+                  {t.nav.login}
                 </Link>
                 <Link
                   href="/register"
                   className="rounded-sm bg-violet px-4 py-2 text-sm font-medium text-white hover:bg-violet-hover transition-colors"
                 >
-                  Register
+                  {t.nav.register}
                 </Link>
               </div>
             )}
@@ -153,11 +185,13 @@ export function SiteShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {/* Main — full width on home, padded elsewhere */}
       <motion.main
-        initial={{ opacity: 0, y: 10 }}
+        key={pathname}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="mx-auto w-full max-w-7xl px-6 pb-32 pt-8"
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className={pathname === "/" ? "w-full" : "mx-auto w-full max-w-7xl px-6 pb-32 pt-8"}
       >
         {children}
       </motion.main>
@@ -165,6 +199,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       <CartDrawer />
       <GlobalPlayer />
 
+      {/* Footer */}
       <footer className="border-t border-[rgba(255,255,255,0.05)] bg-bg/60 py-6 pb-28">
         <div className="mx-auto max-w-7xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-cream/25">
@@ -177,7 +212,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               { href: "/legal/cgv", label: "CGV" },
               { href: "/legal/rgpd", label: "Confidentialité" },
               { href: "/legal/cookies", label: "Cookies" },
-              { href: "/pricing", label: "Tarifs" },
+              { href: "/pricing", label: t.nav.pricing },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="text-xs text-cream/30 hover:text-cream/60 transition-colors">
                 {l.label}
