@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards
 } from "@nestjs/common";
-import { IsString } from "class-validator";
+import { IsEmail, IsOptional, IsString } from "class-validator";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
@@ -19,12 +19,33 @@ class AddArtistDto {
   email!: string;
 }
 
+class AgencyRequestDto {
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
+
 @Controller("agency")
-@UseGuards(JwtAuthGuard)
 export class AgencyController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get("me")
+  @UseGuards(JwtAuthGuard)
   async me(@Req() req: Request & { user?: { userId: string } }) {
     const agency = await this.prisma.agency.findUnique({
       where: { userId: req.user!.userId },
@@ -51,6 +72,7 @@ export class AgencyController {
   }
 
   @Post("artist")
+  @UseGuards(JwtAuthGuard)
   async addArtist(
     @Body() dto: AddArtistDto,
     @Req() req: Request & { user?: { userId: string } }
@@ -61,7 +83,6 @@ export class AgencyController {
     });
     if (!agency) throw new BadRequestException("Agency not found");
 
-    // Look up user by email, then find their artist profile
     const targetUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: { artist: true }
@@ -85,6 +106,7 @@ export class AgencyController {
   }
 
   @Delete("artist/:artistId")
+  @UseGuards(JwtAuthGuard)
   async removeArtist(
     @Param("artistId") artistId: string,
     @Req() req: Request & { user?: { userId: string } }
@@ -97,5 +119,20 @@ export class AgencyController {
     return this.prisma.agencyArtist.deleteMany({
       where: { agencyId: agency.id, artistId }
     });
+  }
+
+  // Public — no auth required
+  @Post("request")
+  async submitRequest(@Body() dto: AgencyRequestDto) {
+    const request = await this.prisma.agencyRequest.create({
+      data: {
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        company: dto.company,
+        message: dto.message
+      }
+    });
+    return { success: true, id: request.id };
   }
 }

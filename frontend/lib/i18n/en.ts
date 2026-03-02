@@ -24,7 +24,7 @@ export const en: Dict = {
     how_steps: [
       { title: "Upload", desc: "Drop your tracks, dubpacks and covers in a few clicks." },
       { title: "Discovery", desc: "Get featured on the homepage, charts and playlists." },
-      { title: "Revenue", desc: "Earn up to 90% of every sale. Guaranteed monthly payout." }
+      { title: "Revenue", desc: "Earn up to 30% of every sale. Guaranteed monthly payout." }
     ],
     charts_title: "Trending now",
     charts_sub: "Monthly ranking by revenue & downloads",
@@ -48,9 +48,9 @@ export const en: Dict = {
     features_title: "Feature comparison",
     faq_title: "Frequently asked questions",
     plans: {
-      artist_free: { name: "Artist Free", commission: "70/30", releases: "1 release/month", support: "Standard support", analytics: false, branding: false },
-      artist_basic: { name: "Artist Basic", commission: "80/20", releases: "Unlimited releases", support: "Priority support", analytics: true, branding: false },
-      artist_pro: { name: "Artist Pro", commission: "90/10", releases: "Unlimited releases", support: "Dedicated support", analytics: true, branding: true },
+      artist_free: { name: "Artist Free", commission: "10/90", releases: "3 releases/month", support: "Standard support", analytics: false, branding: false },
+      artist_basic: { name: "Artist Basic", commission: "20/80", releases: "Unlimited releases", support: "Priority support", analytics: true, branding: false },
+      artist_pro: { name: "Artist Pro", commission: "30/70", releases: "Unlimited releases", support: "Dedicated support", analytics: true, branding: true },
       agency_start: { name: "Agency Start", commission: "80/20", artists: "Up to 5 artists", support: "Priority support" },
       agency_pro: { name: "Agency Pro", commission: "90/10", artists: "Unlimited artists", support: "Dedicated support" }
     },

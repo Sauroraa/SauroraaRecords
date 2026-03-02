@@ -15,7 +15,7 @@ interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role?: UserRole) => Promise<void>;
+  register: (email: string, password: string, role?: UserRole, extraData?: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
 }
@@ -48,14 +48,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email, password, role: UserRole = "CLIENT") => {
+      register: async (email, password, role: UserRole = "CLIENT", extraData?: Record<string, unknown>) => {
         set({ isLoading: true });
         try {
           const res = await fetch(`${API}/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ email, password, role })
+            body: JSON.stringify({ email, password, role, ...extraData })
           });
           if (!res.ok) {
             const err = (await res.json()) as { message?: string };

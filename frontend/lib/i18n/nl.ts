@@ -24,7 +24,7 @@ export const nl: Dict = {
     how_steps: [
       { title: "Uploaden", desc: "Zet je tracks, dubpacks en covers in enkele klikken online." },
       { title: "Ontdekking", desc: "Kom in de kijker op de homepage, charts en afspeellijsten." },
-      { title: "Inkomsten", desc: "Verdien tot 90% van elke verkoop. Gegarandeerde maandelijkse uitbetaling." }
+      { title: "Inkomsten", desc: "Verdien tot 30% van elke verkoop. Gegarandeerde maandelijkse uitbetaling." }
     ],
     charts_title: "Trending nu",
     charts_sub: "Maandelijkse ranking op basis van inkomsten & downloads",
@@ -48,9 +48,9 @@ export const nl: Dict = {
     features_title: "Functievergelijking",
     faq_title: "Veelgestelde vragen",
     plans: {
-      artist_free: { name: "Artist Free", commission: "70/30", releases: "1 release/maand", support: "Standaard support", analytics: false, branding: false },
-      artist_basic: { name: "Artist Basic", commission: "80/20", releases: "Onbeperkte releases", support: "Prioritaire support", analytics: true, branding: false },
-      artist_pro: { name: "Artist Pro", commission: "90/10", releases: "Onbeperkte releases", support: "Toegewijde support", analytics: true, branding: true },
+      artist_free: { name: "Artist Free", commission: "10/90", releases: "3 releases/maand", support: "Standaard support", analytics: false, branding: false },
+      artist_basic: { name: "Artist Basic", commission: "20/80", releases: "Onbeperkte releases", support: "Prioritaire support", analytics: true, branding: false },
+      artist_pro: { name: "Artist Pro", commission: "30/70", releases: "Onbeperkte releases", support: "Toegewijde support", analytics: true, branding: true },
       agency_start: { name: "Agency Start", commission: "80/20", artists: "Tot 5 artiesten", support: "Prioritaire support" },
       agency_pro: { name: "Agency Pro", commission: "90/10", artists: "Onbeperkte artiesten", support: "Toegewijde support" }
     },

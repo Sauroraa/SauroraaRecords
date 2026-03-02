@@ -285,8 +285,8 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-[rgba(255,255,255,0.04)]">
                 {[
-                  { label: t.pricing.features.releases, free: "1/mois", basic: "∞", pro: "∞" },
-                  { label: t.pricing.features.commission, free: "70/30", basic: "80/20", pro: "90/10" },
+                  { label: t.pricing.features.releases, free: "3/mois", basic: "∞", pro: "∞" },
+                  { label: t.pricing.features.commission, free: "10/90", basic: "20/80", pro: "30/70" },
                   { label: t.pricing.features.analytics, free: false, basic: true, pro: true },
                   { label: t.pricing.features.branding, free: false, basic: false, pro: true },
                   { label: t.pricing.features.support, free: "Standard", basic: "Prioritaire", pro: "Dédié" }

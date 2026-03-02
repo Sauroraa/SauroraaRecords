@@ -56,10 +56,12 @@ export async function fetchReleases(): Promise<ReleaseItem[]> {
 export async function fetchRelease(slug: string): Promise<ReleaseItem | null> {
   try {
     const res = await fetch(`${API}/releases/${slug}`, { cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return demoReleases.find((r) => r.slug === slug) ?? null;
+    }
     return (await res.json()) as ReleaseItem;
   } catch {
-    return null;
+    return demoReleases.find((r) => r.slug === slug) ?? null;
   }
 }
 

@@ -35,6 +35,12 @@ enum RevenueStatus {
   PAID
 }
 
+enum AgencyRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum FreeDownloadActionType {
   FOLLOW_ARTIST
   SUBSCRIBE_NEWSLETTER
@@ -48,11 +54,23 @@ enum FreeDownloadActionType {
 // ─── Core User & Auth ─────────────────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(CLIENT)
-  createdAt    DateTime @default(now())
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  role           UserRole  @default(CLIENT)
+  firstName      String?
+  lastName       String?
+  dateOfBirth    DateTime?
+  addressLine1   String?
+  addressLine2   String?
+  postalCode     String?
+  city           String?
+  country        String?
+  hasSociete     Boolean   @default(false)
+  societeName    String?
+  vatNumber      String?
+  billingAddress String?
+  createdAt      DateTime  @default(now())
 
   artist           Artist?
   agency           Agency?
@@ -384,4 +402,17 @@ model Tip {
 
   user   User   @relation("TipUser", fields: [userId], references: [id], onDelete: Cascade)
   artist Artist @relation("TipArtist", fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+// ─── Agency Requests ──────────────────────────────────────────────────────────
+
+model AgencyRequest {
+  id        String              @id @default(cuid())
+  email     String
+  firstName String?
+  lastName  String?
+  company   String?
+  message   String?             @db.Text
+  status    AgencyRequestStatus @default(PENDING)
+  createdAt DateTime            @default(now())
 }
