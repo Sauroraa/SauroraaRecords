@@ -6,11 +6,22 @@ import { RolesGuard } from "./common/roles.guard";
 import { PrismaService } from "./prisma.service";
 import { ArtistsModule } from "./modules/artists/artists.module";
 import { AuthModule } from "./modules/auth/auth.module";
-import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard";
+import { CommentsModule } from "./modules/comments/comments.module";
+import { DubpacksModule } from "./modules/dubpacks/dubpacks.module";
+import { FollowsModule } from "./modules/follows/follows.module";
+import { FreeDownloadsModule } from "./modules/free-downloads/free-downloads.module";
 import { HealthModule } from "./modules/health/health.module";
+import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OrdersModule } from "./modules/orders/orders.module";
+import { PreordersModule } from "./modules/preorders/preorders.module";
+import { PromoCodesModule } from "./modules/promo-codes/promo-codes.module";
+import { RankingsModule } from "./modules/rankings/rankings.module";
 import { ReleasesModule } from "./modules/releases/releases.module";
 import { RevenueModule } from "./modules/revenue/revenue.module";
+import { StripeModule } from "./modules/stripe/stripe.module";
+import { TipsModule } from "./modules/tips/tips.module";
+import { UploadModule } from "./modules/upload/upload.module";
 import { UsersModule } from "./modules/users/users.module";
 
 @Module({
@@ -27,8 +38,19 @@ import { UsersModule } from "./modules/users/users.module";
     UsersModule,
     ArtistsModule,
     ReleasesModule,
+    DubpacksModule,
     OrdersModule,
-    RevenueModule
+    RevenueModule,
+    CommentsModule,
+    FollowsModule,
+    NotificationsModule,
+    FreeDownloadsModule,
+    StripeModule,
+    UploadModule,
+    PreordersModule,
+    PromoCodesModule,
+    TipsModule,
+    RankingsModule
   ],
   providers: [
     PrismaService,

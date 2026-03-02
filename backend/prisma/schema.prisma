@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
 enum UserRole {
   CLIENT
   ARTIST
@@ -23,61 +25,146 @@ enum RevenueStatus {
   PAID
 }
 
+enum FreeDownloadActionType {
+  FOLLOW_ARTIST
+  SUBSCRIBE_NEWSLETTER
+  LEAVE_COMMENT
+  SHARE_LINK
+  FOLLOW_INSTAGRAM
+  FOLLOW_SOUNDCLOUD
+  JOIN_DISCORD
+}
+
+// ─── Core User & Auth ─────────────────────────────────────────────────────────
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
   role         UserRole @default(CLIENT)
   createdAt    DateTime @default(now())
-  artist       Artist?
-  orders       Order[]
-  refreshTokens RefreshToken[]
+
+  artist           Artist?
+  orders           Order[]
+  refreshTokens    RefreshToken[]
+  comments         Comment[]
+  commentLikes     CommentLike[]
+  follows          Follow[]
+  notifications    Notification[]
+  downloadSessions FreeDownloadSession[]
+  preorders        Preorder[]
+  tipsGiven        Tip[] @relation("TipUser")
 }
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Artist ───────────────────────────────────────────────────────────────────
 
 model Artist {
-  id         String    @id @default(cuid())
-  userId     String    @unique
-  bio        String?
-  avatar     String?
-  payoutIban String?
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  releases   Release[]
-  revenues   ArtistRevenue[]
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  displayName   String?
+  bio           String? @db.Text
+  avatar        String?
+  payoutIban    String?
+  instagramUrl  String?
+  soundcloudUrl String?
+  discordUrl    String?
+  websiteUrl    String?
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  releases       Release[]
+  dubpacks       Dubpack[]
+  revenues       ArtistRevenue[]
+  rankings       ArtistRanking[]
+  followers      Follow[]
+  downloadConfig ArtistDownloadConfig?
+  tipsReceived   Tip[]                 @relation("TipArtist")
 }
+
+// ─── Release ──────────────────────────────────────────────────────────────────
 
 model Release {
-  id          String      @id @default(cuid())
-  artistId    String
-  slug        String      @unique
-  title       String
-  description String?
-  price       Decimal     @db.Decimal(10, 2)
-  type        ReleaseType
-  audioPath   String
-  coverPath   String?
-  createdAt   DateTime    @default(now())
-  artist      Artist      @relation(fields: [artistId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
+  id                     String      @id @default(cuid())
+  artistId               String
+  slug                   String      @unique
+  title                  String
+  description            String?     @db.Text
+  price                  Decimal     @db.Decimal(10, 2)
+  type                   ReleaseType
+  audioPath              String
+  previewClip            String?
+  coverPath              String?
+  published              Boolean     @default(false)
+  exclusiveFollowersOnly Boolean     @default(false)
+  createdAt              DateTime    @default(now())
+
+  artist           Artist                @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  orderItems       OrderItem[]
+  comments         Comment[]
+  downloadSessions FreeDownloadSession[]
+  preorders        Preorder[]
 }
 
+// ─── Dubpack ──────────────────────────────────────────────────────────────────
+
+model Dubpack {
+  id                     String      @id @default(cuid())
+  artistId               String
+  slug                   String      @unique
+  title                  String
+  description            String?     @db.Text
+  price                  Decimal     @db.Decimal(10, 2)
+  type                   ReleaseType
+  coverPath              String?
+  zipPath                String
+  isExclusive            Boolean     @default(false)
+  published              Boolean     @default(false)
+  exclusiveFollowersOnly Boolean     @default(false)
+  createdAt              DateTime    @default(now())
+
+  artist           Artist                @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  orderItems       OrderItem[]
+  comments         Comment[]
+  downloadSessions FreeDownloadSession[]
+  preorders        Preorder[]
+}
+
+// ─── Orders & Shop ────────────────────────────────────────────────────────────
+
 model Order {
-  id              String      @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
-  total           Decimal     @db.Decimal(10, 2)
-  stripeSessionId String?     @unique
-  createdAt       DateTime    @default(now())
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items           OrderItem[]
+  total           Decimal   @db.Decimal(10, 2)
+  stripeSessionId String?   @unique
+  status          String    @default("completed")
+  createdAt       DateTime  @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
-  releaseId String
-  price     Decimal  @db.Decimal(10, 2)
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  release   Release  @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  releaseId String?
+  dubpackId String?
+  price     Decimal @db.Decimal(10, 2)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  release Release? @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  dubpack Dubpack? @relation(fields: [dubpackId], references: [id], onDelete: Restrict)
 }
+
+// ─── Revenue & Invoicing ──────────────────────────────────────────────────────
 
 model ArtistRevenue {
   id         String        @id @default(cuid())
@@ -87,16 +174,161 @@ model ArtistRevenue {
   commission Decimal       @db.Decimal(10, 2)
   netDue     Decimal       @db.Decimal(10, 2)
   status     RevenueStatus @default(PENDING)
-  artist     Artist        @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 
   @@unique([artistId, month])
 }
 
-model RefreshToken {
+model ArtistRanking {
+  id             String  @id @default(cuid())
+  artistId       String
+  month          String
+  totalDownloads Int     @default(0)
+  totalRevenue   Decimal @db.Decimal(10, 2) @default(0)
+  rank           Int     @default(0)
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, month])
+}
+
+// ─── Social: Comments ─────────────────────────────────────────────────────────
+
+model Comment {
+  id                 String   @id @default(cuid())
+  userId             String
+  releaseId          String?
+  dubpackId          String?
+  parentId           String?
+  body               String   @db.Text
+  likesCount         Int      @default(0)
+  isVerifiedPurchase Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  release Release?    @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  dubpack Dubpack?    @relation(fields: [dubpackId], references: [id], onDelete: Cascade)
+  parent  Comment?    @relation("Replies", fields: [parentId], references: [id])
+  replies Comment[]   @relation("Replies")
+  likes   CommentLike[]
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+// ─── Social: Follows ──────────────────────────────────────────────────────────
+
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  artistId   String
+  createdAt  DateTime @default(now())
+
+  follower User   @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, artistId])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
   id        String   @id @default(cuid())
   userId    String
-  tokenHash String
-  expiresAt DateTime
+  type      String
+  body      String   @db.Text
+  isRead    Boolean  @default(false)
+  releaseId String?
+  dubpackId String?
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Free Download / Hypeddit System ─────────────────────────────────────────
+
+model FreeDownloadSession {
+  id             String    @id @default(cuid())
+  userId         String
+  releaseId      String?
+  dubpackId      String?
+  downloadToken  String?   @unique
+  tokenExpiresAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  release Release? @relation(fields: [releaseId], references: [id])
+  dubpack Dubpack? @relation(fields: [dubpackId], references: [id])
+  actions FreeDownloadAction[]
+}
+
+model FreeDownloadAction {
+  id          String                 @id @default(cuid())
+  sessionId   String
+  action      FreeDownloadActionType
+  completedAt DateTime?
+
+  session FreeDownloadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model ArtistDownloadConfig {
+  id              String  @id @default(cuid())
+  artistId        String  @unique
+  enabled         Boolean @default(true)
+  requiredActions Json
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+// ─── Preorders ────────────────────────────────────────────────────────────────
+
+model Preorder {
+  id              String    @id @default(cuid())
+  userId          String
+  releaseId       String?
+  dubpackId       String?
+  releaseDate     DateTime
+  paidAt          DateTime?
+  stripeSessionId String?
+  createdAt       DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  release Release? @relation(fields: [releaseId], references: [id])
+  dubpack Dubpack? @relation(fields: [dubpackId], references: [id])
+}
+
+// ─── Promo Codes ─────────────────────────────────────────────────────────────
+
+model PromoCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  discount  Int
+  maxUses   Int       @default(100)
+  uses      Int       @default(0)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ─── Tips ─────────────────────────────────────────────────────────────────────
+
+model Tip {
+  id              String   @id @default(cuid())
+  userId          String
+  artistId        String
+  amount          Decimal  @db.Decimal(10, 2)
+  stripeSessionId String?
+  createdAt       DateTime @default(now())
+
+  user   User   @relation("TipUser", fields: [userId], references: [id], onDelete: Cascade)
+  artist Artist @relation("TipArtist", fields: [artistId], references: [id], onDelete: Cascade)
 }

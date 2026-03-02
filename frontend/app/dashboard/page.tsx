@@ -1,23 +1,452 @@
-import { RevenueChart } from "@/components/revenue-chart";
-import { Card } from "@/components/ui/card";
+"use client";
 
-export default function DashboardPage() {
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ShoppingBag, Download, Users, Bell, User, CheckCircle2,
+  Package, ExternalLink, LogOut, Eye, EyeOff
+} from "lucide-react";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { useAuthStore } from "@/store/auth-store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { OrderItem, NotificationItem } from "@/lib/types";
+
+const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+
+type Tab = "purchases" | "downloads" | "following" | "notifications" | "profile";
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "purchases", label: "Purchases", icon: <ShoppingBag className="h-4 w-4" /> },
+  { id: "downloads", label: "Downloads", icon: <Download className="h-4 w-4" /> },
+  { id: "following", label: "Following", icon: <Users className="h-4 w-4" /> },
+  { id: "notifications", label: "Notifications", icon: <Bell className="h-4 w-4" /> },
+  { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> }
+];
+
+// ─── Purchases Tab ─────────────────────────────────────────────────────────────
+
+function PurchasesTab() {
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/orders/me`, { credentials: "include" });
+        if (res.ok) setOrders((await res.json()) as OrderItem[]);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!orders.length) return (
+    <EmptyState
+      icon={<ShoppingBag className="h-8 w-8 text-violet/40" />}
+      message="No purchases yet"
+      action={<Button asChild size="sm"><Link href="/shop">Browse Shop</Link></Button>}
+    />
+  );
+
   return (
-    <section className="space-y-4">
-      <Card>
-        <h1 className="text-3xl font-bold">Client Dashboard</h1>
-        <p className="text-white/70">Purchases, subscriptions, secure downloads and profile settings.</p>
-      </Card>
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <RevenueChart />
-        <Card>
-          <p className="mb-2 text-sm font-semibold text-white/70">Recent Orders</p>
-          <ul className="space-y-2 text-sm text-white/75">
-            <li>Neon Pulse EP - Paid - 2026-02-20</li>
-            <li>Abyss Drift - Free - 2026-02-18</li>
-          </ul>
-        </Card>
+    <div className="space-y-3">
+      {orders.map((order) => (
+        <div
+          key={order.id}
+          className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-2"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-cream/40">
+              {new Date(order.createdAt).toLocaleDateString("en-BE", { year: "numeric", month: "long", day: "numeric" })}
+            </span>
+            <span className="text-sm font-medium text-cream">€{Number(order.total).toFixed(2)}</span>
+          </div>
+          <div className="space-y-1">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between text-sm">
+                <span className="text-cream/70">
+                  {item.release?.title ?? item.dubpack?.title ?? "Item"}
+                </span>
+                <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" asChild>
+                  <Link href={
+                    item.release ? `/release/${item.release.slug}` :
+                    item.dubpack ? `/dubpack/${item.dubpack.slug}` : "#"
+                  }>
+                    <Download className="h-3 w-3" /> Download
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Downloads Tab ─────────────────────────────────────────────────────────────
+
+function DownloadsTab() {
+  const [sessions, setSessions] = useState<{ id: string; release?: { title: string; slug: string } | null; dubpack?: { title: string; slug: string } | null; createdAt: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/free-downloads/me`, { credentials: "include" });
+        if (res.ok) setSessions(await res.json() as typeof sessions);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!sessions.length) return (
+    <EmptyState
+      icon={<Download className="h-8 w-8 text-violet/40" />}
+      message="No free downloads yet"
+      action={<Button asChild size="sm"><Link href="/catalog">Browse Catalog</Link></Button>}
+    />
+  );
+
+  return (
+    <div className="space-y-2">
+      {sessions.map((s) => (
+        <div key={s.id} className="flex items-center justify-between rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5">
+          <div>
+            <p className="text-sm text-cream">{s.release?.title ?? s.dubpack?.title ?? "Download"}</p>
+            <p className="text-xs text-cream/40 mt-0.5">
+              {new Date(s.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+          <Button size="sm" variant="ghost" className="gap-1.5 text-xs" asChild>
+            <Link href={s.release ? `/release/${s.release.slug}` : s.dubpack ? `/dubpack/${s.dubpack.slug}` : "#"}>
+              <ExternalLink className="h-3 w-3" /> View
+            </Link>
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Following Tab ─────────────────────────────────────────────────────────────
+
+function FollowingTab() {
+  const [artists, setArtists] = useState<{ id: string; displayName: string | null; user?: { email?: string }; avatar: string | null; _count?: { followers: number } }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/follows/me`, { credentials: "include" });
+        if (res.ok) setArtists(await res.json() as typeof artists);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const unfollow = async (artistId: string) => {
+    await fetch(`${API}/follows/artist/${artistId}`, { method: "DELETE", credentials: "include" });
+    setArtists((prev) => prev.filter((a) => a.id !== artistId));
+    toast.success("Unfollowed");
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!artists.length) return (
+    <EmptyState
+      icon={<Users className="h-8 w-8 text-violet/40" />}
+      message="Not following anyone yet"
+      action={<Button asChild size="sm"><Link href="/artists">Discover Artists</Link></Button>}
+    />
+  );
+
+  return (
+    <div className="space-y-2">
+      {artists.map((artist) => {
+        const name = artist.displayName ?? artist.user?.email?.split("@")[0] ?? "Artist";
+        return (
+          <div key={artist.id} className="flex items-center justify-between rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-violet/20 flex items-center justify-center text-sm font-bold text-violet-light">
+                {name.slice(0, 1).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-cream">{name}</p>
+                <p className="text-xs text-cream/40">{artist._count?.followers ?? 0} followers</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={`/artist/${artist.id}`}><ExternalLink className="h-3.5 w-3.5" /></Link>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => void unfollow(artist.id)}>
+                Unfollow
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Notifications Tab ─────────────────────────────────────────────────────────
+
+function NotificationsTab() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/notifications`, { credentials: "include" });
+        if (res.ok) setNotifications((await res.json()) as NotificationItem[]);
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const markRead = async (id: string) => {
+    await fetch(`${API}/notifications/${id}/read`, { method: "PATCH", credentials: "include" });
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const markAllRead = async () => {
+    await fetch(`${API}/notifications/read-all`, { method: "PATCH", credentials: "include" });
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  const unread = notifications.filter((n) => !n.isRead);
+
+  return (
+    <div className="space-y-3">
+      {unread.length > 0 && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="ghost" onClick={() => void markAllRead()}>
+            Mark all read
+          </Button>
+        </div>
+      )}
+      {!notifications.length ? (
+        <EmptyState
+          icon={<Bell className="h-8 w-8 text-violet/40" />}
+          message="No notifications yet"
+        />
+      ) : notifications.map((n) => (
+        <div
+          key={n.id}
+          className={`flex items-start gap-3 rounded-[12px] border p-3.5 transition-colors ${
+            n.isRead ? "border-[rgba(255,255,255,0.06)] bg-surface" : "border-violet/30 bg-violet/5"
+          }`}
+        >
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm ${n.isRead ? "text-cream/70" : "text-cream"}`}>{n.body}</p>
+            <p className="text-xs text-cream/30 mt-1">
+              {new Date(n.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+          {!n.isRead && (
+            <Button size="sm" variant="ghost" onClick={() => void markRead(n.id)} className="shrink-0">
+              <CheckCircle2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Profile Tab ───────────────────────────────────────────────────────────────
+
+function ProfileTab() {
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const body: Record<string, string> = {};
+      if (email !== user?.email) body.email = email;
+      if (currentPassword && newPassword) {
+        body.currentPassword = currentPassword;
+        body.newPassword = newPassword;
+      }
+      const res = await fetch(`${API}/auth/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Profile updated");
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch {
+      toast.error("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
+
+  return (
+    <div className="max-w-md space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Email</label>
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+        </div>
+
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-4 space-y-3">
+          <p className="text-xs font-medium text-cream/60">Change Password</p>
+          <Input
+            type="password"
+            placeholder="Current password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+          <div className="relative">
+            <Input
+              type={showPass ? "text" : "password"}
+              placeholder="New password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <button
+              onClick={() => setShowPass(!showPass)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 hover:text-cream/70"
+            >
+              {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        <Button onClick={() => void handleSave()} disabled={saving}>
+          {saving ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
-    </section>
+
+      <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-cream">Account</p>
+            <p className="text-xs text-cream/40">Role: {user?.role}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void handleLogout()} className="gap-1.5 text-cream/60 hover:text-cream">
+            <LogOut className="h-4 w-4" /> Sign Out
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function LoadingSpinner() {
+  return (
+    <div className="flex justify-center py-12">
+      <div className="h-6 w-6 rounded-full border-2 border-violet border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
+function EmptyState({ icon, message, action }: { icon?: React.ReactNode; message: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.06)] bg-surface h-48">
+      {icon}
+      <p className="text-sm text-cream/40">{message}</p>
+      {action}
+    </div>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
+export default function ClientDashboard() {
+  const { user } = useAuthStore();
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>("purchases");
+
+  useEffect(() => {
+    if (user?.role === "ARTIST") router.replace("/dashboard/artist");
+    if (user?.role === "ADMIN") router.replace("/dashboard/admin");
+  }, [user, router]);
+
+  const TAB_CONTENT: Record<Tab, React.ReactNode> = {
+    purchases: <PurchasesTab />,
+    downloads: <DownloadsTab />,
+    following: <FollowingTab />,
+    notifications: <NotificationsTab />,
+    profile: <ProfileTab />
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-cream">My Dashboard</h1>
+        <p className="text-sm text-cream/50 mt-1">
+          Welcome back, {user?.email?.split("@")[0] ?? "there"}
+        </p>
+      </div>
+
+      {/* Tab nav */}
+      <div className="flex gap-1 overflow-x-auto border-b border-[rgba(255,255,255,0.06)] pb-px">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 whitespace-nowrap px-4 pb-3 text-sm font-medium transition-colors ${
+              tab === t.id
+                ? "border-b-2 border-violet text-cream"
+                : "text-cream/50 hover:text-cream"
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+        >
+          {TAB_CONTENT[tab]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }

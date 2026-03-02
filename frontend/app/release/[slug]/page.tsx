@@ -1,21 +1,17 @@
-import { CheckoutButton } from "@/components/checkout-button";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { fetchRelease, fetchComments } from "@/lib/api";
+import { notFound } from "next/navigation";
+import { ReleaseDetailClient } from "./release-detail-client";
 
-export default function ReleasePage({ params }: { params: { slug: string } }) {
-  return (
-    <section className="space-y-4">
-      <Card className="space-y-3">
-        <h1 className="text-3xl font-bold">Release: {params.slug}</h1>
-        <p className="text-white/70">Interactive audio object with premium visuals and secure monetization.</p>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/catalog">Back To Catalog</Link>
-          </Button>
-          <CheckoutButton releaseId={params.slug} />
-        </div>
-      </Card>
-    </section>
-  );
+export default async function ReleasePage({ params }: { params: { slug: string } }) {
+  const [release, comments] = await Promise.all([
+    fetchRelease(params.slug),
+    fetchRelease(params.slug).then(async (r) => {
+      if (!r) return [];
+      return fetchComments({ releaseId: r.id });
+    })
+  ]);
+
+  if (!release) notFound();
+
+  return <ReleaseDetailClient release={release} initialComments={comments} />;
 }

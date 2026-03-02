@@ -56,7 +56,10 @@ export class AuthService {
       take: 5
     });
 
-    const matched = await this.findMatchingToken(tokenRows.map((row) => row.tokenHash), refreshToken);
+    const matched = await this.findMatchingToken(
+      tokenRows.map((row) => row.tokenHash),
+      refreshToken
+    );
     if (!matched) throw new UnauthorizedException("Invalid refresh token");
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -74,11 +77,17 @@ export class AuthService {
   private async buildTokens(sub: string, email: string, role: UserRole) {
     const accessToken = await this.jwtService.signAsync(
       { sub, email, role },
-      { secret: process.env.JWT_SECRET || "change_me_jwt", expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m" }
+      {
+        secret: process.env.JWT_SECRET || "change_me_jwt",
+        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m"
+      }
     );
     const refreshToken = await this.jwtService.signAsync(
       { sub, email, role, type: "refresh" },
-      { secret: process.env.JWT_REFRESH_SECRET || "change_me_refresh", expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d" }
+      {
+        secret: process.env.JWT_REFRESH_SECRET || "change_me_refresh",
+        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d"
+      }
     );
 
     const tokenHash = await bcrypt.hash(refreshToken, 10);
@@ -90,7 +99,11 @@ export class AuthService {
       }
     });
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: sub, email, role }
+    };
   }
 
   private async findMatchingToken(hashes: string[], candidate: string) {

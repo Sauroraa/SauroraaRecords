@@ -4,11 +4,18 @@
 
 @layer base {
   :root {
-    --bg: #07070c;
-    --text: #f8f9ff;
-    --muted: #9ca3af;
-    --accent: #c2ff2a;
-    --accent2: #5de4ff;
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --text: #f5f3ef;
+    --muted: #6b7280;
+    --accent: #7c3aed;
+    --accent-light: #8b5cf6;
+    --accent-hover: #6d28d9;
+    --accent-glow: rgba(124, 58, 237, 0.15);
+    --border: rgba(255, 255, 255, 0.08);
+    --radius: 16px;
+    --transition: 0.3s ease;
   }
 }
 
@@ -18,7 +25,9 @@ body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-space), sans-serif;
+  font-family: var(--font-inter), var(--font-space), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -27,7 +36,40 @@ body {
 
 h1,
 h2,
-h3 {
-  font-family: var(--font-orbitron), sans-serif;
-  letter-spacing: 0.02em;
+h3,
+h4 {
+  font-family: var(--font-space), sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.3);
+  color: var(--text);
+}
+
+a,
+button {
+  transition: all var(--transition);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

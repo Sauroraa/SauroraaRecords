@@ -1,20 +1,25 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Space_Grotesk, Orbitron } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
 import { Providers } from "./providers";
 
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space" });
-const orbitron = Orbitron({ subsets: ["latin"], variable: "--font-orbitron" });
 
 export const metadata: Metadata = {
   title: "Sauroraa Records",
-  description: "Immersive platform for Sauroraa artists."
+  description: "Premium music label platform — releases, dubpacks & exclusive drops.",
+  openGraph: {
+    title: "Sauroraa Records",
+    description: "Premium music label platform — releases, dubpacks & exclusive drops.",
+    type: "website"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${orbitron.variable}`}>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
         <Providers>
           <SiteShell>{children}</SiteShell>
