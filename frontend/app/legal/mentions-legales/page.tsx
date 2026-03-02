@@ -10,17 +10,16 @@ export default function MentionsLegalesPage() {
       </div>
 
       <Section title="1. Éditeur du site">
-        <Row label="Dénomination sociale" value="Sauroraa Records" />
+        <Row label="Dénomination sociale" value="SauroraaSNC" />
         <Row label="Numéro d'entreprise" value="BE1031.598.463" />
-        <Row label="Forme juridique" value="Personne morale / Entreprise belge" />
+        <Row label="Forme juridique" value="SNC / Entreprise belge" />
         <Row label="Siège social" value="Belgique" />
-        <Row label="Email de contact" value="contact@sauroraarecords.be" />
+        <Row label="Email de contact" value="contact@sauroraa.be" />
         <Row label="Responsable de la publication" value="Équipe Sauroraa Records" />
       </Section>
 
       <Section title="2. Hébergement">
-        <Row label="Hébergeur" value="Serveur dédié Debian 12" />
-        <Row label="Adresse IP serveur" value="141.11.165.20" />
+        <Row label="Hébergeur" value="LordHosting.fr" />
         <Row label="Localisation" value="Union Européenne" />
       </Section>
 

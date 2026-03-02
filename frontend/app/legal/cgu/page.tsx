@@ -10,7 +10,7 @@ export default function CguPage() {
       </div>
 
       <Article title="Article 1 — Objet">
-        <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme Sauroraa Records, accessible à l'adresse <strong className="text-cream">sauroraarecords.be</strong>, éditée par Sauroraa Records (BE1031.598.463).</p>
+        <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme Sauroraa Records, accessible à l'adresse <strong className="text-cream">sauroraa.be</strong>, éditée par Sauroraa Records (BE1031.598.463).</p>
         <p className="mt-2">En s'inscrivant sur la plateforme, l'utilisateur accepte sans réserve les présentes CGU.</p>
       </Article>
 
@@ -68,7 +68,7 @@ export default function CguPage() {
           <li>En cas d'activité frauduleuse.</li>
           <li>Sur demande de l'autorité judiciaire compétente.</li>
         </ul>
-        <p className="mt-2">L'utilisateur peut également supprimer son compte à tout moment depuis son espace personnel ou en contactant <strong className="text-cream">contact@sauroraarecords.be</strong>.</p>
+        <p className="mt-2">L'utilisateur peut également supprimer son compte à tout moment depuis son espace personnel ou en contactant <strong className="text-cream">contact@sauroraa.be</strong>.</p>
       </Article>
 
       <Article title="Article 8 — Modification des CGU">
