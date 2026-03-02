@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-type UserRole = "CLIENT" | "ARTIST" | "ADMIN";
+type UserRole = "CLIENT" | "ARTIST" | "ADMIN" | "AGENCY" | "STAFF";
 
 interface AuthUser {
   id: string;
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email, password, role = "CLIENT") => {
+      register: async (email, password, role: UserRole = "CLIENT") => {
         set({ isLoading: true });
         try {
           const res = await fetch(`${API}/auth/register`, {

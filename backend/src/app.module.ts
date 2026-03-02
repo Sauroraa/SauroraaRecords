@@ -21,6 +21,9 @@ import { ReleasesModule } from "./modules/releases/releases.module";
 import { RevenueModule } from "./modules/revenue/revenue.module";
 import { StripeModule } from "./modules/stripe/stripe.module";
 import { TipsModule } from "./modules/tips/tips.module";
+import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
+import { AgencyModule } from "./modules/agency/agency.module";
+import { AdminController } from "./modules/admin/admin.controller";
 import { UploadModule } from "./modules/upload/upload.module";
 import { UsersModule } from "./modules/users/users.module";
 
@@ -50,8 +53,11 @@ import { UsersModule } from "./modules/users/users.module";
     PreordersModule,
     PromoCodesModule,
     TipsModule,
-    RankingsModule
+    RankingsModule,
+    SubscriptionsModule,
+    AgencyModule
   ],
+  controllers: [AdminController],
   providers: [
     PrismaService,
     RolesGuard,

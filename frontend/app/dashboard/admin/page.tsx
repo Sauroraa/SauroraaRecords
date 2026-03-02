@@ -184,7 +184,19 @@ function UsersTab() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={u.role === "ADMIN" ? "violet" : u.role === "ARTIST" ? "green" : "gray"}>
+              <Badge
+                variant={
+                  u.role === "ADMIN"
+                    ? "violet"
+                    : u.role === "ARTIST"
+                    ? "green"
+                    : u.role === "AGENCY"
+                    ? "orange"
+                    : u.role === "STAFF"
+                    ? "gray"
+                    : "gray"
+                }
+              >
                 {u.role}
               </Badge>
               <select
@@ -195,6 +207,8 @@ function UsersTab() {
                 <option value="CLIENT">CLIENT</option>
                 <option value="ARTIST">ARTIST</option>
                 <option value="ADMIN">ADMIN</option>
+                <option value="AGENCY">AGENCY</option>
+                <option value="STAFF">STAFF</option>
               </select>
             </div>
           </div>

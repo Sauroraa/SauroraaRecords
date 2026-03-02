@@ -74,9 +74,24 @@ export class DubpacksController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  list() {
+  async list(@Req() req: Request & { user?: { role?: UserRole } }) {
+    const adminQuery = req.query.admin === "true";
+    const isAdmin = req.user?.role === UserRole.ADMIN;
+    if (adminQuery && isAdmin) {
+      return this.listAll();
+    }
     return this.prisma.dubpack.findMany({
       where: { published: true },
+      orderBy: { createdAt: "desc" },
+      include: { artist: { include: { user: { select: { email: true } } } } }
+    });
+  }
+
+  @Get("all")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  listAll() {
+    return this.prisma.dubpack.findMany({
       orderBy: { createdAt: "desc" },
       include: { artist: { include: { user: { select: { email: true } } } } }
     });

@@ -43,6 +43,13 @@ export type DubpackItem = {
   createdAt?: string;
   artist?: ArtistProfile & { id: string };
 };
+ 
+export type SubscriptionItem = {
+  id: string;
+  plan: string;
+  status: string;
+  currentPeriodEnd?: string | null;
+};
 
 export type CommentItem = {
   id: string;

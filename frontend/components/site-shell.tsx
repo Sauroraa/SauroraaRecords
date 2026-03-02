@@ -16,7 +16,8 @@ const navItems = [
   { href: "/catalog", label: "Releases" },
   { href: "/dubpacks", label: "Dubpacks" },
   { href: "/shop", label: "Shop" },
-  { href: "/rankings", label: "Rankings" }
+  { href: "/rankings", label: "Rankings" },
+  { href: "/pricing", label: "Pricing" }
 ];
 
 export function SiteShell({ children }: { children: ReactNode }) {
@@ -113,7 +114,11 @@ export function SiteShell({ children }: { children: ReactNode }) {
                         ? "/dashboard/artist"
                         : user.role === "ADMIN"
                           ? "/dashboard/admin"
-                          : "/dashboard"
+                          : user.role === "AGENCY"
+                            ? "/dashboard/agency"
+                            : user.role === "STAFF"
+                              ? "/dashboard/staff"
+                              : "/dashboard"
                     }
                     className="flex items-center gap-1.5 px-3 py-2 text-sm text-cream/60 hover:text-cream transition-colors"
                   >
@@ -159,6 +164,28 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
       <CartDrawer />
       <GlobalPlayer />
+
+      <footer className="border-t border-[rgba(255,255,255,0.05)] bg-bg/60 py-6 pb-28">
+        <div className="mx-auto max-w-7xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-cream/25">
+            © {new Date().getFullYear()} Sauroraa Records — BE1031.598.463
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            {[
+              { href: "/legal/mentions-legales", label: "Mentions légales" },
+              { href: "/legal/cgu", label: "CGU" },
+              { href: "/legal/cgv", label: "CGV" },
+              { href: "/legal/rgpd", label: "Confidentialité" },
+              { href: "/legal/cookies", label: "Cookies" },
+              { href: "/pricing", label: "Tarifs" },
+            ].map((l) => (
+              <Link key={l.href} href={l.href} className="text-xs text-cream/30 hover:text-cream/60 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

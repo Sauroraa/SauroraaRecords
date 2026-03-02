@@ -39,6 +39,14 @@ Production-ready platform for `sauroraarecords.be`:
 - Commerce:
   - Stripe JS checkout integration point
   - Revenue split logic (90/10) supported in data model + cron
+ - Subscriptions & billing:
+   - Monthly plans for artists, agencies, staff
+   - Stripe webhook handling and customer metadata
+   - Subscription management endpoints (checkout, cancel, status)
+ - Agency support:
+   - Agency accounts can add/remove managed artists
+   - Staff role reserved for moderation (placeholder UI)
+   - Commission rates adapt per plan
 
 ## Local Build
 

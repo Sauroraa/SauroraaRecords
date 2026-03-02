@@ -11,6 +11,7 @@ import {
 import { IsArray, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import Stripe from "stripe";
+import { SubscriptionPlan } from "@prisma/client";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
@@ -208,9 +209,23 @@ export class StripeController {
         await this.handlePurchase(session, meta);
       } else if (meta.type === "tip") {
         await this.handleTip(meta, session);
+      } else if (meta.type === "subscription") {
+        await this.handleSubscription(session, meta);
       }
+    } else if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as Stripe.Subscription;
+      await this.prisma.subscription.updateMany({
+        where: { stripeSubscriptionId: subscription.id },
+        data: { status: "cancelled" }
+      });
+    } else if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      await this.prisma.subscription.updateMany({
+        where: { stripeSubscriptionId: invoice.subscription as string | null },
+        data: { status: "past_due" }
+      });
     }
-
+    // always acknowledge receipt
     return { received: true };
   }
 
@@ -281,4 +296,33 @@ export class StripeController {
       }
     });
   }
+
+  private async handleSubscription(
+    session: Stripe.Checkout.Session,
+    meta: Record<string, string>
+  ) {
+    const userId = meta.userId;
+    const plan = meta.plan as SubscriptionPlan | undefined;
+    const stripeSubId = session.subscription as string | undefined;
+    const stripeCustId = typeof session.customer === "string" ? session.customer : undefined;
+    if (!userId || !plan || !stripeSubId) return;
+
+    await this.prisma.subscription.upsert({
+      where: { userId },
+      update: {
+        plan,
+        stripeSubscriptionId: stripeSubId,
+        stripeCustomerId: stripeCustId,
+        status: "active"
+      },
+      create: {
+        userId,
+        plan,
+        stripeSubscriptionId: stripeSubId,
+        stripeCustomerId: stripeCustId,
+        status: "active"
+      }
+    });
+  }
+  // end of controller class
 }

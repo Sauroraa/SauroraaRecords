@@ -4,7 +4,26 @@ import PDFDocument from "pdfkit";
 import fs from "node:fs";
 import path from "node:path";
 
-const COMMISSION_RATE = Number(process.env.COMMISSION_RATE ?? "0.10");
+// Computes platform commission rate based on subscription plan string.
+// This duplicates logic from backend/utils/commission.ts but keeps cron-service standalone.
+function getPlatformCommission(plan) {
+  switch (plan) {
+    case "ARTIST_BASIC":
+      return 0.20;
+    case "ARTIST_PRO":
+      return 0.10;
+    case "AGENCY_START":
+      return 0.20;
+    case "AGENCY_PRO":
+      return 0.10;
+    case "ARTIST_FREE":
+    default:
+      return 0.30;
+  }
+}
+
+// default rate if no plan available
+let COMMISSION_RATE = Number(process.env.COMMISSION_RATE ?? "0.10");
 
 function currentMonthKey(date = new Date()) {
   const year = date.getUTCFullYear();
@@ -58,7 +77,20 @@ async function runMonthlyJob() {
 
     for (const row of rows) {
       const totalSales = Number(row.totalSales || 0);
-      const commission = Number((totalSales * COMMISSION_RATE).toFixed(2));
+      // fetch artist subscription plan to compute rate
+      let commissionRate = COMMISSION_RATE;
+      try {
+        const [planRow] = await db.query(
+          `SELECT s.plan FROM Subscription s WHERE s.userId = ? LIMIT 1`,
+          [row.artistId]
+        );
+        if (planRow && planRow.length > 0 && planRow[0].plan) {
+          commissionRate = getPlatformCommission(planRow[0].plan);
+        }
+      } catch (err) {
+        // if any error, fallback to env rate
+      }
+      const commission = Number((totalSales * commissionRate).toFixed(2));
       const netDue = Number((totalSales - commission).toFixed(2));
 
       await db.query(

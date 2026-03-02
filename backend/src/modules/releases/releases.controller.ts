@@ -63,7 +63,13 @@ export class ReleasesController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  list() {
+  async list(@Req() req: Request & { user?: { role?: UserRole } }) {
+    // admin clients can pass ?admin=true to fetch all releases
+    const adminQuery = req.query.admin === "true";
+    const isAdmin = req.user?.role === UserRole.ADMIN;
+    if (adminQuery && isAdmin) {
+      return this.listAll();
+    }
     return this.prisma.release.findMany({
       where: { published: true },
       orderBy: { createdAt: "desc" },

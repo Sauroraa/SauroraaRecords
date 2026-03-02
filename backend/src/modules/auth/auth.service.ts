@@ -24,6 +24,10 @@ export class AuthService {
     if (dto.role === UserRole.ARTIST) {
       await this.prisma.artist.create({ data: { userId: user.id } });
     }
+    if (dto.role === UserRole.AGENCY) {
+      // create an agency record for this user
+      await this.prisma.agency.create({ data: { userId: user.id } });
+    }
 
     return this.buildTokens(user.id, user.email, user.role);
   }

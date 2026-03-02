@@ -4,8 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart2, Upload, Archive, Settings2, TrendingUp, Disc3,
-  Trash2, Eye, EyeOff, Plus, ToggleLeft, ToggleRight, Check
+  BarChart2,
+  Upload,
+  Archive,
+  Settings2,
+  TrendingUp,
+  Disc3,
+  Trash2,
+  Eye,
+  EyeOff,
+  Plus,
+  ToggleLeft,
+  ToggleRight,
+  Check,
+  CreditCard
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -16,10 +28,18 @@ import type { ReleaseItem, DubpackItem, RevenueSeries } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-type Tab = "overview" | "upload-release" | "upload-dubpack" | "downloads-config" | "revenue" | "releases";
+type Tab =
+  | "overview"
+  | "subscription"
+  | "upload-release"
+  | "upload-dubpack"
+  | "downloads-config"
+  | "revenue"
+  | "releases";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <BarChart2 className="h-4 w-4" /> },
+  { id: "subscription", label: "Subscription", icon: <CreditCard className="h-4 w-4" /> },
   { id: "upload-release", label: "Upload Release", icon: <Upload className="h-4 w-4" /> },
   { id: "upload-dubpack", label: "Upload Dubpack", icon: <Archive className="h-4 w-4" /> },
   { id: "downloads-config", label: "Downloads Config", icon: <Settings2 className="h-4 w-4" /> },
@@ -71,6 +91,73 @@ function OverviewTab() {
       <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
         <p className="text-sm text-cream/50">Revenue chart and recent activity available in the Revenue tab.</p>
       </div>
+    </div>
+  );
+}
+
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+function SubscriptionTab() {
+  const [sub, setSub] = useState<{ id: string; plan: string; status: string; currentPeriodEnd?: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/subscriptions/me`, { credentials: "include" });
+        if (res.ok) {
+          setSub(await res.json());
+        }
+      } catch {} finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleCancel = async () => {
+    if (!sub) return;
+    setCanceling(true);
+    try {
+      const res = await fetch(`${API}/subscriptions/me`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setSub(null);
+        toast.success("Subscription canceled");
+      } else {
+        toast.error("Could not cancel subscription");
+      }
+    } catch {
+      toast.error("Could not cancel subscription");
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  if (loading) {
+    return <p>Loading subscription...</p>;
+  }
+
+  if (!sub) {
+    return (
+      <div className="space-y-4">
+        <p>You do not currently have an active plan.</p>
+        <Button asChild>
+          <a href="/pricing">Choose a plan</a>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p>Your current plan: <strong>{sub.plan}</strong></p>
+      <p>Status: {sub.status}</p>
+      {sub.currentPeriodEnd && <p>Expires: {new Date(sub.currentPeriodEnd).toLocaleDateString()}</p>}
+      {sub.status === "active" && (
+        <Button variant="destructive" onClick={handleCancel} disabled={canceling}>
+          {canceling ? "Canceling…" : "Cancel subscription"}
+        </Button>
+      )}
     </div>
   );
 }
@@ -632,6 +719,7 @@ export default function ArtistDashboard() {
 
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     overview: <OverviewTab />,
+    subscription: <SubscriptionTab />,
     "upload-release": <UploadReleaseTab />,
     "upload-dubpack": <UploadDubpackTab />,
     "downloads-config": <DownloadsConfigTab />,

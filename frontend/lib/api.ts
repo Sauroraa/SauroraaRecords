@@ -1,4 +1,4 @@
-import type { ReleaseItem, DubpackItem, ArtistProfile, CommentItem, RankingItem } from "./types";
+import type { ReleaseItem, DubpackItem, ArtistProfile, CommentItem, RankingItem, SubscriptionItem } from "./types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
@@ -135,5 +135,29 @@ export async function fetchRankings(month?: string): Promise<RankingItem[]> {
     return (await res.json()) as RankingItem[];
   } catch {
     return [];
+  }
+}
+
+// ─── Subscriptions ───────────────────────────────────────────────────────────
+
+export async function fetchMySubscription(): Promise<SubscriptionItem | null> {
+  try {
+    const res = await fetch(`${API}/subscriptions/me`, { cache: "no-store", credentials: "include" });
+    if (!res.ok) return null;
+    return (await res.json()) as SubscriptionItem;
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelSubscription(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/subscriptions/me`, {
+      method: "DELETE",
+      credentials: "include"
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }

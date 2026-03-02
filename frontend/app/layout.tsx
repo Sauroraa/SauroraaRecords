@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
+import { CookieBanner } from "@/components/cookie-banner";
 import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <SiteShell>{children}</SiteShell>
+          <CookieBanner />
         </Providers>
       </body>
     </html>
