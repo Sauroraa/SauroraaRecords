@@ -496,18 +496,71 @@ function UploadReleaseTab() {
   const [uploading, setUploading] = useState(false);
   const [dragAudio, setDragAudio] = useState(false);
   const [dragCover, setDragCover] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [coverProgress, setCoverProgress] = useState(0);
 
-  const uploadFile = async (file: File, route: string): Promise<string> => {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`${API}/upload/${route}`, {
+  const uploadFileResumable = async (
+    file: File,
+    kind: "audio" | "cover",
+    onProgress: (percent: number) => void
+  ): Promise<string> => {
+    const chunkSize = 5 * 1024 * 1024;
+    const fingerprint = `${kind}:${file.name}:${file.size}:${file.lastModified}`;
+
+    const initRes = await fetch(`${API}/upload/resumable/init`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: fd
+      body: JSON.stringify({
+        kind,
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        totalSize: file.size,
+        chunkSize,
+        fingerprint
+      })
     });
-    if (!res.ok) throw new Error("Upload failed");
-    const data = (await res.json()) as { path: string };
-    return data.path;
+    if (initRes.status === 401) throw new Error("AUTH_REQUIRED");
+    if (!initRes.ok) throw new Error("UPLOAD_INIT_FAILED");
+
+    let state = (await initRes.json()) as {
+      uploadId: string;
+      nextChunk: number;
+      chunkSize: number;
+      uploadedBytes: number;
+      totalSize: number;
+    };
+    onProgress(Math.round((state.uploadedBytes / state.totalSize) * 100));
+
+    const totalChunks = Math.ceil(file.size / state.chunkSize);
+    for (let chunkIndex = state.nextChunk; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * state.chunkSize;
+      const end = Math.min(file.size, start + state.chunkSize);
+      const chunkBlob = file.slice(start, end);
+      const fd = new FormData();
+      fd.append("chunk", chunkBlob, file.name);
+      fd.append("chunkIndex", String(chunkIndex));
+
+      const chunkRes = await fetch(`${API}/upload/resumable/${state.uploadId}/chunk`, {
+        method: "POST",
+        credentials: "include",
+        body: fd
+      });
+      if (chunkRes.status === 401) throw new Error("AUTH_REQUIRED");
+      if (!chunkRes.ok) throw new Error("UPLOAD_CHUNK_FAILED");
+      state = (await chunkRes.json()) as typeof state;
+      onProgress(Math.round((state.uploadedBytes / state.totalSize) * 100));
+    }
+
+    const completeRes = await fetch(`${API}/upload/resumable/${state.uploadId}/complete`, {
+      method: "POST",
+      credentials: "include"
+    });
+    if (completeRes.status === 401) throw new Error("AUTH_REQUIRED");
+    if (!completeRes.ok) throw new Error("UPLOAD_COMPLETE_FAILED");
+    const completeData = (await completeRes.json()) as { path: string };
+    onProgress(100);
+    return completeData.path;
   };
 
   const handleSubmit = async () => {
@@ -516,10 +569,12 @@ function UploadReleaseTab() {
       return;
     }
     setUploading(true);
+    setAudioProgress(0);
+    setCoverProgress(0);
     try {
       const [audioPath, coverPath] = await Promise.all([
-        uploadFile(audioFile, "audio"),
-        coverFile ? uploadFile(coverFile, "cover") : Promise.resolve(undefined)
+        uploadFileResumable(audioFile, "audio", setAudioProgress),
+        coverFile ? uploadFileResumable(coverFile, "cover", setCoverProgress) : Promise.resolve(undefined)
       ]);
       const res = await fetch(`${API}/releases`, {
         method: "POST",
@@ -542,8 +597,14 @@ function UploadReleaseTab() {
       setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
       setAudioFile(null);
       setCoverFile(null);
-    } catch {
-      toast.error("Failed to upload release");
+      setAudioProgress(0);
+      setCoverProgress(0);
+    } catch (error) {
+      if (error instanceof Error && error.message === "AUTH_REQUIRED") {
+        toast.error("Session expirée. Reconnecte-toi puis relance l'upload.");
+      } else {
+        toast.error("Failed to upload release");
+      }
     } finally {
       setUploading(false);
     }
@@ -605,6 +666,17 @@ function UploadReleaseTab() {
             <p className="text-sm text-cream/40">Drop audio file here or click to browse</p>
           )}
         </div>
+        {uploading && audioProgress > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-cream/50">
+              <span>Upload audio</span>
+              <span>{audioProgress}%</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+              <div className="h-full rounded-full bg-violet transition-all" style={{ width: `${audioProgress}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cover dropzone */}
@@ -626,6 +698,17 @@ function UploadReleaseTab() {
             <p className="text-sm text-cream/40">Drop cover image here or click to browse</p>
           )}
         </div>
+        {uploading && coverFile && coverProgress > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-cream/50">
+              <span>Upload cover</span>
+              <span>{coverProgress}%</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+              <div className="h-full rounded-full bg-violet transition-all" style={{ width: `${coverProgress}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* HypeEdit Gate — only for FREE releases */}
@@ -677,7 +760,7 @@ function UploadReleaseTab() {
       )}
 
       <Button onClick={() => void handleSubmit()} disabled={uploading} className="w-full">
-        {uploading ? "Uploading..." : "Submit Release"}
+        {uploading ? `Uploading... ${audioProgress}%` : "Submit Release"}
       </Button>
     </div>
   );
