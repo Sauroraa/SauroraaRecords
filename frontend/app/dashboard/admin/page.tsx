@@ -44,8 +44,8 @@ function ReleasesTab() {
     void (async () => {
       try {
         const [rRes, dRes] = await Promise.all([
-          fetch(`${API}/releases?admin=true`, { credentials: "include" }),
-          fetch(`${API}/dubpacks?admin=true`, { credentials: "include" })
+          fetch(`${API}/releases/all`, { credentials: "include" }),
+          fetch(`${API}/dubpacks/all`, { credentials: "include" })
         ]);
         if (rRes.ok) setReleases((await rRes.json()) as ReleaseItem[]);
         if (dRes.ok) setDubpacks((await dRes.json()) as DubpackItem[]);
