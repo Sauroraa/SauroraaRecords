@@ -1176,10 +1176,18 @@ export default function ArtistDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
-    if (user && user.role !== "ARTIST" && user.role !== "ADMIN") {
+    if (!user) {
+      router.replace("/login?redirect=/dashboard/artist");
+      return;
+    }
+    if (user.role !== "ARTIST" && user.role !== "ADMIN") {
       router.replace("/dashboard");
     }
   }, [user, router]);
+
+  if (!user || (user.role !== "ARTIST" && user.role !== "ADMIN")) {
+    return <LoadingSpinner />;
+  }
 
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     overview: <OverviewTab />,

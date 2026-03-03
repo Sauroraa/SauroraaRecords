@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, ShoppingBag, LogOut, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useNotificationsStore } from "@/store/notifications-store";
@@ -21,9 +21,18 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const { items, toggleCart } = useCartStore();
   const { unreadCount, fetchUnread } = useNotificationsStore();
   const { locale, setLocale, t } = useLanguage();
+  const [meLoaded, setMeLoaded] = useState(false);
 
-  useEffect(() => { void fetchMe(); }, [fetchMe]);
-  useEffect(() => { if (user) void fetchUnread(); }, [user, fetchUnread]);
+  useEffect(() => {
+    void (async () => {
+      await fetchMe();
+      setMeLoaded(true);
+    })();
+  }, [fetchMe]);
+
+  useEffect(() => {
+    if (meLoaded && user) void fetchUnread();
+  }, [meLoaded, user, fetchUnread]);
 
   const handleLogout = async () => {
     await logout();
