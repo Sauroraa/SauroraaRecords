@@ -6,14 +6,18 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter;
 
+  private readonly from =
+    process.env.MAIL_FROM || '"SauroraaRecords" <contact@sauroraa.be>';
+
   constructor() {
+    const port = parseInt(process.env.MAIL_PORT || "587");
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
+      host: process.env.MAIL_HOST || "smtp.us.appsuite.cloud",
+      port,
+      secure: port === 465,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD
       }
     });
   }
@@ -22,7 +26,7 @@ export class EmailService {
     const name = firstName || email.split("@")[0];
     try {
       await this.transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sauroraa Records" <noreply@sauroraa.be>',
+        from: this.from,
         to: email,
         subject: "Bienvenue sur Sauroraa Records",
         html: this.welcomeTemplate(name)
@@ -38,7 +42,7 @@ export class EmailService {
     const inviteUrl = `${url}/agency/invite/${token}`;
     try {
       await this.transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sauroraa Records" <noreply@sauroraa.be>',
+        from: this.from,
         to: email,
         subject: `Invitation à rejoindre ${agencyName} sur Sauroraa Records`,
         html: this.invitationTemplate(email, agencyName, inviteUrl)
@@ -53,7 +57,7 @@ export class EmailService {
     const name = firstName || email.split("@")[0];
     try {
       await this.transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Sauroraa Records" <noreply@sauroraa.be>',
+        from: this.from,
         to: email,
         subject: "Ton mot de passe a été modifié",
         html: this.passwordChangedTemplate(name)
