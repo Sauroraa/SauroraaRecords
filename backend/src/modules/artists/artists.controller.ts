@@ -1,24 +1,28 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { Request } from "express";
 
 class UpdateArtistDto {
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  avatar?: string;
-
-  @IsOptional()
-  @IsString()
-  payoutIban?: string;
+  @IsOptional() @IsString() displayName?: string;
+  @IsOptional() @IsString() bio?: string;
+  @IsOptional() @IsString() avatar?: string;
+  @IsOptional() @IsString() payoutIban?: string;
+  @IsOptional() @IsString() instagramUrl?: string;
+  @IsOptional() @IsString() soundcloudUrl?: string;
+  @IsOptional() @IsString() discordUrl?: string;
+  @IsOptional() @IsString() websiteUrl?: string;
 }
+
+const ARTIST_FULL_INCLUDE = {
+  user: { select: { email: true, firstName: true, lastName: true } },
+  agencyLinks: { include: { agency: { select: { displayName: true } } }, take: 1 },
+  _count: { select: { followers: true, releases: true } }
+};
 
 @Controller("artists")
 export class ArtistsController {
@@ -27,7 +31,57 @@ export class ArtistsController {
   @Get()
   list() {
     return this.prisma.artist.findMany({
-      include: { user: { select: { email: true } } }
+      include: {
+        user: { select: { email: true, firstName: true, lastName: true } },
+        _count: { select: { followers: true } }
+      }
+    });
+  }
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  me(@Req() req: Request & { user?: { userId: string } }) {
+    return this.prisma.artist.findUnique({
+      where: { userId: req.user!.userId },
+      include: ARTIST_FULL_INCLUDE
+    });
+  }
+
+  @Get("me/stats")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async stats(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) return { totalRevenue: 0, totalDownloads: 0, totalReleases: 0, totalFollowers: 0 };
+
+    const [revenues, downloadSessions, releases, followers] = await Promise.all([
+      this.prisma.artistRevenue.aggregate({ where: { artistId: artist.id }, _sum: { netDue: true } }),
+      this.prisma.freeDownloadSession.count({ where: { release: { artistId: artist.id } } }),
+      this.prisma.release.count({ where: { artistId: artist.id } }),
+      this.prisma.follow.count({ where: { artistId: artist.id } })
+    ]);
+
+    return {
+      totalRevenue: Number(revenues._sum.netDue ?? 0),
+      totalDownloads: downloadSessions,
+      totalReleases: releases,
+      totalFollowers: followers
+    };
+  }
+
+  @Patch("me")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async updateMe(
+    @Req() req: Request & { user?: { userId: string } },
+    @Body() dto: UpdateArtistDto
+  ) {
+    return this.prisma.artist.upsert({
+      where: { userId: req.user!.userId },
+      create: { userId: req.user!.userId, ...dto },
+      update: dto,
+      include: ARTIST_FULL_INCLUDE
     });
   }
 
@@ -35,9 +89,6 @@ export class ArtistsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ARTIST, UserRole.ADMIN)
   update(@Param("id") id: string, @Body() dto: UpdateArtistDto) {
-    return this.prisma.artist.update({
-      where: { id },
-      data: dto
-    });
+    return this.prisma.artist.update({ where: { id }, data: dto });
   }
 }
