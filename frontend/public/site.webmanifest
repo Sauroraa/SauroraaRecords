@@ -1,0 +1,13 @@
+{
+  "name": "Sauroraa Records",
+  "short_name": "Sauroraa",
+  "description": "Label musical indépendant belge — releases, dubpacks & classements d'artistes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
