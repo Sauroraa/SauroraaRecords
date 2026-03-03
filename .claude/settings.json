@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \" import sys, json data = json.load\\(sys.stdin\\) for item in data: if isinstance\\(item, dict\\) and ''text'' in item: print\\(item[''text'']\\) \")",
+      "Bash(npm install cookie-parser @types/cookie-parser @nestjs/multer multer @types/multer @aws-sdk/client-s3 @aws-sdk/s3-request-presigner stripe)",
+      "Bash(npm install --legacy-peer-deps cookie-parser @types/cookie-parser multer @types/multer @aws-sdk/client-s3 @aws-sdk/s3-request-presigner stripe)",
+      "Bash(npm install --legacy-peer-deps lenis react-hot-toast howler wavesurfer.js react-dropzone react-masonry-css @headlessui/react @radix-ui/react-dialog @radix-ui/react-tabs @radix-ui/react-dropdown-menu @types/howler)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx prisma generate)",
+      "Bash(node -e \"const Stripe = require\\(''stripe''\\); const s = new Stripe\\(''sk_test_x''\\); console.log\\(s.getApiField\\(''version''\\)\\);\")",
+      "Bash(npx stripe --version)",
+      "Bash(node -e \"const p = require\\(''./node_modules/stripe/package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(npm install --save-dev @types/nodemailer)",
+      "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/.env\")",
+      "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/backend/.env\")",
+      "Bash(python3 -c \":*)"
+    ],
+    "additionalDirectories": [
+      "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite"
+    ]
+  }
+}

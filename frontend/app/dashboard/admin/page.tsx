@@ -151,14 +151,20 @@ function UsersTab() {
   }, []);
 
   const changeRole = async (userId: string, role: string) => {
-    await fetch(`${API}/admin/users/${userId}/role`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ role })
-    });
-    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role } : u));
-    toast.success("Role updated");
+    try {
+      const res = await fetch(`${API}/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role })
+      });
+      if (!res.ok) throw new Error();
+      const updated = (await res.json()) as AdminUser;
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: updated.role } : u));
+      toast.success("Role updated");
+    } catch {
+      toast.error("Role update failed");
+    }
   };
 
   const filtered = users.filter((u) => u.email.toLowerCase().includes(search.toLowerCase()));

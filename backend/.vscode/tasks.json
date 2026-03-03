@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "prisma-generate-2",
+			"type": "shell",
+			"command": "npx prisma generate",
+			"isBackground": false
+		},
+		{
+			"label": "prisma-generate",
+			"type": "shell",
+			"command": "npx prisma generate",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

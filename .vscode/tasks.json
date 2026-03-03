@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "prisma-generate",
+			"type": "shell",
+			"command": "cd backend && npx prisma generate",
+			"isBackground": false
+		}
+	]
+}

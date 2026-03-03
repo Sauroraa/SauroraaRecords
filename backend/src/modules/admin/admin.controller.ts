@@ -2,6 +2,7 @@ import {
   Body, Controller, Delete, Get, NotFoundException,
   Patch, Param, BadRequestException, UseGuards
 } from "@nestjs/common";
+import { IsEnum } from "class-validator";
 import { SubscriptionPlan } from "@prisma/client";
 import { UserRole } from "@prisma/client";
 import { PrismaService } from "../../prisma.service";
@@ -9,7 +10,10 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
 import { Roles } from "../../common/roles.decorator";
 
-class ChangeRoleDto { role!: UserRole; }
+class ChangeRoleDto {
+  @IsEnum(UserRole)
+  role!: UserRole;
+}
 class UpdateAgencyDto { displayName?: string; }
 class UpdateUserDto {
   email?: string;
