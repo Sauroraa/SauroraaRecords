@@ -145,8 +145,9 @@ model Agency {
   displayName String?
   logoPath    String?
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  artists AgencyArtist[]
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artists     AgencyArtist[]
+  invitations AgencyInvitation[]
 }
 
 model AgencyArtist {
@@ -416,3 +417,18 @@ model AgencyRequest {
   status    AgencyRequestStatus @default(PENDING)
   createdAt DateTime            @default(now())
 }
+
+// ─── Agency Artist Invitations ────────────────────────────────────────────────
+
+model AgencyInvitation {
+  id        String   @id @default(cuid())
+  agencyId  String
+  email     String
+  token     String   @unique @default(cuid())
+  accepted  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
+

@@ -26,6 +26,7 @@ import { AgencyModule } from "./modules/agency/agency.module";
 import { AdminController } from "./modules/admin/admin.controller";
 import { UploadModule } from "./modules/upload/upload.module";
 import { UsersModule } from "./modules/users/users.module";
+import { EmailModule } from "./modules/email/email.module";
 
 @Module({
   imports: [
@@ -55,7 +56,8 @@ import { UsersModule } from "./modules/users/users.module";
     TipsModule,
     RankingsModule,
     SubscriptionsModule,
-    AgencyModule
+    AgencyModule,
+    EmailModule
   ],
   controllers: [AdminController],
   providers: [

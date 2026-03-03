@@ -3,13 +3,15 @@ import { JwtService } from "@nestjs/jwt";
 import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "../../prisma.service";
+import { EmailService } from "../email/email.service";
 import { LoginDto, RegisterDto } from "./dto";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly emailService: EmailService
   ) {}
 
   async register(dto: RegisterDto) {
@@ -41,9 +43,11 @@ export class AuthService {
       await this.prisma.artist.create({ data: { userId: user.id } });
     }
     if (dto.role === UserRole.AGENCY) {
-      // create an agency record for this user
       await this.prisma.agency.create({ data: { userId: user.id } });
     }
+
+    // Fire-and-forget welcome email
+    void this.emailService.sendWelcome(user.email, dto.firstName);
 
     return this.buildTokens(user.id, user.email, user.role);
   }
