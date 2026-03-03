@@ -41,6 +41,7 @@ class AgencyProfileDto {
 class UpdateProfileDto {
   @IsOptional() @IsString() firstName?: string;
   @IsOptional() @IsString() lastName?: string;
+  @IsOptional() @IsString() avatarUrl?: string;
   @IsOptional() @IsDateString() dateOfBirth?: string;
   @IsOptional() @IsString() addressLine1?: string;
   @IsOptional() @IsString() addressLine2?: string;
@@ -119,6 +120,7 @@ export class UsersController {
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
+        avatarUrl: dto.avatarUrl,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         addressLine1: dto.addressLine1,
         addressLine2: dto.addressLine2,

@@ -60,6 +60,7 @@ model User {
   role           UserRole  @default(CLIENT)
   firstName      String?
   lastName       String?
+  avatarUrl      String?
   dateOfBirth    DateTime?
   addressLine1   String?
   addressLine2   String?

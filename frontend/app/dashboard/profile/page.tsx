@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User, MapPin, Building2, Mic2, Lock, Save, CheckCircle2,
-  Instagram, Globe, Music, Hash, CreditCard
+  Instagram, Globe, Music, Hash, CreditCard, Camera, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ interface UserProfile {
   role: string;
   firstName?: string | null;
   lastName?: string | null;
+  avatarUrl?: string | null;
   dateOfBirth?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
@@ -50,12 +51,17 @@ interface UserProfile {
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saved, setSaved] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Form state — personal
   const [firstName, setFirstName] = useState("");
@@ -117,12 +123,35 @@ export default function ProfilePage() {
       .catch(() => toast.error("Impossible de charger le profil"));
   }, [user, router]);
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API}/upload/cover`, { method: "POST", credentials: "include", body: fd });
+    if (!res.ok) throw new Error("Upload failed");
+    return ((await res.json()) as { path: string }).path;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
+      let avatarUrl = profile?.avatarUrl ?? undefined;
+      let logoPath = profile?.agency?.logoPath ?? undefined;
+
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadFile(avatarFile);
+        setAvatarFile(null);
+        setUploadingAvatar(false);
+      }
+      if (logoFile) {
+        logoPath = await uploadFile(logoFile);
+        setLogoFile(null);
+      }
+
       const body: Record<string, unknown> = {
         firstName, lastName,
+        avatarUrl: avatarUrl || undefined,
         dateOfBirth: dateOfBirth || undefined,
         addressLine1: addressLine1 || undefined,
         addressLine2: addressLine2 || undefined,
@@ -146,7 +175,17 @@ export default function ProfilePage() {
         };
       }
       if (profile?.agency) {
-        body.agency = { displayName: agencyDisplayName || undefined };
+        // logoPath saved directly via PATCH /agency/me
+        if (logoPath !== profile.agency.logoPath) {
+          await fetch(`${API}/agency/me`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ displayName: agencyDisplayName || undefined, logoPath })
+          });
+        } else {
+          body.agency = { displayName: agencyDisplayName || undefined };
+        }
       }
       const res = await fetch(`${API}/users/me`, {
         method: "PATCH",
@@ -202,15 +241,41 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8 max-w-2xl">
-      {/* Header */}
+      {/* Hidden file inputs */}
+      <input ref={avatarRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden"
+        onChange={(e) => e.target.files?.[0] && setAvatarFile(e.target.files[0])} />
+      <input ref={logoRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden"
+        onChange={(e) => e.target.files?.[0] && setLogoFile(e.target.files[0])} />
+
+      {/* Header with avatar */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet/15 border border-violet/30">
-            <User className="h-5 w-5 text-violet-light" />
+        <div className="flex items-center gap-5">
+          {/* Avatar */}
+          <div
+            onClick={() => avatarRef.current?.click()}
+            className="relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-full border-2 border-[rgba(255,255,255,0.12)] bg-surface2 hover:border-violet/40 transition-colors group"
+          >
+            {avatarFile || profile.avatarUrl ? (
+              <img
+                src={avatarFile ? URL.createObjectURL(avatarFile) : `${API.replace("/api", "")}${profile.avatarUrl}`}
+                alt="avatar"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <User className="h-8 w-8 text-cream/20" />
+              </div>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+            </div>
           </div>
           <div>
             <h1 className="text-2xl font-bold text-cream">Mon profil</h1>
-            <p className="text-xs text-cream/40">{profile.email} · <span className="text-violet-light uppercase text-[10px] font-bold tracking-widest">{role}</span></p>
+            <p className="text-xs text-cream/40 mt-0.5">{profile.email} · <span className="text-violet-light uppercase text-[10px] font-bold tracking-widest">{role}</span></p>
+            <button type="button" onClick={() => avatarRef.current?.click()} className="mt-1 text-xs text-violet-light hover:underline">
+              {avatarFile ? `${avatarFile.name}` : "Changer la photo"}
+            </button>
           </div>
         </div>
       </motion.div>
@@ -356,6 +421,29 @@ export default function ProfilePage() {
           <Section icon={Building2} title="Profil Agence" delay={0.2}>
             <Field label="Nom de l'agence / label">
               <Input placeholder="Mon Label Music" value={agencyDisplayName} onChange={(e) => setAgencyDisplayName(e.target.value)} />
+            </Field>
+            <Field label="Logo de l'agence">
+              <div
+                onClick={() => logoRef.current?.click()}
+                className="flex cursor-pointer items-center gap-4 rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-surface2 p-3 hover:border-violet/30 transition-colors"
+              >
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface flex items-center justify-center">
+                  {logoFile || profile?.agency?.logoPath ? (
+                    <img
+                      src={logoFile ? URL.createObjectURL(logoFile) : `${API.replace("/api", "")}${profile?.agency?.logoPath}`}
+                      alt="logo"
+                      className="h-12 w-12 object-cover"
+                    />
+                  ) : (
+                    <Building2 className="h-5 w-5 text-cream/20" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-cream/70">{logoFile ? logoFile.name : "Choisir un logo"}</p>
+                  <p className="text-xs text-cream/30 mt-0.5">JPG, PNG, WebP · max 5MB</p>
+                </div>
+                <Camera className="ml-auto h-4 w-4 text-cream/30" />
+              </div>
             </Field>
           </Section>
         )}

@@ -47,6 +47,10 @@ class UpdateAgencyDto {
   @IsOptional()
   @IsString()
   displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  logoPath?: string;
 }
 
 class AgencyRequestDto {
@@ -141,7 +145,7 @@ export class AgencyController {
 
     return this.prisma.agency.update({
       where: { id: agency.id },
-      data: { displayName: dto.displayName }
+      data: { displayName: dto.displayName, logoPath: dto.logoPath }
     });
   }
 

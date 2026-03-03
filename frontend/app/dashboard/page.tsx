@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -278,33 +278,73 @@ function NotificationsTab() {
 function ProfileTab() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [currentPassword, setCurrentPassword] = useState("");
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/users/me`, { credentials: "include" });
+        if (res.ok) {
+          const data = (await res.json()) as { firstName?: string | null; lastName?: string | null; avatarUrl?: string | null };
+          setFirstName(data.firstName ?? "");
+          setLastName(data.lastName ?? "");
+          setAvatarUrl(data.avatarUrl ?? null);
+        }
+      } catch {}
+    })();
+  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const body: Record<string, string> = {};
-      if (email !== user?.email) body.email = email;
-      if (currentPassword && newPassword) {
-        body.currentPassword = currentPassword;
-        body.newPassword = newPassword;
+      let uploadedAvatar = avatarUrl;
+      if (avatarFile) {
+        const fd = new FormData();
+        fd.append("file", avatarFile);
+        const upRes = await fetch(`${API}/upload/cover`, { method: "POST", credentials: "include", body: fd });
+        if (upRes.ok) {
+          uploadedAvatar = ((await upRes.json()) as { path: string }).path;
+          setAvatarUrl(uploadedAvatar);
+          setAvatarFile(null);
+        }
       }
-      const res = await fetch(`${API}/auth/profile`, {
+      const body: Record<string, string | undefined> = {
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        avatarUrl: uploadedAvatar ?? undefined
+      };
+      const res = await fetch(`${API}/users/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error();
-      toast.success("Profile updated");
-      setCurrentPassword("");
-      setNewPassword("");
+
+      if (newPassword) {
+        if (newPassword !== confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); setSaving(false); return; }
+        if (newPassword.length < 8) { toast.error("8 caractères minimum"); setSaving(false); return; }
+        await fetch(`${API}/users/me/password`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ newPassword })
+        });
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+      toast.success("Profil mis à jour !");
     } catch {
-      toast.error("Failed to update profile");
+      toast.error("Erreur lors de la sauvegarde");
     } finally {
       setSaving(false);
     }
@@ -317,51 +357,93 @@ function ProfileTab() {
 
   return (
     <div className="max-w-md space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-cream/60">Email</label>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
-        </div>
+      <input ref={avatarRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden"
+        onChange={(e) => e.target.files?.[0] && setAvatarFile(e.target.files[0])} />
 
-        <div className="border-t border-[rgba(255,255,255,0.06)] pt-4 space-y-3">
-          <p className="text-xs font-medium text-cream/60">Change Password</p>
-          <Input
-            type="password"
-            placeholder="Current password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-          />
-          <div className="relative">
-            <Input
-              type={showPass ? "text" : "password"}
-              placeholder="New password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+      {/* Avatar */}
+      <div className="flex items-center gap-4">
+        <div
+          onClick={() => avatarRef.current?.click()}
+          className="relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-full border-2 border-[rgba(255,255,255,0.12)] bg-surface2 hover:border-violet/40 transition-colors group"
+        >
+          {avatarFile || avatarUrl ? (
+            <img
+              src={avatarFile ? URL.createObjectURL(avatarFile) : `${API.replace("/api", "")}${avatarUrl}`}
+              alt="avatar"
+              className="h-full w-full object-cover"
             />
-            <button
-              onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 hover:text-cream/70"
-            >
-              {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <User className="h-6 w-6 text-cream/20" />
+            </div>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+            <User className="h-4 w-4 text-white" />
           </div>
         </div>
+        <div>
+          <p className="text-sm font-medium text-cream">{user?.email}</p>
+          <p className="text-xs text-cream/40">Role: {user?.role}</p>
+          <button type="button" onClick={() => avatarRef.current?.click()} className="mt-1 text-xs text-violet-light hover:underline">
+            Changer la photo
+          </button>
+        </div>
+      </div>
 
-        <Button onClick={() => void handleSave()} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
+      {/* Name */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Prénom</label>
+          <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jean" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Nom</label>
+          <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Dupont" />
+        </div>
+      </div>
+
+      {/* Full profile link */}
+      <div className="rounded-[10px] border border-[rgba(255,255,255,0.06)] bg-surface p-3.5 flex items-center justify-between">
+        <p className="text-sm text-cream/60">Adresse, facturation, préférences…</p>
+        <Button size="sm" variant="outline" asChild>
+          <Link href="/dashboard/profile">Profil complet →</Link>
         </Button>
       </div>
 
-      <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-cream">Account</p>
-            <p className="text-xs text-cream/40">Role: {user?.role}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => void handleLogout()} className="gap-1.5 text-cream/60 hover:text-cream">
-            <LogOut className="h-4 w-4" /> Sign Out
-          </Button>
+      {/* Password */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-cream/60">Changer le mot de passe</p>
+        <div className="relative">
+          <Input
+            type={showPass ? "text" : "password"}
+            placeholder="Nouveau mot de passe (8 car. min)"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <button
+            onClick={() => setShowPass(!showPass)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 hover:text-cream/70"
+          >
+            {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
         </div>
+        {newPassword && (
+          <Input
+            type="password"
+            placeholder="Confirmer le mot de passe"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={() => void handleSave()} disabled={saving} className="flex-1">
+          {saving ? "Sauvegarde…" : "Sauvegarder"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => void handleLogout()} className="gap-1.5 text-cream/60 hover:text-cream">
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

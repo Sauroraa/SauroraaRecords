@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Disc3,
   Package,
-  Sparkles
+  Sparkles,
+  Camera,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +63,7 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
 
 export default function AgencyDashboard() {
   const { user } = useAuthStore();
+  const logoRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [agency, setAgency] = useState<AgencyData | null>(null);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -68,11 +71,12 @@ export default function AgencyDashboard() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
-    void loadAgency();
-  }, []);
+    if (user && user.role === "AGENCY") void loadAgency();
+  }, [user]);
 
   async function loadAgency() {
     setLoading(true);
@@ -166,14 +170,24 @@ export default function AgencyDashboard() {
   async function handleSaveSettings() {
     setSavingSettings(true);
     try {
+      let logoPath = agency?.logoPath ?? undefined;
+      if (logoFile) {
+        const fd = new FormData();
+        fd.append("file", logoFile);
+        const upRes = await fetch(`${API}/upload/cover`, { method: "POST", credentials: "include", body: fd });
+        if (upRes.ok) {
+          logoPath = ((await upRes.json()) as { path: string }).path;
+          setLogoFile(null);
+        }
+      }
       const res = await fetch(`${API}/agency/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ displayName })
+        body: JSON.stringify({ displayName, logoPath })
       });
       if (!res.ok) throw new Error("Erreur");
-      setAgency((prev) => (prev ? { ...prev, displayName } : prev));
+      setAgency((prev) => (prev ? { ...prev, displayName, logoPath: logoPath ?? null } : prev));
       toast.success("Paramètres sauvegardés");
     } catch {
       toast.error("Erreur lors de la sauvegarde");
@@ -571,8 +585,37 @@ export default function AgencyDashboard() {
           {/* ── PARAMÈTRES ──────────────────────────────────────────────── */}
           {tab === "settings" && (
             <div className="space-y-4">
+              <input ref={logoRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden"
+                onChange={(e) => e.target.files?.[0] && setLogoFile(e.target.files[0])} />
+
               <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-6 space-y-5">
                 <h2 className="font-semibold text-cream">Profil de l'agence</h2>
+
+                {/* Logo */}
+                <div className="space-y-2">
+                  <label className="text-xs text-cream/50 uppercase tracking-widest">Logo</label>
+                  <div
+                    onClick={() => logoRef.current?.click()}
+                    className="flex cursor-pointer items-center gap-4 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-surface2 p-3 hover:border-violet/30 transition-colors"
+                  >
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface flex items-center justify-center">
+                      {logoFile || agency?.logoPath ? (
+                        <img
+                          src={logoFile ? URL.createObjectURL(logoFile) : `${API.replace("/api", "")}${agency?.logoPath}`}
+                          alt="logo"
+                          className="h-14 w-14 object-cover"
+                        />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-cream/20" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-cream/70">{logoFile ? logoFile.name : "Choisir un logo"}</p>
+                      <p className="text-xs text-cream/30 mt-0.5">JPG, PNG, WebP · max 5MB</p>
+                    </div>
+                    <Camera className="h-4 w-4 text-cream/30" />
+                  </div>
+                </div>
 
                 <div className="space-y-2">
                   <label className="text-xs text-cream/50 uppercase tracking-widest">
