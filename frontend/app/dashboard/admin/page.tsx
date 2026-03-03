@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Disc3, Users, TrendingUp, FileText, Tag, Trophy,
   Check, X, Search, Plus, Trash2, Edit3, Crown,
-  Building2, Mail
+  Building2, Mail, CreditCard
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -17,12 +17,13 @@ import type { ReleaseItem, DubpackItem, RankingItem } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-type Tab = "releases" | "users" | "agencies" | "revenue" | "invoices" | "promo-codes" | "rankings";
+type Tab = "releases" | "users" | "agencies" | "subscriptions" | "revenue" | "invoices" | "promo-codes" | "rankings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "releases", label: "Releases", icon: <Disc3 className="h-4 w-4" /> },
   { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
   { id: "agencies", label: "Agences", icon: <Building2 className="h-4 w-4" /> },
+  { id: "subscriptions", label: "Abonnements", icon: <CreditCard className="h-4 w-4" /> },
   { id: "revenue", label: "Revenue", icon: <TrendingUp className="h-4 w-4" /> },
   { id: "invoices", label: "Invoices", icon: <FileText className="h-4 w-4" /> },
   { id: "promo-codes", label: "Promo Codes", icon: <Tag className="h-4 w-4" /> },
@@ -667,6 +668,172 @@ function AgenciesTab() {
   );
 }
 
+// ─── Subscriptions ─────────────────────────────────────────────────────────────
+
+const PLANS = ["ARTIST_FREE", "ARTIST_BASIC", "ARTIST_PRO", "AGENCY_START", "AGENCY_PRO"];
+
+type AdminSub = {
+  id: string;
+  userId: string;
+  plan: string;
+  status: string;
+  currentPeriodEnd?: string | null;
+  createdAt: string;
+  user: { id: string; email: string; firstName?: string | null; lastName?: string | null; role: string };
+};
+
+function SubscriptionsTab() {
+  const [subs, setSubs] = useState<AdminSub[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [addForm, setAddForm] = useState({ userId: "", plan: "ARTIST_BASIC" });
+  const [users, setUsers] = useState<{ id: string; email: string; role: string }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [subRes, userRes] = await Promise.all([
+          fetch(`${API}/admin/subscriptions`, { credentials: "include" }),
+          fetch(`${API}/admin/users`, { credentials: "include" })
+        ]);
+        if (subRes.ok) setSubs((await subRes.json()) as AdminSub[]);
+        if (userRes.ok) setUsers((await userRes.json()) as typeof users);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const changePlan = async (userId: string, plan: string) => {
+    try {
+      const res = await fetch(`${API}/admin/users/${userId}/subscription`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ plan })
+      });
+      if (!res.ok) throw new Error();
+      setSubs((prev) => prev.map((s) => s.userId === userId ? { ...s, plan } : s));
+      toast.success("Plan mis à jour");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
+
+  const cancelSub = async (userId: string) => {
+    if (!confirm("Annuler cet abonnement ?")) return;
+    try {
+      const res = await fetch(`${API}/admin/users/${userId}/subscription`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error();
+      setSubs((prev) => prev.filter((s) => s.userId !== userId));
+      toast.success("Abonnement annulé");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!addForm.userId) return;
+    setAdding(true);
+    try {
+      const res = await fetch(`${API}/admin/users/${addForm.userId}/subscription`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ plan: addForm.plan })
+      });
+      if (!res.ok) throw new Error();
+      const user = users.find((u) => u.id === addForm.userId);
+      setSubs((prev) => {
+        const exists = prev.find((s) => s.userId === addForm.userId);
+        if (exists) return prev.map((s) => s.userId === addForm.userId ? { ...s, plan: addForm.plan } : s);
+        return [{ id: Date.now().toString(), userId: addForm.userId, plan: addForm.plan, status: "active", createdAt: new Date().toISOString(), user: { id: addForm.userId, email: user?.email ?? "", role: user?.role ?? "", firstName: null, lastName: null } }, ...prev];
+      });
+      toast.success("Abonnement assigné");
+      setAddForm({ userId: "", plan: "ARTIST_BASIC" });
+    } catch {
+      toast.error("Erreur");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const filtered = subs.filter((s) => {
+    const q = search.toLowerCase();
+    return s.user.email.toLowerCase().includes(q) || s.plan.toLowerCase().includes(q);
+  });
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-5">
+      {/* Assign subscription */}
+      <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-3">
+        <p className="text-sm font-medium text-cream">Assigner un abonnement</p>
+        <div className="flex gap-3 flex-wrap">
+          <select
+            value={addForm.userId}
+            onChange={(e) => setAddForm({ ...addForm, userId: e.target.value })}
+            className="flex-1 min-w-0 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream/80 focus:outline-none focus:ring-2 focus:ring-violet/50"
+          >
+            <option value="">Sélectionner un utilisateur…</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.email} ({u.role})</option>
+            ))}
+          </select>
+          <select
+            value={addForm.plan}
+            onChange={(e) => setAddForm({ ...addForm, plan: e.target.value })}
+            className="rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream/80 focus:outline-none focus:ring-2 focus:ring-violet/50"
+          >
+            {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <Button onClick={() => void handleAdd()} disabled={adding || !addForm.userId} size="sm" className="gap-1.5 shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Assigner
+          </Button>
+        </div>
+      </div>
+
+      {/* Search + list */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cream/30" />
+        <Input placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      </div>
+
+      {!filtered.length ? (
+        <EmptyState message="Aucun abonnement actif" />
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((s) => (
+            <div key={s.id} className="flex items-center justify-between gap-4 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-cream truncate">{s.user.email}</p>
+                <p className="text-xs text-cream/40 mt-0.5">
+                  {s.user.role} · depuis {new Date(s.createdAt).toLocaleDateString("fr-BE")}
+                  {s.currentPeriodEnd ? ` · expire ${new Date(s.currentPeriodEnd).toLocaleDateString("fr-BE")}` : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <select
+                  value={s.plan}
+                  onChange={(e) => void changePlan(s.userId, e.target.value)}
+                  className="text-xs rounded-[6px] border border-[rgba(255,255,255,0.12)] bg-surface2 px-2 py-1 text-cream/70 focus:outline-none"
+                >
+                  {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <Badge variant={s.status === "active" ? "green" : "gray"}>{s.status}</Badge>
+                <Button size="sm" variant="ghost" onClick={() => void cancelSub(s.userId)} className="h-7 w-7 p-0 text-red-400/60 hover:text-red-400">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function LoadingSpinner() {
@@ -702,6 +869,7 @@ export default function AdminDashboard() {
     releases: <ReleasesTab />,
     users: <UsersTab />,
     agencies: <AgenciesTab />,
+    subscriptions: <SubscriptionsTab />,
     revenue: <AdminRevenueTab />,
     invoices: <InvoicesTab />,
     "promo-codes": <PromoCodesTab />,

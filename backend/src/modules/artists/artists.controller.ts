@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Put, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
-import { IsOptional, IsString } from "class-validator";
+import { IsArray, IsBoolean, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
@@ -16,6 +16,11 @@ class UpdateArtistDto {
   @IsOptional() @IsString() soundcloudUrl?: string;
   @IsOptional() @IsString() discordUrl?: string;
   @IsOptional() @IsString() websiteUrl?: string;
+}
+
+class DownloadConfigDto {
+  @IsOptional() @IsBoolean() enabled?: boolean;
+  @IsOptional() @IsArray() requiredActions?: string[];
 }
 
 const ARTIST_FULL_INCLUDE = {
@@ -68,6 +73,50 @@ export class ArtistsController {
       totalReleases: releases,
       totalFollowers: followers
     };
+  }
+
+  @Get("me/download-config")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async getDownloadConfig(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) return { enabled: false, requiredActions: [] };
+    const config = await this.prisma.artistDownloadConfig.findUnique({ where: { artistId: artist.id } });
+    return config ?? { enabled: false, requiredActions: [] };
+  }
+
+  @Put("me/download-config")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async updateDownloadConfig(
+    @Req() req: Request & { user?: { userId: string } },
+    @Body() dto: DownloadConfigDto
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) return { enabled: false, requiredActions: [] };
+    return this.prisma.artistDownloadConfig.upsert({
+      where: { artistId: artist.id },
+      update: { enabled: dto.enabled ?? true, requiredActions: dto.requiredActions ?? [] },
+      create: { artistId: artist.id, enabled: dto.enabled ?? true, requiredActions: dto.requiredActions ?? [] }
+    });
+  }
+
+  @Get("me/revenue")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async getRevenue(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) return [];
+    const revenues = await this.prisma.artistRevenue.findMany({
+      where: { artistId: artist.id },
+      orderBy: { month: "asc" }
+    });
+    return revenues.map((r) => ({
+      month: r.month,
+      gross: Number(r.totalSales),
+      net: Number(r.netDue),
+      label: Number(r.commission)
+    }));
   }
 
   @Patch("me")

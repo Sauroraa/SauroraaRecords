@@ -2,6 +2,7 @@ import {
   Body, Controller, Delete, Get, NotFoundException,
   Patch, Param, BadRequestException, UseGuards
 } from "@nestjs/common";
+import { SubscriptionPlan } from "@prisma/client";
 import { UserRole } from "@prisma/client";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -230,5 +231,42 @@ export class AdminController {
   @Patch("invoices/:id/paid")
   async markInvoicePaid(@Param("id") id: string) {
     return this.prisma.artistRevenue.update({ where: { id }, data: { status: "PAID" } });
+  }
+
+  // ─── Subscriptions ─────────────────────────────────────────────────────────
+
+  @Get("subscriptions")
+  async listSubscriptions() {
+    return this.prisma.subscription.findMany({
+      include: {
+        user: { select: { id: true, email: true, firstName: true, lastName: true, role: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  @Patch("users/:id/subscription")
+  async upsertSubscription(
+    @Param("id") id: string,
+    @Body() dto: { plan: string; status?: string }
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    if (!Object.values(SubscriptionPlan).includes(dto.plan as SubscriptionPlan)) {
+      throw new BadRequestException("Invalid plan");
+    }
+    return this.prisma.subscription.upsert({
+      where: { userId: id },
+      update: { plan: dto.plan as SubscriptionPlan, status: dto.status ?? "active" },
+      create: { userId: id, plan: dto.plan as SubscriptionPlan, status: dto.status ?? "active" }
+    });
+  }
+
+  @Delete("users/:id/subscription")
+  async deleteSubscription(@Param("id") id: string) {
+    const sub = await this.prisma.subscription.findUnique({ where: { userId: id } });
+    if (!sub) throw new NotFoundException("No subscription found");
+    await this.prisma.subscription.delete({ where: { userId: id } });
+    return { success: true };
   }
 }
