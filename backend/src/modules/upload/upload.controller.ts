@@ -14,12 +14,13 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { UploadService } from "./upload.service";
 
 @Controller("upload")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ARTIST, UserRole.ADMIN)
+@UseGuards(JwtAuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post("audio")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),
@@ -52,6 +53,8 @@ export class UploadController {
   }
 
   @Post("zip")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),

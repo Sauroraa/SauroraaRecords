@@ -43,6 +43,19 @@ export class FreeDownloadsController {
     private readonly jwtService: JwtService
   ) {}
 
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  async myDownloads(@Req() req: Request & { user?: { userId: string } }) {
+    return this.prisma.freeDownloadSession.findMany({
+      where: { userId: req.user!.userId },
+      include: {
+        release: { select: { title: true, slug: true, coverPath: true } },
+        dubpack: { select: { title: true, slug: true, coverPath: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
   @Post("session")
   @UseGuards(JwtAuthGuard)
   async initSession(

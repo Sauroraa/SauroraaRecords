@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { Type } from "class-transformer";
 import { IsArray, IsNumber, IsString, ValidateNested } from "class-validator";
@@ -6,6 +6,7 @@ import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { Request } from "express";
 
 class ItemDto {
   @IsString()
@@ -29,6 +30,22 @@ class CreateOrderDto {
 @Controller("orders")
 export class OrdersController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  async getMyOrders(@Req() req: Request & { user?: { userId: string } }) {
+    return this.prisma.order.findMany({
+      where: { userId: req.user!.userId },
+      include: {
+        items: {
+          include: {
+            release: { select: { title: true, slug: true, coverPath: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

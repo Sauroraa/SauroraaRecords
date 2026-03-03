@@ -314,6 +314,18 @@ function OverviewTab() {
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
+const PLAN_LABELS: Record<string, { name: string; price: string; color: string }> = {
+  ARTIST_FREE:  { name: "Free",  price: "0 €/mois",    color: "text-foreground" },
+  ARTIST_BASIC: { name: "Basic", price: "4,99 €/mois", color: "text-violet-500" },
+  ARTIST_PRO:   { name: "Pro",   price: "9,99 €/mois", color: "text-yellow-500" }
+};
+
+const PLAN_FEATURES: Record<string, string[]> = {
+  ARTIST_FREE:  ["1 release par mois", "Partage 70/30", "HypeEdit gate"],
+  ARTIST_BASIC: ["Releases illimitées", "Partage 80/20", "HypeEdit gate", "Support prioritaire"],
+  ARTIST_PRO:   ["Releases illimitées", "Partage 90/10", "HypeEdit gate", "Support prioritaire", "Badge Vérifié"]
+};
+
 function SubscriptionTab() {
   const [sub, setSub] = useState<{ id: string; plan: string; status: string; currentPeriodEnd?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -323,10 +335,10 @@ function SubscriptionTab() {
     void (async () => {
       try {
         const res = await fetch(`${API}/subscriptions/me`, { credentials: "include" });
-        if (res.ok) {
-          setSub(await res.json());
-        }
-      } catch {} finally {
+        if (res.ok) setSub(await res.json());
+      } catch {
+        // no subscription
+      } finally {
         setLoading(false);
       }
     })();
@@ -339,42 +351,118 @@ function SubscriptionTab() {
       const res = await fetch(`${API}/subscriptions/me`, { method: "DELETE", credentials: "include" });
       if (res.ok) {
         setSub(null);
-        toast.success("Subscription canceled");
+        toast.success("Abonnement annulé");
       } else {
-        toast.error("Could not cancel subscription");
+        toast.error("Impossible d'annuler l'abonnement");
       }
     } catch {
-      toast.error("Could not cancel subscription");
+      toast.error("Impossible d'annuler l'abonnement");
     } finally {
       setCanceling(false);
     }
   };
 
   if (loading) {
-    return <p>Loading subscription...</p>;
-  }
-
-  if (!sub) {
     return (
-      <div className="space-y-4">
-        <p>You do not currently have an active plan.</p>
-        <Button asChild>
-          <a href="/pricing">Choose a plan</a>
-        </Button>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Chargement…</span>
       </div>
     );
   }
 
+  if (!sub) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-1">Mon abonnement</h2>
+          <p className="text-muted-foreground text-sm">Vous n'avez pas encore de plan actif.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {(["ARTIST_FREE", "ARTIST_BASIC", "ARTIST_PRO"] as const).map((plan) => {
+            const meta = PLAN_LABELS[plan];
+            const features = PLAN_FEATURES[plan];
+            return (
+              <div key={plan} className={`rounded-xl border p-5 space-y-4 ${plan === "ARTIST_BASIC" ? "border-violet-500 ring-1 ring-violet-500/30" : "border-border"}`}>
+                <div>
+                  <p className={`text-lg font-bold ${meta.color}`}>{meta.name}</p>
+                  <p className="text-2xl font-black mt-1">{meta.price}</p>
+                </div>
+                <ul className="space-y-1.5">
+                  {features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild size="sm" className="w-full" variant={plan === "ARTIST_BASIC" ? "default" : "outline"}>
+                  <a href="/pricing">Choisir {meta.name}</a>
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const meta = PLAN_LABELS[sub.plan] ?? { name: sub.plan, price: "—", color: "text-foreground" };
+  const features = PLAN_FEATURES[sub.plan] ?? [];
+  const isActive = sub.status === "active";
+
   return (
-    <div className="space-y-4">
-      <p>Your current plan: <strong>{sub.plan}</strong></p>
-      <p>Status: {sub.status}</p>
-      {sub.currentPeriodEnd && <p>Expires: {new Date(sub.currentPeriodEnd).toLocaleDateString()}</p>}
-      {sub.status === "active" && (
-        <Button variant="destructive" onClick={handleCancel} disabled={canceling}>
-          {canceling ? "Canceling…" : "Cancel subscription"}
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-1">Mon abonnement</h2>
+        <p className="text-muted-foreground text-sm">Gérez votre plan et vos avantages.</p>
+      </div>
+
+      {/* Current plan card */}
+      <div className="rounded-xl border border-violet-500/40 bg-violet-500/5 p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Plan actuel</p>
+            <p className={`text-3xl font-black ${meta.color}`}>{meta.name}</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{meta.price}</p>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${isActive ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-green-500" : "bg-muted-foreground"}`} />
+            {isActive ? "Actif" : sub.status}
+          </span>
+        </div>
+
+        {features.length > 0 && (
+          <ul className="grid sm:grid-cols-2 gap-2">
+            {features.map((f) => (
+              <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {sub.currentPeriodEnd && (
+          <p className="text-xs text-muted-foreground border-t border-border pt-3">
+            Renouvellement / expiration le{" "}
+            <strong className="text-foreground">
+              {new Date(sub.currentPeriodEnd).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            </strong>
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button asChild variant="outline" size="sm">
+          <a href="/pricing">Changer de plan</a>
         </Button>
-      )}
+        {isActive && (
+          <Button variant="destructive" size="sm" onClick={handleCancel} disabled={canceling}>
+            {canceling ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Annulation…</> : "Annuler l'abonnement"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

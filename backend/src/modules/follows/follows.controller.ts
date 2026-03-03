@@ -15,6 +15,24 @@ import { Request } from "express";
 export class FollowsController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  async myFollows(@Req() req: Request & { user?: { userId: string } }) {
+    const follows = await this.prisma.follow.findMany({
+      where: { followerId: req.user!.userId },
+      include: {
+        artist: {
+          include: {
+            user: { select: { email: true, avatarUrl: true } },
+            _count: { select: { followers: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    return follows.map((f) => f.artist);
+  }
+
   @Get("artist/:artistId")
   async getFollowInfo(
     @Param("artistId") artistId: string,
