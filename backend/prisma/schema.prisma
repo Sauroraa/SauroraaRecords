@@ -140,10 +140,11 @@ model Subscription {
 // ─── Agency ───────────────────────────────────────────────────────────────────
 
 model Agency {
-  id          String  @id @default(cuid())
-  userId      String  @unique
+  id          String   @id @default(cuid())
+  userId      String   @unique
   displayName String?
   logoPath    String?
+  createdAt   DateTime @default(now())
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   artists     AgencyArtist[]

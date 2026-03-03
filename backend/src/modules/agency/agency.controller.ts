@@ -77,11 +77,22 @@ export class AgencyController {
     private readonly emailService: EmailService
   ) {}
 
+  /** Ensures an Agency row exists for this user (auto-create on first access). */
+  private async ensureAgency(userId: string) {
+    return this.prisma.agency.upsert({
+      where: { userId },
+      create: { userId },
+      update: {}
+    });
+  }
+
   // ─── Agency profile ────────────────────────────────────────────────────────
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
   async me(@Req() req: Request & { user?: { userId: string } }) {
+    await this.ensureAgency(req.user!.userId);
+
     const agency = await this.prisma.agency.findUnique({
       where: { userId: req.user!.userId },
       include: {
@@ -126,10 +137,7 @@ export class AgencyController {
     @Body() dto: UpdateAgencyDto,
     @Req() req: Request & { user?: { userId: string } }
   ) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { userId: req.user!.userId }
-    });
-    if (!agency) throw new BadRequestException("Agency not found");
+    const agency = await this.ensureAgency(req.user!.userId);
 
     return this.prisma.agency.update({
       where: { id: agency.id },
@@ -142,10 +150,7 @@ export class AgencyController {
   @Get("invitations")
   @UseGuards(JwtAuthGuard)
   async getInvitations(@Req() req: Request & { user?: { userId: string } }) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { userId: req.user!.userId }
-    });
-    if (!agency) throw new BadRequestException("Agency not found");
+    const agency = await this.ensureAgency(req.user!.userId);
 
     return this.prisma.agencyInvitation.findMany({
       where: { agencyId: agency.id, accepted: false },
@@ -159,10 +164,7 @@ export class AgencyController {
     @Body() dto: InviteDto,
     @Req() req: Request & { user?: { userId: string } }
   ) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { userId: req.user!.userId }
-    });
-    if (!agency) throw new BadRequestException("Agency not found");
+    const agency = await this.ensureAgency(req.user!.userId);
 
     // Check not already linked
     const existing = await this.prisma.user.findUnique({
@@ -308,10 +310,7 @@ export class AgencyController {
     @Body() dto: AddArtistDto,
     @Req() req: Request & { user?: { userId: string } }
   ) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { userId: req.user!.userId }
-    });
-    if (!agency) throw new BadRequestException("Agency not found");
+    const agency = await this.ensureAgency(req.user!.userId);
 
     const targetUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -339,10 +338,7 @@ export class AgencyController {
     @Param("artistId") artistId: string,
     @Req() req: Request & { user?: { userId: string } }
   ) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { userId: req.user!.userId }
-    });
-    if (!agency) throw new BadRequestException("Agency not found");
+    const agency = await this.ensureAgency(req.user!.userId);
 
     return this.prisma.agencyArtist.deleteMany({
       where: { agencyId: agency.id, artistId }

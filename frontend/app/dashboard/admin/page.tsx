@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Disc3, Users, TrendingUp, FileText, Tag, Trophy,
-  Check, X, Search, Plus, Trash2, Edit3, Crown
+  Check, X, Search, Plus, Trash2, Edit3, Crown,
+  Building2, Mail
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -16,11 +17,12 @@ import type { ReleaseItem, DubpackItem, RankingItem } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-type Tab = "releases" | "users" | "revenue" | "invoices" | "promo-codes" | "rankings";
+type Tab = "releases" | "users" | "agencies" | "revenue" | "invoices" | "promo-codes" | "rankings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "releases", label: "Releases", icon: <Disc3 className="h-4 w-4" /> },
   { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
+  { id: "agencies", label: "Agences", icon: <Building2 className="h-4 w-4" /> },
   { id: "revenue", label: "Revenue", icon: <TrendingUp className="h-4 w-4" /> },
   { id: "invoices", label: "Invoices", icon: <FileText className="h-4 w-4" /> },
   { id: "promo-codes", label: "Promo Codes", icon: <Tag className="h-4 w-4" /> },
@@ -496,6 +498,175 @@ function RankingsAdminTab() {
   );
 }
 
+// ─── Agencies ──────────────────────────────────────────────────────────────────
+
+type AdminAgency = {
+  id: string;
+  displayName: string | null;
+  createdAt: string;
+  user: { id: string; email: string; firstName?: string | null; lastName?: string | null; createdAt: string };
+  _count: { artists: number; invitations: number };
+};
+
+function AgenciesTab() {
+  const [agencies, setAgencies] = useState<AdminAgency[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/admin/agencies`, { credentials: "include" });
+        if (res.ok) setAgencies((await res.json()) as AdminAgency[]);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const startEdit = (ag: AdminAgency) => {
+    setEditing(ag.id);
+    setEditName(ag.displayName ?? "");
+  };
+
+  const saveEdit = async (id: string) => {
+    try {
+      const res = await fetch(`${API}/admin/agencies/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ displayName: editName })
+      });
+      if (!res.ok) throw new Error();
+      setAgencies((prev) => prev.map((a) => a.id === id ? { ...a, displayName: editName } : a));
+      toast.success("Agence mise à jour");
+    } catch {
+      toast.error("Erreur");
+    } finally {
+      setEditing(null);
+    }
+  };
+
+  const deleteAgency = async (id: string, name: string | null) => {
+    if (!confirm(`Supprimer l'agence "${name ?? id}" ? Le compte sera rétrogradé en CLIENT.`)) return;
+    try {
+      const res = await fetch(`${API}/admin/agencies/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error();
+      setAgencies((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Agence supprimée");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
+
+  const filtered = agencies.filter((a) => {
+    const q = search.toLowerCase();
+    return (
+      (a.displayName?.toLowerCase().includes(q) ?? false) ||
+      a.user.email.toLowerCase().includes(q)
+    );
+  });
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cream/30" />
+          <Input
+            placeholder="Rechercher une agence..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <span className="shrink-0 text-xs text-cream/40">{agencies.length} agence{agencies.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {!filtered.length ? (
+        <EmptyState message="Aucune agence enregistrée" />
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((ag) => (
+            <div
+              key={ag.id}
+              className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-violet-900/40 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-violet-400" />
+                  </div>
+                  <div>
+                    {editing === ag.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && void saveEdit(ag.id)}
+                          className="h-7 text-sm py-0 w-48"
+                          autoFocus
+                        />
+                        <Button size="sm" className="h-7 px-2" onClick={() => void saveEdit(ag.id)}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditing(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="font-semibold text-cream">
+                        {ag.displayName ?? <span className="text-cream/30 italic">Sans nom</span>}
+                      </p>
+                    )}
+                    <p className="text-xs text-cream/40 mt-0.5">{ag.user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-cream/40 hover:text-cream"
+                    onClick={() => startEdit(ag)}
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-cream/30 hover:text-red-400"
+                    onClick={() => void deleteAgency(ag.id, ag.displayName)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-1">
+                <div className="flex items-center gap-1.5 rounded-md bg-white/5 px-2.5 py-1">
+                  <Users className="h-3 w-3 text-violet-400" />
+                  <span className="text-xs text-cream/60">{ag._count.artists} artiste{ag._count.artists !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-md bg-white/5 px-2.5 py-1">
+                  <Mail className="h-3 w-3 text-amber-400" />
+                  <span className="text-xs text-cream/60">{ag._count.invitations} invitation{ag._count.invitations !== 1 ? "s" : ""} en attente</span>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-md bg-white/5 px-2.5 py-1">
+                  <span className="text-xs text-cream/30">
+                    Depuis {new Date(ag.createdAt).toLocaleDateString("fr-BE")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function LoadingSpinner() {
@@ -530,6 +701,7 @@ export default function AdminDashboard() {
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     releases: <ReleasesTab />,
     users: <UsersTab />,
+    agencies: <AgenciesTab />,
     revenue: <AdminRevenueTab />,
     invoices: <InvoicesTab />,
     "promo-codes": <PromoCodesTab />,

@@ -16,7 +16,8 @@ import {
   Send,
   ChevronRight,
   Disc3,
-  Package
+  Package,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -218,6 +219,29 @@ export default function AgencyDashboard() {
           </span>
         </div>
       </div>
+
+      {/* Onboarding banner — shown until displayName is set */}
+      <AnimatePresence>
+        {!agency?.displayName && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="rounded-[14px] border border-violet-500/30 bg-violet-500/10 p-5 flex items-start gap-4"
+          >
+            <Sparkles className="h-5 w-5 text-violet-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold text-cream">Configurez votre agence</p>
+              <p className="mt-0.5 text-sm text-cream/50">
+                Donnez un nom à votre agence pour commencer à inviter des artistes et gérer votre roster.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setTab("settings")}>
+              Configurer →
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-[12px] border border-[rgba(255,255,255,0.06)] bg-surface p-1">
