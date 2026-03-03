@@ -168,6 +168,14 @@ function UploadReleaseTab() {
   const audioRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ title: "", description: "", price: "0", type: "FREE", previewClip: "" });
+  const [gate, setGate] = useState({
+    gateEnabled: false,
+    gateFollowArtist: false,
+    gateEmail: false,
+    gateInstagram: false,
+    gateSoundcloud: false,
+    gateDiscord: false
+  });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -209,12 +217,14 @@ function UploadReleaseTab() {
           type: form.type,
           audioPath,
           coverPath,
-          previewClip: form.previewClip || undefined
+          previewClip: form.previewClip || undefined,
+          ...(form.type === "FREE" && gate.gateEnabled ? gate : {})
         })
       });
       if (!res.ok) throw new Error("Failed to create release");
       toast.success("Release created! Pending admin approval.");
       setForm({ title: "", description: "", price: "0", type: "FREE", previewClip: "" });
+      setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
       setAudioFile(null);
       setCoverFile(null);
     } catch {
@@ -302,6 +312,54 @@ function UploadReleaseTab() {
           )}
         </div>
       </div>
+
+      {/* HypeEdit Gate — only for FREE releases */}
+      {form.type === "FREE" && (
+        <div className="rounded-[12px] border border-[rgba(255,255,255,0.1)] bg-surface p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-cream">HypeEdit Gate</p>
+              <p className="text-xs text-cream/40 mt-0.5">Require actions before the download link is revealed</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGate((g) => ({ ...g, gateEnabled: !g.gateEnabled }))}
+              className="flex items-center gap-1.5"
+            >
+              {gate.gateEnabled
+                ? <ToggleRight className="h-6 w-6 text-violet-light" />
+                : <ToggleLeft className="h-6 w-6 text-cream/30" />}
+            </button>
+          </div>
+
+          {gate.gateEnabled && (
+            <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
+              {[
+                { key: "gateFollowArtist" as const, label: "Follow Artist on Sauroraa" },
+                { key: "gateEmail" as const, label: "Capture email address" },
+                { key: "gateInstagram" as const, label: "Follow on Instagram" },
+                { key: "gateSoundcloud" as const, label: "Follow on SoundCloud" },
+                { key: "gateDiscord" as const, label: "Join Discord server" }
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2.5 cursor-pointer group">
+                  <button
+                    type="button"
+                    onClick={() => setGate((g) => ({ ...g, [key]: !g[key] }))}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                      gate[key]
+                        ? "bg-violet border-violet"
+                        : "border-[rgba(255,255,255,0.2)] bg-transparent group-hover:border-violet/50"
+                    }`}
+                  >
+                    {gate[key] && <Check className="h-3 w-3 text-white" />}
+                  </button>
+                  <span className="text-sm text-cream/70 group-hover:text-cream/90 transition-colors">{label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <Button onClick={() => void handleSubmit()} disabled={uploading} className="w-full">
         {uploading ? "Uploading..." : "Submit Release"}

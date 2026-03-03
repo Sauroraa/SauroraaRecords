@@ -7,8 +7,13 @@ export type ArtistProfile = {
   soundcloudUrl: string | null;
   discordUrl: string | null;
   websiteUrl: string | null;
-  user?: { email?: string };
+  isVerified?: boolean;
+  verifiedAt?: string | null;
+  user?: { email?: string; firstName?: string; lastName?: string };
   _count?: { followers?: number; releases?: number; dubpacks?: number };
+  // Badge data from backend includes
+  agencyLinks?: { agency: { displayName: string | null } }[];
+  subscription?: { plan: string; status: string } | null;
 };
 
 export type ReleaseItem = {
@@ -26,6 +31,16 @@ export type ReleaseItem = {
   releaseDate?: string | null;
   createdAt?: string;
   artist?: ArtistProfile & { id: string };
+  // Gate / HypeEdit
+  gateEnabled?: boolean;
+  gateFollowArtist?: boolean;
+  gateEmail?: boolean;
+  gateInstagram?: boolean;
+  gateSoundcloud?: boolean;
+  gateDiscord?: boolean;
+  // Trending score (computed by backend)
+  trendScore?: number;
+  _count?: { downloadSessions?: number; comments?: number };
 };
 
 export type DubpackItem = {

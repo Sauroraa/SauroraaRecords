@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, X, ChevronDown, Zap, Building2, ArrowRight, Star
+  Check, X, ChevronDown, Zap, Building2, ArrowRight, Star, Tag, Sparkles
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useLanguage } from "@/context/language-context";
@@ -97,8 +97,40 @@ export default function PricingPage() {
     return map[key];
   };
 
+  const isPromo = tab === "artist";
+
   return (
     <div className="space-y-24 py-12">
+      {/* March promo banner */}
+      {isPromo && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900/60 via-violet-800/50 to-violet-900/60 border border-violet/30 px-6 py-4"
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-20"
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+          />
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet/30">
+              <Tag className="h-5 w-5 text-violet-light" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-cream flex items-center gap-1.5 justify-center sm:justify-start flex-wrap">
+                <Sparkles className="h-4 w-4 text-violet-light" />
+                Offre Découverte — Mars 2026
+              </p>
+              <p className="text-xs text-cream/60 mt-0.5">
+                Profitez de <strong className="text-violet-light">−50% sur le premier mois Artist Pro</strong>. Offre limitée jusqu'au 31 mars 2026.
+              </p>
+            </div>
+            <div className="shrink-0 rounded-full bg-violet px-4 py-1.5 text-xs font-bold text-white">
+              4,99€ au lieu de 9,99€
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="text-center space-y-4">
         <motion.p
@@ -201,16 +233,23 @@ export default function PricingPage() {
 
                 {/* Price */}
                 <div className="mb-8">
-                  <div className="flex items-end gap-1">
-                    {isFree ? (
-                      <span className="text-5xl font-bold text-cream">{t.pricing.free}</span>
-                    ) : (
-                      <>
-                        <span className="text-5xl font-bold text-cream">{plan.price}€</span>
+                  {isFree ? (
+                    <span className="text-5xl font-bold text-cream">{t.pricing.free}</span>
+                  ) : plan.key === "ARTIST_PRO" ? (
+                    <div className="space-y-1">
+                      <div className="flex items-end gap-2">
+                        <span className="text-5xl font-bold text-cream">4,99€</span>
                         <span className="text-cream/40 mb-1.5 text-sm">{t.pricing.per_month}</span>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                      <p className="text-sm text-cream/35 line-through">9,99€/mois</p>
+                      <p className="text-xs text-violet-light font-medium">Premier mois · Offre mars</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-end gap-1">
+                      <span className="text-5xl font-bold text-cream">{plan.price}€</span>
+                      <span className="text-cream/40 mb-1.5 text-sm">{t.pricing.per_month}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Features */}

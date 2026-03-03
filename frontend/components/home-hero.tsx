@@ -5,12 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight, Upload, Sparkles, TrendingUp,
-  Disc3, Package, Music2, Users, CheckCircle2
+  Disc3, Package, Music2, Users, CheckCircle2,
+  Flame, Trophy, Tag
 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ReleaseItem, ArtistProfile } from "@/lib/types";
 import { ReleaseCard } from "./release-card";
 import { FreeDownloadModal } from "./free-download-modal";
+import { ArtistBadges } from "./artist-badges";
 import { Button } from "./ui/button";
 import { useLanguage } from "@/context/language-context";
 
@@ -20,12 +22,20 @@ const fade = (delay = 0) => ({
   transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1], delay }
 });
 
+const fadeIn = (delay = 0) => ({
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-60px" },
+  transition: { duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }
+});
+
 interface HomeHeroProps {
   releases: ReleaseItem[];
+  trending: ReleaseItem[];
   artists: ArtistProfile[];
 }
 
-export function HomeHero({ releases, artists }: HomeHeroProps) {
+export function HomeHero({ releases, trending, artists }: HomeHeroProps) {
   const { t } = useLanguage();
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -33,8 +43,12 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
   const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
   const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
-  const featured = releases.slice(0, 3);
+  const featured = trending.length ? trending.slice(0, 3) : releases.slice(0, 3);
   const latest = releases.slice(0, 8);
+  const topArtists = artists.slice(0, 3);
+  const maxRevenue = topArtists.length > 0
+    ? Math.max(...topArtists.map((a) => Number(a._count?.releases ?? 0) + Number(a._count?.followers ?? 0)))
+    : 1;
 
   const howSteps = [
     { icon: Upload, ...t.home.how_steps[0] },
@@ -44,6 +58,20 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
 
   return (
     <div className="overflow-x-hidden">
+      {/* ── MARCH PROMO STRIP ── */}
+      <div className="relative z-10 overflow-hidden bg-gradient-to-r from-violet-700/90 via-violet-600/90 to-violet-500/90 py-2.5 text-center">
+        <div className="pointer-events-none absolute inset-0 opacity-30"
+          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+        />
+        <p className="text-sm font-semibold text-white">
+          <Tag className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
+          Offre Découverte Mars 2026 — <strong>−50% sur le premier mois Artist Pro</strong>
+          <Link href="/pricing" className="ml-3 underline underline-offset-2 opacity-90 hover:opacity-100">
+            En profiter →
+          </Link>
+        </p>
+      </div>
+
       {/* ── HERO ── */}
       <motion.section
         ref={heroRef}
@@ -157,8 +185,71 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
         </motion.div>
       </motion.section>
 
+      {/* ── TRENDING NOW ── */}
+      {trending.length > 0 && (
+        <section className="mx-auto max-w-7xl px-6 py-16 space-y-6">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
+                <Flame className="h-3.5 w-3.5" />
+                Trending cette semaine
+              </p>
+              <h2 className="text-3xl font-bold text-cream">En ce moment</h2>
+            </div>
+            <Link
+              href="/catalog"
+              className="text-sm text-cream/40 hover:text-cream/70 transition-colors flex items-center gap-1.5"
+            >
+              Voir tout <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none -mx-6 px-6">
+            {trending.slice(0, 6).map((release, i) => (
+              <motion.div
+                key={release.id}
+                {...fadeIn(i * 0.06)}
+                className="shrink-0 w-44 sm:w-48"
+              >
+                <Link href={`/catalog/${release.slug}`} className="group block">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] group-hover:border-violet/30 transition-all duration-300 bg-surface2">
+                    {release.coverPath ? (
+                      <Image src={release.coverPath} alt={release.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Disc3 className="h-10 w-10 text-violet/25" />
+                      </div>
+                    )}
+                    {/* Rank badge */}
+                    <div className={`absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                      i === 0 ? "bg-amber-400 text-black" :
+                      i === 1 ? "bg-zinc-300 text-black" :
+                      i === 2 ? "bg-amber-600 text-white" :
+                      "bg-[rgba(0,0,0,0.6)] text-cream/70"
+                    }`}>
+                      #{i + 1}
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                      <p className="text-[10px] font-semibold text-cream truncate">{release.title}</p>
+                      <p className="text-[9px] text-cream/50 truncate">{release.artist?.displayName ?? "—"}</p>
+                    </div>
+                  </div>
+                  {release.trendScore !== undefined && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-cream/30">
+                      <Flame className="h-3 w-3 text-orange-400/60" />
+                      <span>{release.trendScore} pts</span>
+                    </div>
+                  )}
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── LATEST RELEASES ── */}
-      <section className="mx-auto max-w-7xl px-6 py-24 space-y-8">
+      <section className="mx-auto max-w-7xl px-6 py-16 space-y-8">
         <div className="flex items-end justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">
@@ -179,35 +270,34 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
             {latest.map((release, i) => (
               <motion.div
                 key={release.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                {...fadeIn(i * 0.06)}
               >
                 <ReleaseCard release={release} onDownloadFree={setFreeDownloadRelease} index={i} />
               </motion.div>
             ))}
           </div>
         ) : (
-          <EmptyState icon={Disc3} label="No releases yet" />
+          <EmptyState icon={Disc3} label="Aucune sortie pour l'instant — revenez bientôt" />
         )}
       </section>
 
       {/* ── FEATURED ARTISTS ── */}
       {artists.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-16 space-y-8">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">Artists</p>
-            <h2 className="text-3xl font-bold text-cream">{t.home.featured_artists}</h2>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">Artistes</p>
+              <h2 className="text-3xl font-bold text-cream">{t.home.featured_artists}</h2>
+            </div>
+            <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 transition-colors flex items-center gap-1.5">
+              Top Charts <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-none">
-            {artists.slice(0, 8).map((artist, i) => (
+          <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-none -mx-6 px-6">
+            {artists.slice(0, 10).map((artist, i) => (
               <motion.div
                 key={artist.id}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.07 }}
+                {...fadeIn(i * 0.07)}
                 className="shrink-0"
               >
                 <Link href={`/artist/${artist.id}`} className="group flex flex-col items-center gap-3 w-28">
@@ -219,17 +309,108 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
                         {(artist.displayName ?? "A").slice(0, 1).toUpperCase()}
                       </div>
                     )}
+                    {artist.isVerified && (
+                      <div className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 border-2 border-[#0a0a0a]">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
-                  <div className="text-center">
+                  <div className="text-center space-y-1">
                     <p className="text-xs font-semibold text-cream truncate w-full group-hover:text-violet-light transition-colors">
                       {artist.displayName ?? "Artist"}
                     </p>
-                    <p className="text-[10px] text-cream/35 mt-0.5">
+                    <p className="text-[10px] text-cream/35">
                       {artist._count?.followers ?? 0} {t.common.followers}
                     </p>
+                    <ArtistBadges artist={artist} size="sm" />
                   </div>
                 </Link>
               </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── CHARTS TEASER ── */}
+      {topArtists.length > 0 && (
+        <section className="mx-auto max-w-7xl px-6 py-16">
+          <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-surface overflow-hidden">
+            <div className="px-8 pt-10 pb-4 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
+                  <Trophy className="h-3.5 w-3.5" />
+                  Top artistes ce mois
+                </p>
+                <h2 className="text-2xl font-bold text-cream">Classement</h2>
+              </div>
+              <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 flex items-center gap-1.5 transition-colors mb-1">
+                Classement complet <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Podium */}
+            <div className="px-8 pb-10 flex items-end justify-center gap-4 sm:gap-8 h-40 mt-6">
+              {[1, 0, 2].map((idx) => {
+                const artist = topArtists[idx];
+                if (!artist) return null;
+                const heights = [72, 96, 56];
+                const podiumH = heights[idx];
+                const rank = idx + 1;
+                const colors = ["bg-zinc-300/20", "bg-amber-400/20", "bg-amber-600/20"];
+                const labelColors = ["text-zinc-300", "text-amber-400", "text-amber-600"];
+                const displayRank = idx === 0 ? 2 : idx === 1 ? 1 : 3;
+                return (
+                  <motion.div
+                    key={artist.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: idx * 0.1 }}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className={`text-xs font-bold ${labelColors[idx]}`}>#{displayRank}</div>
+                      <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-[rgba(255,255,255,0.12)]">
+                        {artist.avatar ? (
+                          <Image src={artist.avatar} alt={artist.displayName ?? ""} width={40} height={40} className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-surface2 text-sm font-bold text-violet/40">
+                            {(artist.displayName ?? "A").slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium text-cream/70 max-w-[64px] truncate text-center">
+                        {artist.displayName ?? "—"}
+                      </p>
+                    </div>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      whileInView={{ height: podiumH }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.7, delay: 0.3 + idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                      className={`w-16 sm:w-20 rounded-t-lg ${colors[idx]} border border-[rgba(255,255,255,0.06)]`}
+                    />
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Rest of list */}
+            {artists.slice(3, 6).map((artist, i) => (
+              <div key={artist.id} className="flex items-center gap-4 px-8 py-3 border-t border-[rgba(255,255,255,0.05)] last:border-b-0">
+                <span className="w-5 text-center text-sm font-bold text-cream/30">#{i + 4}</span>
+                <div className="h-8 w-8 overflow-hidden rounded-full bg-surface2 shrink-0">
+                  {artist.avatar ? (
+                    <Image src={artist.avatar} alt={artist.displayName ?? ""} width={32} height={32} className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs font-bold text-violet/30">
+                      {(artist.displayName ?? "A").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <p className="flex-1 text-sm text-cream/70 truncate">{artist.displayName ?? "—"}</p>
+                <p className="text-xs text-cream/30">{artist._count?.releases ?? 0} releases</p>
+              </div>
             ))}
           </div>
         </section>
@@ -245,10 +426,7 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
           {howSteps.map((step, i) => (
             <motion.div
               key={step.title}
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+              {...fadeIn(i * 0.1)}
               className="relative rounded-2xl border border-[rgba(255,255,255,0.08)] bg-surface p-8 hover:border-violet/30 transition-all duration-300 group"
             >
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-violet/10 group-hover:bg-violet/20 transition-colors">
@@ -266,21 +444,40 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
 
       {/* ── PRICING TEASER ── */}
       <section className="mx-auto max-w-7xl px-6 py-20">
-        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-surface px-8 py-12 md:px-16">
+        <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-surface px-8 py-12 md:px-16 relative overflow-hidden">
+          {/* March promo accent */}
+          <div className="absolute top-0 right-0 pointer-events-none">
+            <div className="h-48 w-48 rounded-full bg-violet/10 blur-[80px] translate-x-12 -translate-y-12" />
+          </div>
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-4">
-              <p className="text-xs font-medium uppercase tracking-widest text-violet-light">Plans</p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-medium uppercase tracking-widest text-violet-light">Plans</p>
+                <span className="rounded-full bg-violet/20 px-2.5 py-0.5 text-[10px] font-semibold text-violet-light border border-violet/30">
+                  −50% Mars 2026
+                </span>
+              </div>
               <h2 className="text-3xl font-bold text-cream">{t.home.pricing_title}</h2>
               <div className="flex flex-col gap-2">
                 {[
                   { plan: "Artist Free", price: "0€", commission: "70/30" },
                   { plan: "Artist Basic", price: "4,99€/mo", commission: "80/20" },
-                  { plan: "Artist Pro", price: "9,99€/mo", commission: "90/10" }
+                  { plan: "Artist Pro", price: "~~9,99€~~ 4,99€/mo", commission: "90/10", promo: true }
                 ].map((p) => (
                   <div key={p.plan} className="flex items-center gap-3">
                     <CheckCircle2 className="h-4 w-4 text-violet-light shrink-0" />
                     <span className="text-sm text-cream/70">
-                      <strong className="text-cream">{p.plan}</strong> — {p.price} · commission {p.commission}
+                      <strong className="text-cream">{p.plan}</strong>
+                      {" — "}
+                      {p.promo ? (
+                        <>
+                          <span className="line-through text-cream/40">9,99€</span>
+                          <span className="text-violet-light font-semibold ml-1">4,99€/mo ce mois</span>
+                        </>
+                      ) : (
+                        p.price
+                      )}
+                      {" · commission "}{p.commission}
                     </span>
                   </div>
                 ))}
@@ -314,11 +511,16 @@ export function HomeHero({ releases, artists }: HomeHeroProps) {
             <Users className="mx-auto mb-6 h-12 w-12 text-violet/60" />
             <h2 className="text-4xl font-bold text-cream md:text-5xl">{t.home.join_title}</h2>
             <p className="mt-4 text-lg text-cream/50">{t.home.join_sub}</p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-wrap gap-3 justify-center">
               <Button asChild size="lg" className="gap-2 shadow-violet-lg px-8">
                 <Link href="/register">
                   {t.home.join_cta}
                   <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="gap-2 px-8">
+                <Link href="/agency/request">
+                  Rejoindre une agence
                 </Link>
               </Button>
             </div>

@@ -2,66 +2,35 @@ import type { ReleaseItem, DubpackItem, ArtistProfile, CommentItem, RankingItem,
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-// ─── Demo data ────────────────────────────────────────────────────────────────
-
-const demoReleases: ReleaseItem[] = [
-  {
-    id: "demo-1",
-    slug: "neon-pulse",
-    title: "Neon Pulse",
-    description: "Cinematic synthwave release — dark atmospheric textures.",
-    price: 4.99,
-    type: "PAID",
-    audioPath: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    coverPath: null,
-    published: true
-  },
-  {
-    id: "demo-2",
-    slug: "abyss-drift",
-    title: "Abyss Drift",
-    description: "Deep immersive ambient textures — free download.",
-    price: 0,
-    type: "FREE",
-    audioPath: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    coverPath: null,
-    published: true
-  },
-  {
-    id: "demo-3",
-    slug: "void-signal",
-    title: "Void Signal",
-    description: "Industrial electronic — limited run.",
-    price: 2.99,
-    type: "PAID",
-    audioPath: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    coverPath: null,
-    published: true
-  }
-];
-
 // ─── Releases ─────────────────────────────────────────────────────────────────
 
 export async function fetchReleases(): Promise<ReleaseItem[]> {
   try {
     const res = await fetch(`${API}/releases`, { cache: "no-store" });
-    if (!res.ok) throw new Error("API unavailable");
-    const data = (await res.json()) as ReleaseItem[];
-    return data.length ? data : demoReleases;
+    if (!res.ok) return [];
+    return (await res.json()) as ReleaseItem[];
   } catch {
-    return demoReleases;
+    return [];
+  }
+}
+
+export async function fetchTrendingReleases(): Promise<ReleaseItem[]> {
+  try {
+    const res = await fetch(`${API}/releases/trending`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return (await res.json()) as ReleaseItem[];
+  } catch {
+    return [];
   }
 }
 
 export async function fetchRelease(slug: string): Promise<ReleaseItem | null> {
   try {
     const res = await fetch(`${API}/releases/${slug}`, { cache: "no-store" });
-    if (!res.ok) {
-      return demoReleases.find((r) => r.slug === slug) ?? null;
-    }
+    if (!res.ok) return null;
     return (await res.json()) as ReleaseItem;
   } catch {
-    return demoReleases.find((r) => r.slug === slug) ?? null;
+    return null;
   }
 }
 

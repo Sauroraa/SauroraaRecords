@@ -1,13 +1,6 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  NotFoundException,
-  Patch,
-  Param,
-  BadRequestException,
-  UseGuards
+  Body, Controller, Delete, Get, NotFoundException,
+  Patch, Param, BadRequestException, UseGuards
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { PrismaService } from "../../prisma.service";
@@ -15,12 +8,21 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
 import { Roles } from "../../common/roles.decorator";
 
-class ChangeRoleDto {
-  role!: UserRole;
-}
-
-class UpdateAgencyDto {
-  displayName?: string;
+class ChangeRoleDto { role!: UserRole; }
+class UpdateAgencyDto { displayName?: string; }
+class UpdateUserDto {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  role?: UserRole;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
+  hasSociete?: boolean;
+  societeName?: string;
+  vatNumber?: string;
 }
 
 @Controller("admin")
@@ -35,16 +37,83 @@ export class AdminController {
   async listUsers() {
     return this.prisma.user.findMany({
       select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        createdAt: true,
+        id: true, email: true, firstName: true, lastName: true,
+        role: true, createdAt: true, country: true,
         _count: { select: { orders: true } }
       },
       orderBy: { createdAt: "desc" }
     });
+  }
+
+  @Get("users/:id")
+  async getUser(@Param("id") id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, email: true, firstName: true, lastName: true,
+        role: true, createdAt: true, dateOfBirth: true,
+        addressLine1: true, addressLine2: true, postalCode: true,
+        city: true, country: true, hasSociete: true,
+        societeName: true, vatNumber: true, billingAddress: true,
+        artist: {
+          select: {
+            id: true, displayName: true, bio: true, avatar: true,
+            isVerified: true, verifiedAt: true, instagramUrl: true,
+            soundcloudUrl: true, discordUrl: true, websiteUrl: true,
+            _count: { select: { releases: true, followers: true } },
+            agencyLinks: { include: { agency: { select: { displayName: true } } }, take: 1 }
+          }
+        },
+        agency: { select: { id: true, displayName: true, _count: { select: { artists: true } } } },
+        subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
+        _count: { select: { orders: true } },
+        orders: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          include: { items: { include: { release: { select: { title: true } }, dubpack: { select: { title: true } } } } }
+        }
+      }
+    });
+    if (!user) throw new NotFoundException("User not found");
+    return user;
+  }
+
+  @Patch("users/:id")
+  async updateUser(@Param("id") id: string, @Body() dto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+
+    if (dto.role && !Object.values(UserRole).includes(dto.role)) {
+      throw new BadRequestException("Invalid role");
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        role: dto.role,
+        addressLine1: dto.addressLine1,
+        addressLine2: dto.addressLine2,
+        postalCode: dto.postalCode,
+        city: dto.city,
+        country: dto.country,
+        hasSociete: dto.hasSociete,
+        societeName: dto.societeName,
+        vatNumber: dto.vatNumber
+      }
+    });
+
+    // Auto-create artist/agency profile if needed
+    if (dto.role === UserRole.AGENCY) {
+      await this.prisma.agency.upsert({ where: { userId: id }, update: {}, create: { userId: id } });
+    }
+    if (dto.role === UserRole.ARTIST) {
+      await this.prisma.artist.upsert({ where: { userId: id }, update: {}, create: { userId: id } });
+    }
+
+    return updated;
   }
 
   @Patch("users/:id/role")
@@ -54,20 +123,48 @@ export class AdminController {
     }
     const user = await this.prisma.user.update({ where: { id }, data: { role: dto.role } });
     if (dto.role === UserRole.AGENCY) {
-      await this.prisma.agency.upsert({
-        where: { userId: id },
-        update: {},
-        create: { userId: id }
-      });
+      await this.prisma.agency.upsert({ where: { userId: id }, update: {}, create: { userId: id } });
     }
     if (dto.role === UserRole.ARTIST) {
-      await this.prisma.artist.upsert({
-        where: { userId: id },
-        update: {},
-        create: { userId: id }
-      });
+      await this.prisma.artist.upsert({ where: { userId: id }, update: {}, create: { userId: id } });
     }
     return user;
+  }
+
+  @Delete("users/:id")
+  async deleteUser(@Param("id") id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    if (user.role === UserRole.ADMIN) throw new BadRequestException("Cannot delete an admin");
+    await this.prisma.user.delete({ where: { id } });
+    return { success: true };
+  }
+
+  // ─── Artists ───────────────────────────────────────────────────────────────
+
+  @Get("artists")
+  async listArtists() {
+    return this.prisma.artist.findMany({
+      include: {
+        user: { select: { email: true, firstName: true, lastName: true, createdAt: true } },
+        _count: { select: { releases: true, followers: true } },
+        agencyLinks: { include: { agency: { select: { displayName: true } } }, take: 1 }
+      },
+      orderBy: { user: { createdAt: "desc" } }
+    });
+  }
+
+  @Patch("artists/:id/verify")
+  async verifyArtist(@Param("id") id: string, @Body() dto: { verified: boolean }) {
+    const artist = await this.prisma.artist.findUnique({ where: { id } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return this.prisma.artist.update({
+      where: { id },
+      data: {
+        isVerified: dto.verified,
+        verifiedAt: dto.verified ? new Date() : null
+      }
+    });
   }
 
   // ─── Agencies ──────────────────────────────────────────────────────────────
@@ -76,9 +173,7 @@ export class AdminController {
   async listAgencies() {
     return this.prisma.agency.findMany({
       include: {
-        user: {
-          select: { id: true, email: true, firstName: true, lastName: true, createdAt: true }
-        },
+        user: { select: { id: true, email: true, firstName: true, lastName: true, createdAt: true } },
         _count: { select: { artists: true, invitations: true } }
       },
       orderBy: { createdAt: "desc" }
@@ -101,10 +196,7 @@ export class AdminController {
             }
           }
         },
-        invitations: {
-          where: { accepted: false },
-          orderBy: { createdAt: "desc" }
-        }
+        invitations: { where: { accepted: false }, orderBy: { createdAt: "desc" } }
       }
     });
     if (!agency) throw new NotFoundException("Agency not found");
@@ -122,10 +214,7 @@ export class AdminController {
   async deleteAgency(@Param("id") id: string) {
     const agency = await this.prisma.agency.findUnique({ where: { id } });
     if (!agency) throw new NotFoundException("Agency not found");
-    await this.prisma.user.update({
-      where: { id: agency.userId },
-      data: { role: UserRole.CLIENT }
-    });
+    await this.prisma.user.update({ where: { id: agency.userId }, data: { role: UserRole.CLIENT } });
     return this.prisma.agency.delete({ where: { id } });
   }
 
