@@ -34,6 +34,12 @@ class CreateReleaseDto {
   @IsOptional() @IsString() previewClip?: string;
   @IsOptional() @IsBoolean() exclusiveFollowersOnly?: boolean;
   @IsOptional() @IsString() releaseDate?: string;
+  @IsOptional() @IsBoolean() gateEnabled?: boolean;
+  @IsOptional() @IsBoolean() gateFollowArtist?: boolean;
+  @IsOptional() @IsBoolean() gateEmail?: boolean;
+  @IsOptional() @IsBoolean() gateInstagram?: boolean;
+  @IsOptional() @IsBoolean() gateSoundcloud?: boolean;
+  @IsOptional() @IsBoolean() gateDiscord?: boolean;
 }
 
 class UpdateReleaseDto {
@@ -251,7 +257,13 @@ export class ReleasesController {
         coverPath: dto.coverPath,
         previewClip: dto.previewClip,
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly ?? false,
-        releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined
+        releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
+        gateEnabled: dto.gateEnabled ?? false,
+        gateFollowArtist: dto.gateFollowArtist ?? false,
+        gateEmail: dto.gateEmail ?? false,
+        gateInstagram: dto.gateInstagram ?? false,
+        gateSoundcloud: dto.gateSoundcloud ?? false,
+        gateDiscord: dto.gateDiscord ?? false
       }
     });
   }

@@ -435,16 +435,7 @@ function SessionFlow({
 
   const handleComment = async () => {
     if (!commentBody.trim()) return;
-    const body: Record<string, string | undefined> = { body: commentBody };
-    if (release) body.releaseId = release.id;
-    if (dubpack) body.dubpackId = dubpack.id;
-    await fetch(`${API}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(body)
-    });
-    await completeAction("LEAVE_COMMENT");
+    await completeAction("LEAVE_COMMENT", { commentBody });
     setCommentBody("");
   };
 
@@ -595,9 +586,7 @@ function SessionFlow({
 
 export function FreeDownloadModal({ open, onClose, release, dubpack }: FreeDownloadModalProps) {
   const { user } = useAuthStore();
-
-  // Use HypeEdit gate if release has it enabled
-  const useGate = !!(release?.gateEnabled);
+  const useGate = !!release?.gateEnabled;
 
   return (
     <Modal
@@ -626,8 +615,6 @@ export function FreeDownloadModal({ open, onClose, release, dubpack }: FreeDownl
             </Button>
           </div>
         </div>
-      ) : useGate && release ? (
-        <HypeEditGate release={release} onClose={onClose} />
       ) : (
         <SessionFlow release={release} dubpack={dubpack} onClose={onClose} />
       )}

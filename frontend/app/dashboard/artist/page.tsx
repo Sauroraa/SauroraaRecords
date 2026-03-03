@@ -64,6 +64,16 @@ const ACTION_OPTIONS = [
   { value: "JOIN_DISCORD", label: "Join Discord" }
 ];
 
+function slugifyTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 // ─── Mon Profil ───────────────────────────────────────────────────────────────
 
 function ProfilTab() {
@@ -518,7 +528,7 @@ function UploadReleaseTab() {
         body: JSON.stringify({
           title: form.title,
           description: form.description || undefined,
-          price: parseFloat(form.price) || 0,
+          price: String(form.type === "FREE" ? "0" : form.price || "0"),
           type: form.type,
           audioPath,
           coverPath,
@@ -707,7 +717,15 @@ function UploadDubpackTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title: form.title, description: form.description || undefined, price: parseFloat(form.price) || 0, type: form.type, zipPath, coverPath })
+        body: JSON.stringify({
+          slug: slugifyTitle(form.title),
+          title: form.title,
+          description: form.description || undefined,
+          price: String(form.type === "FREE" ? "0" : form.price || "0"),
+          type: form.type,
+          zipPath,
+          coverPath
+        })
       });
       if (!res.ok) throw new Error();
       toast.success("Dubpack submitted! Pending admin approval.");

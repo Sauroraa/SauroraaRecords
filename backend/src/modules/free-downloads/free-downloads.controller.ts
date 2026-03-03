@@ -14,7 +14,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { FreeDownloadActionType } from "@prisma/client";
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { IsEmail, IsEnum, IsOptional, IsString } from "class-validator";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request, Response } from "express";
@@ -34,6 +34,14 @@ class InitSessionDto {
 class CompleteActionDto {
   @IsEnum(FreeDownloadActionType)
   action!: FreeDownloadActionType;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  commentBody?: string;
 }
 
 @Controller("free-downloads")
@@ -64,13 +72,35 @@ export class FreeDownloadsController {
   ) {
     const userId = req.user!.userId;
 
-    // Get artist download config
+    // Resolve source item + artist
     let artistId: string | null = null;
+    let releaseGateActions: FreeDownloadActionType[] | null = null;
     if (dto.releaseId) {
-      const release = await this.prisma.release.findUnique({ where: { id: dto.releaseId } });
+      const release = await this.prisma.release.findUnique({
+        where: { id: dto.releaseId },
+        select: {
+          id: true,
+          artistId: true,
+          type: true,
+          gateEnabled: true,
+          gateFollowArtist: true,
+          gateEmail: true,
+          gateInstagram: true,
+          gateSoundcloud: true,
+          gateDiscord: true
+        }
+      });
       if (!release) throw new NotFoundException("Release not found");
       if (release.type !== "FREE") throw new BadRequestException("Not a free release");
       artistId = release.artistId;
+      if (release.gateEnabled) {
+        releaseGateActions = [];
+        if (release.gateFollowArtist) releaseGateActions.push("FOLLOW_ARTIST");
+        if (release.gateEmail) releaseGateActions.push("SUBSCRIBE_NEWSLETTER");
+        if (release.gateInstagram) releaseGateActions.push("FOLLOW_INSTAGRAM");
+        if (release.gateSoundcloud) releaseGateActions.push("FOLLOW_SOUNDCLOUD");
+        if (release.gateDiscord) releaseGateActions.push("JOIN_DISCORD");
+      }
     }
     if (dto.dubpackId) {
       const dubpack = await this.prisma.dubpack.findUnique({ where: { id: dto.dubpackId } });
@@ -95,12 +125,18 @@ export class FreeDownloadsController {
       return this.formatSession(existingSession);
     }
 
-    // Get required actions from artist config
-    const config = await this.prisma.artistDownloadConfig.findUnique({ where: { artistId } });
-    const requiredActions: FreeDownloadActionType[] =
-      config?.enabled && config?.requiredActions
-        ? (config.requiredActions as FreeDownloadActionType[])
-        : ["FOLLOW_ARTIST"];
+    // Priority: release gate config > artist fallback config
+    let requiredActions: FreeDownloadActionType[] = [];
+    if (releaseGateActions) {
+      requiredActions = releaseGateActions;
+    } else {
+      const config = await this.prisma.artistDownloadConfig.findUnique({ where: { artistId } });
+      requiredActions =
+        config?.enabled && config?.requiredActions
+          ? (config.requiredActions as FreeDownloadActionType[])
+          : ["FOLLOW_ARTIST"];
+    }
+    if (requiredActions.length === 0) requiredActions = ["FOLLOW_ARTIST"];
 
     // Create session + actions
     const session = await this.prisma.freeDownloadSession.create({
@@ -138,22 +174,49 @@ export class FreeDownloadsController {
     if (!actionRow) throw new BadRequestException("Action not required for this session");
     if (actionRow.completedAt) return this.formatSession({ ...session, actions: session.actions });
 
-    // If follow artist, also create the follow record
-    if (dto.action === "FOLLOW_ARTIST") {
-      const release = session.releaseId
-        ? await this.prisma.release.findUnique({ where: { id: session.releaseId } })
-        : null;
-      const dubpack = session.dubpackId
-        ? await this.prisma.dubpack.findUnique({ where: { id: session.dubpackId } })
-        : null;
-      const artistId = release?.artistId ?? dubpack?.artistId;
-      if (artistId) {
-        await this.prisma.follow.upsert({
-          where: { followerId_artistId: { followerId: userId, artistId } },
-          create: { followerId: userId, artistId },
-          update: {}
+    const release = session.releaseId
+      ? await this.prisma.release.findUnique({ where: { id: session.releaseId } })
+      : null;
+    const dubpack = session.dubpackId
+      ? await this.prisma.dubpack.findUnique({ where: { id: session.dubpackId } })
+      : null;
+    const artistId = release?.artistId ?? dubpack?.artistId;
+
+    if (dto.action === "FOLLOW_ARTIST" && artistId) {
+      await this.prisma.follow.upsert({
+        where: { followerId_artistId: { followerId: userId, artistId } },
+        create: { followerId: userId, artistId },
+        update: {}
+      });
+    }
+
+    if (dto.action === "SUBSCRIBE_NEWSLETTER") {
+      if (!dto.email) throw new BadRequestException("Email required for newsletter action");
+      if (session.releaseId && artistId) {
+        await this.prisma.gateSubmission.create({
+          data: {
+            releaseId: session.releaseId,
+            artistId,
+            userId,
+            email: dto.email
+          }
         });
       }
+    }
+
+    if (dto.action === "LEAVE_COMMENT") {
+      const body = dto.commentBody?.trim();
+      if (!body || body.length < 3) {
+        throw new BadRequestException("Comment is required for this action");
+      }
+      await this.prisma.comment.create({
+        data: {
+          userId,
+          releaseId: session.releaseId ?? undefined,
+          dubpackId: session.dubpackId ?? undefined,
+          body
+        }
+      });
     }
 
     await this.prisma.freeDownloadAction.update({
