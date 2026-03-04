@@ -6,7 +6,7 @@ import { Disc3, Eye, Globe, Heart, Instagram, MessageCircle, Music, Play, Pause,
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { fetchArtistStats, fetchDubpacks, fetchReleases } from "@/lib/api";
+import { fetchArtist, fetchArtistStats, fetchDubpacks, fetchReleases } from "@/lib/api";
 import type { ReleaseItem } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { usePlayerStore } from "@/store/player-store";
@@ -121,11 +121,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
   const { data: artist, isLoading: artistLoading } = useQuery({
     queryKey: ["artist", artistId],
-    queryFn: async () => {
-      const res = await fetch(`${API}/artists/${artistId}`, { credentials: "include" });
-      if (!res.ok) return null;
-      return res.json();
-    }
+    queryFn: () => fetchArtist(artistId)
   });
 
   const { data: releases = [], isLoading: releasesLoading } = useQuery({

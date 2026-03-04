@@ -109,8 +109,10 @@ export type RankingItem = {
   id: string;
   rank: number;
   month: string;
+  totalViews?: number;
   totalDownloads: number;
-  totalRevenue: number | string;
+  totalShares?: number;
+  totalRevenue?: number | string;
   artist: ArtistProfile;
 };
 

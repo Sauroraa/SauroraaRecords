@@ -155,13 +155,7 @@ export class ReleasesController {
   async statsOverview() {
     const [releases, artists] = await Promise.all([
       this.prisma.release.count({ where: { published: true } }),
-      this.prisma.artist.count({
-        where: {
-          releases: {
-            some: { published: true }
-          }
-        }
-      })
+      this.prisma.artist.count()
     ]);
 
     return {

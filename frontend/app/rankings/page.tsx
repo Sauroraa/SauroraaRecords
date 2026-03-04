@@ -6,7 +6,7 @@ import { fetchRankings } from "@/lib/api";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Trophy, Download, Euro, TrendingUp } from "lucide-react";
+import { Eye, Share2, Trophy, Download, TrendingUp } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
 import type { RankingItem } from "@/lib/types";
 
@@ -29,7 +29,11 @@ export default function RankingsPage() {
     [selectedMonth]
   );
   const top3 = rankings.slice(0, 3);
-  const maxRevenue = rankings[0] ? Number(rankings[0].totalRevenue) : 1;
+  const maxScore = rankings[0]
+    ? (rankings[0].totalViews ?? rankings[0].totalDownloads) +
+      rankings[0].totalDownloads * 2 +
+      (rankings[0].totalShares ?? 0) * 3
+    : 1;
 
   // Podium order: 2nd | 1st | 3rd
   const podiumOrder = top3.length >= 3
@@ -89,7 +93,9 @@ export default function RankingsPage() {
                 {podiumOrder.map((item, idx) => {
                   if (!item) return null;
                   const name = item.artist?.displayName ?? "Artist";
-                  const revenue = Number(item.totalRevenue);
+                  const views = item.totalViews ?? item.totalDownloads;
+                  const shares = item.totalShares ?? 0;
+                  const score = views + item.totalDownloads * 2 + shares * 3;
                   const height = podiumHeights[idx];
                   const isFirst = idx === 1; // center = #1
 
@@ -123,7 +129,7 @@ export default function RankingsPage() {
                           </p>
                         </Link>
                         <p className={`text-xs font-semibold mt-0.5 ${podiumColors[idx]}`}>
-                          €{revenue.toFixed(2)}
+                          {score.toLocaleString()} pts
                         </p>
                       </div>
 
@@ -158,8 +164,10 @@ export default function RankingsPage() {
           <section className="space-y-3">
             {rankings.map((item, i) => {
               const name = item.artist?.displayName ?? "Artist";
-              const revenue = Number(item.totalRevenue);
-              const barWidth = maxRevenue > 0 ? (revenue / maxRevenue) * 100 : 0;
+              const views = item.totalViews ?? item.totalDownloads;
+              const shares = item.totalShares ?? 0;
+              const score = views + item.totalDownloads * 2 + shares * 3;
+              const barWidth = maxScore > 0 ? (score / maxScore) * 100 : 0;
 
               return (
                 <motion.div
@@ -208,20 +216,31 @@ export default function RankingsPage() {
 
                     {/* Stats */}
                     <div className="flex items-center gap-5 shrink-0">
+                      <div className="text-right hidden md:block">
+                        <div className="flex items-center gap-1 text-xs text-cream/40">
+                          <Eye className="h-3 w-3" />
+                          <span>{views.toLocaleString()}</span>
+                        </div>
+                      </div>
                       <div className="text-right hidden sm:block">
                         <div className="flex items-center gap-1 text-xs text-cream/40">
                           <Download className="h-3 w-3" />
                           <span>{item.totalDownloads.toLocaleString()}</span>
                         </div>
                       </div>
+                      <div className="text-right hidden sm:block">
+                        <div className="flex items-center gap-1 text-xs text-cream/40">
+                          <Share2 className="h-3 w-3" />
+                          <span>{shares.toLocaleString()}</span>
+                        </div>
+                      </div>
                       <div className="text-right">
                         <div className="flex items-center gap-1">
-                          <Euro className="h-3 w-3 text-violet-light" />
-                          <span className="text-sm font-bold text-cream">{revenue.toFixed(2)}</span>
+                          <TrendingUp className="h-3 w-3 text-violet-light" />
+                          <span className="text-sm font-bold text-cream">{score.toLocaleString()}</span>
                         </div>
                         <div className="flex items-center justify-end gap-0.5 text-[10px] text-violet-light mt-0.5">
-                          <TrendingUp className="h-2.5 w-2.5" />
-                          <span>Revenue</span>
+                          <span>Score</span>
                         </div>
                       </div>
                     </div>

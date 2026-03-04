@@ -25,7 +25,7 @@ export const fr = {
       { title: "Revenus", desc: "Garde jusqu'à 70% de chaque vente. Paiement mensuel garanti." }
     ],
     charts_title: "Top du moment",
-    charts_sub: "Classement mensuel par revenus & downloads",
+    charts_sub: "Classement mensuel par vues, partages & téléchargements",
     charts_cta: "Voir le classement complet →",
     pricing_title: "Des plans adaptés à chaque artiste",
     pricing_cta: "Comparer tous les plans →",
@@ -83,8 +83,8 @@ export const fr = {
   },
   rankings: {
     title: "Charts",
-    sub_prefix: "Top artistes par revenus & downloads —",
-    podium_revenue: "Revenus",
+    sub_prefix: "Top artistes par vues, partages & téléchargements —",
+    podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "Aucune donnée de classement pour ce mois.",
     rank: "Rang"

@@ -22,6 +22,40 @@ const API = resolveApiBase();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sauroraarecords.be";
 const PUBLIC_FALLBACK_API = `${SITE_URL.replace(/\/$/, "")}/api`;
 
+function normalizeAssetPath(path?: string | null): string | null | undefined {
+  if (path == null) return path;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("/")) return path;
+  return `/${path}`;
+}
+
+function normalizeArtist(artist?: ArtistProfile | null): ArtistProfile | undefined {
+  if (!artist) return undefined;
+  return {
+    ...artist,
+    avatar: normalizeAssetPath(artist.avatar) ?? null
+  };
+}
+
+function normalizeRelease(release: ReleaseItem): ReleaseItem {
+  return {
+    ...release,
+    coverPath: normalizeAssetPath(release.coverPath) ?? null,
+    audioPath: normalizeAssetPath(release.audioPath) ?? release.audioPath,
+    previewClip: normalizeAssetPath(release.previewClip) ?? null,
+    artist: release.artist
+      ? ({
+          ...release.artist,
+          avatar: normalizeAssetPath(release.artist.avatar) ?? null
+        } as ReleaseItem["artist"])
+      : release.artist
+  };
+}
+
+function normalizeReleases(items: ReleaseItem[]): ReleaseItem[] {
+  return items.map(normalizeRelease);
+}
+
 async function apiFetch(path: string, init?: RequestInit): Promise<Response | null> {
   const targets =
     typeof window !== "undefined"
@@ -46,7 +80,8 @@ export async function fetchReleases(): Promise<ReleaseItem[]> {
   const res = await apiFetch("/releases", { cache: "no-store" });
   try {
     if (!res) return [];
-    return (await res.json()) as ReleaseItem[];
+    const data = (await res.json()) as ReleaseItem[];
+    return normalizeReleases(data);
   } catch {
     return [];
   }
@@ -56,7 +91,8 @@ export async function fetchTrendingReleases(): Promise<ReleaseItem[]> {
   const res = await apiFetch("/releases/trending", { cache: "no-store" });
   try {
     if (!res) return [];
-    return (await res.json()) as ReleaseItem[];
+    const data = (await res.json()) as ReleaseItem[];
+    return normalizeReleases(data);
   } catch {
     return [];
   }
@@ -76,7 +112,8 @@ export async function fetchRelease(slug: string): Promise<ReleaseItem | null> {
   const res = await apiFetch(`/releases/${slug}`, { cache: "no-store" });
   try {
     if (!res) return null;
-    return (await res.json()) as ReleaseItem;
+    const data = (await res.json()) as ReleaseItem;
+    return normalizeRelease(data);
   } catch {
     return null;
   }
@@ -110,7 +147,8 @@ export async function fetchArtists(): Promise<ArtistProfile[]> {
   const res = await apiFetch("/artists", { cache: "no-store" });
   try {
     if (!res) return [];
-    return (await res.json()) as ArtistProfile[];
+    const data = (await res.json()) as ArtistProfile[];
+    return data.map((artist) => normalizeArtist(artist) as ArtistProfile);
   } catch {
     return [];
   }
@@ -120,7 +158,8 @@ export async function fetchArtist(id: string): Promise<ArtistProfile | null> {
   const res = await apiFetch(`/artists/${id}`, { cache: "no-store" });
   try {
     if (!res) return null;
-    return (await res.json()) as ArtistProfile;
+    const data = (await res.json()) as ArtistProfile;
+    return normalizeArtist(data) ?? null;
   } catch {
     return null;
   }

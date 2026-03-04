@@ -27,7 +27,7 @@ export const en: Dict = {
       { title: "Revenue", desc: "Keep up to 70% of every sale. Guaranteed monthly payout." }
     ],
     charts_title: "Trending now",
-    charts_sub: "Monthly ranking by revenue & downloads",
+    charts_sub: "Monthly ranking by views, shares & downloads",
     charts_cta: "See the full ranking →",
     pricing_title: "Plans tailored for every artist",
     pricing_cta: "Compare all plans →",
@@ -85,8 +85,8 @@ export const en: Dict = {
   },
   rankings: {
     title: "Charts",
-    sub_prefix: "Top artists by revenue & downloads —",
-    podium_revenue: "Revenue",
+    sub_prefix: "Top artists by views, shares & downloads —",
+    podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "No ranking data available for this month.",
     rank: "Rank"

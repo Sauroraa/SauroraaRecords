@@ -27,7 +27,7 @@ export const nl: Dict = {
       { title: "Inkomsten", desc: "Houd tot 70% van elke verkoop. Gegarandeerde maandelijkse uitbetaling." }
     ],
     charts_title: "Trending nu",
-    charts_sub: "Maandelijkse ranking op basis van inkomsten & downloads",
+    charts_sub: "Maandelijkse ranking op basis van views, shares & downloads",
     charts_cta: "Bekijk de volledige ranking →",
     pricing_title: "Plannen voor elke artiest",
     pricing_cta: "Vergelijk alle plannen →",
@@ -85,8 +85,8 @@ export const nl: Dict = {
   },
   rankings: {
     title: "Charts",
-    sub_prefix: "Top artiesten op inkomsten & downloads —",
-    podium_revenue: "Inkomsten",
+    sub_prefix: "Top artiesten op views, shares & downloads —",
+    podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "Geen rankingdata beschikbaar voor deze maand.",
     rank: "Rang"

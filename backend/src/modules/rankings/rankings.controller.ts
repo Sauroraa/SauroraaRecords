@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { FreeDownloadActionType } from "@prisma/client";
 import { PrismaService } from "../../prisma.service";
 
 @Controller("rankings")
@@ -19,10 +20,9 @@ export class RankingsController {
   private async buildLiveRankings(month: string) {
     const { start, end } = this.monthBounds(month);
 
-    const [revenues, sessions] = await Promise.all([
-      this.prisma.artistRevenue.findMany({
-        where: { month },
-        select: { artistId: true, totalSales: true, netDue: true }
+    const [artists, sessions, shares] = await Promise.all([
+      this.prisma.artist.findMany({
+        include: { user: { select: { email: true } } }
       }),
       this.prisma.freeDownloadSession.findMany({
         where: {
@@ -32,58 +32,78 @@ export class RankingsController {
           release: { select: { artistId: true } },
           dubpack: { select: { artistId: true } }
         }
+      }),
+      this.prisma.freeDownloadAction.findMany({
+        where: {
+          action: FreeDownloadActionType.SHARE_LINK,
+          completedAt: { not: null },
+          session: {
+            createdAt: { gte: start, lt: end }
+          }
+        },
+        select: {
+          session: {
+            select: {
+              release: { select: { artistId: true } },
+              dubpack: { select: { artistId: true } }
+            }
+          }
+        }
       })
     ]);
 
-    const byArtist = new Map<string, { totalRevenue: number; totalDownloads: number }>();
-
-    for (const row of revenues) {
-      const current = byArtist.get(row.artistId) ?? { totalRevenue: 0, totalDownloads: 0 };
-      current.totalRevenue += Number(row.totalSales ?? row.netDue ?? 0);
-      byArtist.set(row.artistId, current);
+    const byArtist = new Map<string, { totalViews: number; totalDownloads: number; totalShares: number }>();
+    for (const artist of artists) {
+      byArtist.set(artist.id, { totalViews: 0, totalDownloads: 0, totalShares: 0 });
     }
 
     for (const session of sessions) {
       const artistId = session.release?.artistId ?? session.dubpack?.artistId ?? null;
       if (!artistId) continue;
-      const current = byArtist.get(artistId) ?? { totalRevenue: 0, totalDownloads: 0 };
+      const current = byArtist.get(artistId) ?? { totalViews: 0, totalDownloads: 0, totalShares: 0 };
+      current.totalViews += 1;
       current.totalDownloads += 1;
       byArtist.set(artistId, current);
     }
 
-    const artistIds = [...byArtist.keys()];
-    if (!artistIds.length) return [];
+    for (const share of shares) {
+      const artistId = share.session.release?.artistId ?? share.session.dubpack?.artistId ?? null;
+      if (!artistId) continue;
+      const current = byArtist.get(artistId) ?? { totalViews: 0, totalDownloads: 0, totalShares: 0 };
+      current.totalShares += 1;
+      byArtist.set(artistId, current);
+    }
 
-    const artists = await this.prisma.artist.findMany({
-      where: { id: { in: artistIds } },
-      include: { user: { select: { email: true } } }
-    });
-    const artistMap = new Map(artists.map((artist) => [artist.id, artist]));
-
-    const rows = artistIds
+    const rows = artists
       .map((artistId) => {
-        const metrics = byArtist.get(artistId);
-        const artist = artistMap.get(artistId);
+        const artist = artistId;
+        const metrics = byArtist.get(artist.id);
         if (!metrics || !artist) return null;
+        const score = metrics.totalViews + metrics.totalDownloads * 2 + metrics.totalShares * 3;
         return {
-          artistId,
+          artistId: artist.id,
           month,
+          totalViews: metrics.totalViews,
           totalDownloads: metrics.totalDownloads,
-          totalRevenue: metrics.totalRevenue,
+          totalShares: metrics.totalShares,
+          score,
           artist
         };
       })
       .filter((row): row is NonNullable<typeof row> => Boolean(row))
       .sort((a, b) => {
-        if (b.totalRevenue !== a.totalRevenue) return b.totalRevenue - a.totalRevenue;
-        return b.totalDownloads - a.totalDownloads;
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.totalViews !== a.totalViews) return b.totalViews - a.totalViews;
+        if (b.totalDownloads !== a.totalDownloads) return b.totalDownloads - a.totalDownloads;
+        return b.totalShares - a.totalShares;
       })
       .map((row, index) => ({
         id: `${row.artistId}-${month}`,
         artistId: row.artistId,
         month,
+        totalViews: row.totalViews,
         totalDownloads: row.totalDownloads,
-        totalRevenue: row.totalRevenue,
+        totalShares: row.totalShares,
         rank: index + 1,
         artist: row.artist
       }));
@@ -95,14 +115,15 @@ export class RankingsController {
           where: { artistId_month: { artistId: row.artistId, month } },
           update: {
             totalDownloads: row.totalDownloads,
-            totalRevenue: row.totalRevenue,
+            // keep compatibility with existing schema; store engagement score.
+            totalRevenue: row.totalViews + row.totalDownloads * 2 + row.totalShares * 3,
             rank: row.rank
           },
           create: {
             artistId: row.artistId,
             month,
             totalDownloads: row.totalDownloads,
-            totalRevenue: row.totalRevenue,
+            totalRevenue: row.totalViews + row.totalDownloads * 2 + row.totalShares * 3,
             rank: row.rank
           }
         })
@@ -133,6 +154,10 @@ export class RankingsController {
       return this.buildLiveRankings(targetMonth);
     }
 
-    return rankings;
+    return rankings.map((row) => ({
+      ...row,
+      totalViews: row.totalDownloads,
+      totalShares: 0
+    }));
   }
 }
