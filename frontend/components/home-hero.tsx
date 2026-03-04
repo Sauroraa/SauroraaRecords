@@ -9,7 +9,7 @@ import {
   Flame, Trophy, Tag
 } from "lucide-react";
 import { useRef, useState } from "react";
-import type { ReleaseItem, ArtistProfile } from "@/lib/types";
+import type { ReleaseItem, ArtistProfile, HomeOverviewStats } from "@/lib/types";
 import { ReleaseCard } from "./release-card";
 import { FreeDownloadModal } from "./free-download-modal";
 import { ArtistBadges } from "./artist-badges";
@@ -33,9 +33,10 @@ interface HomeHeroProps {
   releases: ReleaseItem[];
   trending: ReleaseItem[];
   artists: ArtistProfile[];
+  stats?: HomeOverviewStats;
 }
 
-export function HomeHero({ releases, trending, artists }: HomeHeroProps) {
+export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) {
   const { t } = useLanguage();
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -55,6 +56,10 @@ export function HomeHero({ releases, trending, artists }: HomeHeroProps) {
     { icon: Sparkles, ...t.home.how_steps[1] },
     { icon: TrendingUp, ...t.home.how_steps[2] }
   ];
+
+  const artistCount = Math.max(stats?.artists ?? 0, artists.length);
+  const releaseCount = Math.max(stats?.releases ?? 0, releases.length);
+  const maxCommissionPercent = stats?.maxCommissionPercent ?? 30;
 
   return (
     <div className="overflow-x-hidden">
@@ -121,9 +126,9 @@ export function HomeHero({ releases, trending, artists }: HomeHeroProps) {
             {/* Stats row */}
             <motion.div {...fade(0.4)} className="flex gap-8 justify-center lg:justify-start pt-2">
               {[
-                { value: artists.length || "0", label: "Artistes" },
-                { value: releases.length || "0", label: "Releases" },
-                { value: "90%", label: "Commission max" }
+                { value: artistCount, label: "Artistes" },
+                { value: releaseCount, label: "Releases" },
+                { value: `${maxCommissionPercent}%`, label: "Commission max" }
               ].map((s) => (
                 <div key={s.label} className="text-center lg:text-left">
                   <p className="text-2xl font-bold text-cream">{s.value}</p>
@@ -211,7 +216,7 @@ export function HomeHero({ releases, trending, artists }: HomeHeroProps) {
                 {...fadeIn(i * 0.06)}
                 className="shrink-0 w-44 sm:w-48"
               >
-                <Link href={`/catalog/${release.slug}`} className="group block">
+                <Link href={`/release/${release.slug}`} className="group block">
                   <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] group-hover:border-violet/30 transition-all duration-300 bg-surface2">
                     {release.coverPath ? (
                       <Image src={release.coverPath} alt={release.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />

@@ -11,6 +11,7 @@ import { useNotificationsStore } from "@/store/notifications-store";
 import { useLanguage, type Locale } from "@/context/language-context";
 import { GlobalPlayer } from "./global-player";
 import { CartDrawer } from "./cart-drawer";
+import { SupportWidget } from "./support-widget";
 
 const LOCALES: Locale[] = ["fr", "en", "nl"];
 
@@ -206,6 +207,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       </motion.main>
 
       <CartDrawer />
+      <SupportWidget />
       <GlobalPlayer />
 
       {/* Footer */}

@@ -113,3 +113,59 @@ export type RankingItem = {
   totalRevenue: number | string;
   artist: ArtistProfile;
 };
+
+export type SupportTicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_USER" | "RESOLVED" | "CLOSED";
+export type SupportTicketPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+export type SupportMessageAuthorType = "USER" | "AGENT" | "BOT";
+
+export type SupportMessageItem = {
+  id: string;
+  ticketId: string;
+  authorType: SupportMessageAuthorType;
+  authorId?: string | null;
+  body: string;
+  createdAt: string;
+  author?: { id: string; email: string; role: string } | null;
+};
+
+export type SupportTicketItem = {
+  id: string;
+  subject: string;
+  category?: string | null;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  userId: string;
+  assignedToId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt?: string | null;
+  assignedTo?: { id: string; email: string; role: string } | null;
+  _count?: { messages?: number };
+};
+
+export type SupportTicketDetail = SupportTicketItem & {
+  messages: SupportMessageItem[];
+};
+
+export type HomeOverviewStats = {
+  artists: number;
+  releases: number;
+  maxCommissionPercent: number;
+};
+
+export type ArtistTrackViewsItem = {
+  id: string;
+  slug: string;
+  title: string;
+  coverPath?: string | null;
+  createdAt: string;
+  views: number;
+  comments: number;
+};
+
+export type ArtistPublicStats = {
+  artistId: string;
+  totalViews: number;
+  totalTracks: number;
+  tracks: ArtistTrackViewsItem[];
+};

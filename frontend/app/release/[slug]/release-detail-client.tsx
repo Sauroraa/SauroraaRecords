@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, ShoppingCart, Play, Disc3, Heart, ArrowLeft, Clock, Lock } from "lucide-react";
+import { Download, ShoppingCart, Play, Pause, Disc3, Heart, ArrowLeft, Clock, Lock, Users, Globe, Instagram } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/auth-store";
 import type { ReleaseItem, CommentItem } from "@/lib/types";
 import { FreeDownloadModal } from "@/components/free-download-modal";
 import { CommentThread } from "@/components/comment-thread";
+import { ReleaseWaveform } from "@/components/release-waveform";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -23,7 +24,15 @@ interface ReleaseDetailClientProps {
 }
 
 export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailClientProps) {
-  const { setTrack, setPlaying, src, playing } = usePlayerStore();
+  const {
+    setTrack,
+    setPlaying,
+    requestSeekPercent,
+    src,
+    playing,
+    currentTime,
+    duration
+  } = usePlayerStore();
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
   const [freeDownloadOpen, setFreeDownloadOpen] = useState(false);
@@ -53,14 +62,32 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
     }
   };
 
-  const isCurrentlyPlaying = src === release.audioPath && playing;
+  const isActiveTrack = src === release.audioPath;
+  const isCurrentlyPlaying = isActiveTrack && playing;
+  const localProgress = isActiveTrack && duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const togglePlay = () => {
+    if (isActiveTrack) {
+      setPlaying(!playing);
+      return;
+    }
+    setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null });
+    setPlaying(true);
+  };
+
+  const handleSeek = (percent: number) => {
+    if (!isActiveTrack) {
+      setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null });
+      setPlaying(true);
+    }
+    requestSeekPercent(percent);
+  };
+
+  const handlePlayOrPause = () => {
     if (isCurrentlyPlaying) {
       setPlaying(false);
     } else {
-      setTrack({ title: release.title, artist: artistName, src: release.audioPath });
-      setPlaying(true);
+      togglePlay();
     }
   };
 
@@ -150,30 +177,27 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           )}
 
           {/* Waveform / Play bar */}
-          <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <button
-                onClick={togglePlay}
+                onClick={handlePlayOrPause}
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet text-white hover:bg-violet-hover transition-colors shadow-violet"
               >
-                <Play className={`h-5 w-5 translate-x-px ${isCurrentlyPlaying ? "hidden" : ""}`} />
-                {isCurrentlyPlaying && (
-                  <span className="flex gap-0.5">
-                    {[0, 1, 2].map((i) => (
-                      <span
-                        key={i}
-                        className="h-4 w-1 rounded-full bg-white animate-pulse"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
-                    ))}
-                  </span>
-                )}
+                {isCurrentlyPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 translate-x-px" />}
               </button>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-cream">{release.title}</p>
                 <p className="text-xs text-cream/50 mt-0.5">{artistName}</p>
               </div>
             </div>
+            <ReleaseWaveform
+              src={release.audioPath}
+              title={release.title}
+              progressPercent={localProgress}
+              currentTime={isActiveTrack ? currentTime : 0}
+              duration={isActiveTrack ? duration : 0}
+              onSeekPercent={handleSeek}
+            />
           </div>
 
           {/* Action buttons */}
@@ -210,6 +234,56 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
             <p className="text-xs text-cream/30">
               Released {new Date(release.createdAt).toLocaleDateString("en-BE", { year: "numeric", month: "long", day: "numeric" })}
             </p>
+          )}
+
+          {/* Artist profile card */}
+          {release.artist && (
+            <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 overflow-hidden rounded-full bg-surface2">
+                  {release.artist.avatar ? (
+                    <Image src={release.artist.avatar} alt={artistName} fill className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm font-bold text-violet/40">
+                      {artistName.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-cream truncate">{artistName}</p>
+                  <p className="text-xs text-cream/45 flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    {(release.artist._count?.followers ?? 0).toLocaleString()} followers
+                  </p>
+                </div>
+                <Link href={`/artist/${release.artist.id}`} className="ml-auto">
+                  <Button size="sm" variant="outline">View profile</Button>
+                </Link>
+              </div>
+
+              {release.artist.bio && (
+                <p className="text-sm text-cream/60 leading-relaxed">{release.artist.bio}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {release.artist.instagramUrl && (
+                  <a href={release.artist.instagramUrl} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="ghost" className="gap-1.5">
+                      <Instagram className="h-4 w-4" />
+                      Instagram
+                    </Button>
+                  </a>
+                )}
+                {release.artist.websiteUrl && (
+                  <a href={release.artist.websiteUrl} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="ghost" className="gap-1.5">
+                      <Globe className="h-4 w-4" />
+                      Website
+                    </Button>
+                  </a>
+                )}
+              </div>
+            </div>
           )}
         </motion.div>
       </div>

@@ -2,10 +2,21 @@
 
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { usePlayerStore } from "@/store/player-store";
 
 export function GlobalPlayer() {
-  const { title, artist, src, playing, setPlaying } = usePlayerStore();
+  const {
+    title,
+    artist,
+    coverPath,
+    src,
+    playing,
+    setPlaying,
+    setPlayback,
+    pendingSeekPercent,
+    clearPendingSeek
+  } = usePlayerStore();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -25,21 +36,31 @@ export function GlobalPlayer() {
     if (audio.src !== src) {
       audio.src = src;
       audio.load();
+      setProgress(0);
+      setDuration(0);
+      setPlayback({ currentTime: 0, duration: 0 });
     }
     if (playing) {
       void audio.play().catch(() => setPlaying(false));
     } else {
       audio.pause();
     }
-  }, [src, playing, setPlaying]);
+  }, [src, playing, setPlaying, setPlayback]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => {
-      if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
+      if (audio.duration) {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        setProgress(pct);
+        setPlayback({ currentTime: audio.currentTime, duration: audio.duration });
+      }
     };
-    const onLoaded = () => setDuration(audio.duration);
+    const onLoaded = () => {
+      setDuration(audio.duration);
+      setPlayback({ currentTime: audio.currentTime, duration: audio.duration });
+    };
     const onEnded = () => setPlaying(false);
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onLoaded);
@@ -49,7 +70,17 @@ export function GlobalPlayer() {
       audio.removeEventListener("loadedmetadata", onLoaded);
       audio.removeEventListener("ended", onEnded);
     };
-  }, [setPlaying]);
+  }, [setPlaying, setPlayback]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio?.duration || pendingSeekPercent == null) return;
+    const pct = Math.min(100, Math.max(0, pendingSeekPercent));
+    audio.currentTime = (pct / 100) * audio.duration;
+    setProgress(pct);
+    setPlayback({ currentTime: audio.currentTime, duration: audio.duration });
+    clearPendingSeek();
+  }, [pendingSeekPercent, clearPendingSeek, setPlayback]);
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
@@ -57,6 +88,7 @@ export function GlobalPlayer() {
     const pct = Number(e.target.value);
     audio.currentTime = (pct / 100) * audio.duration;
     setProgress(pct);
+    setPlayback({ currentTime: audio.currentTime, duration: audio.duration });
   };
 
   const toggleMute = () => {
@@ -85,7 +117,11 @@ export function GlobalPlayer() {
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-3">
         {/* Info */}
         <div className="flex items-center gap-3 min-w-0 w-48 shrink-0">
-          <div className="h-10 w-10 rounded-sm shrink-0 bg-gradient-to-br from-violet/30 to-violet/5" />
+          <div className="relative h-10 w-10 rounded-sm shrink-0 overflow-hidden bg-gradient-to-br from-violet/30 to-violet/5">
+            {coverPath ? (
+              <Image src={coverPath} alt={title} fill className="object-cover" />
+            ) : null}
+          </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-cream truncate">{title}</p>
             <p className="text-xs text-cream/50 truncate">{artist}</p>

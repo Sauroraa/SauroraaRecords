@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Put, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Put, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { IsArray, IsBoolean, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
@@ -117,6 +117,52 @@ export class ArtistsController {
       net: Number(r.netDue),
       label: Number(r.commission)
     }));
+  }
+
+  @Get(":id/stats")
+  async publicStats(@Param("id") id: string) {
+    const artist = await this.prisma.artist.findUnique({ where: { id }, select: { id: true } });
+    if (!artist) throw new NotFoundException("Artist not found");
+
+    const tracks = await this.prisma.release.findMany({
+      where: { artistId: id, published: true },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        coverPath: true,
+        createdAt: true,
+        _count: { select: { downloadSessions: true, comments: true } }
+      }
+    });
+
+    const totalViews = tracks.reduce((sum, track) => sum + track._count.downloadSessions, 0);
+
+    return {
+      artistId: id,
+      totalViews,
+      totalTracks: tracks.length,
+      tracks: tracks.map((track) => ({
+        id: track.id,
+        slug: track.slug,
+        title: track.title,
+        coverPath: track.coverPath,
+        createdAt: track.createdAt,
+        views: track._count.downloadSessions,
+        comments: track._count.comments
+      }))
+    };
+  }
+
+  @Get(":id")
+  async one(@Param("id") id: string) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { id },
+      include: ARTIST_FULL_INCLUDE
+    });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return artist;
   }
 
   @Patch("me")

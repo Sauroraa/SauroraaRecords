@@ -30,7 +30,7 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
     setHovering(true);
     const src = release.previewClip ?? release.audioPath;
     previewTimeoutRef.current = setTimeout(() => {
-      setTrack({ title: release.title, artist: artistName, src });
+      setTrack({ title: release.title, artist: artistName, src, coverPath: release.coverPath ?? null });
       setPlaying(true);
     }, 400);
   };

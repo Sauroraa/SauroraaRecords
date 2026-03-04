@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { fetchReleases, fetchTrendingReleases, fetchArtists } from "@/lib/api";
+import { fetchReleases, fetchTrendingReleases, fetchArtists, fetchHomeOverviewStats } from "@/lib/api";
 import { HomeHero } from "@/components/home-hero";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   alternates: { canonical: "https://sauroraarecords.be" }
@@ -45,10 +48,11 @@ const jsonLd = {
 };
 
 export default async function HomePage() {
-  const [releases, trending, artists] = await Promise.all([
+  const [releases, trending, artists, stats] = await Promise.all([
     fetchReleases(),
     fetchTrendingReleases(),
-    fetchArtists()
+    fetchArtists(),
+    fetchHomeOverviewStats()
   ]);
 
   return (
@@ -57,7 +61,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <HomeHero releases={releases} trending={trending} artists={artists} />
+      <HomeHero releases={releases} trending={trending} artists={artists} stats={stats} />
     </>
   );
 }

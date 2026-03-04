@@ -42,7 +42,8 @@ export function CatalogGrid() {
                   setTrack({
                     title: release.title,
                     artist: release.artist?.user?.email ?? "Sauroraa Artist",
-                    src: release.audioPath
+                    src: release.audioPath,
+                    coverPath: release.coverPath ?? null
                   });
                   setPlaying(true);
                 }}

@@ -24,7 +24,7 @@ export const nl: Dict = {
     how_steps: [
       { title: "Uploaden", desc: "Zet je tracks, dubpacks en covers in enkele klikken online." },
       { title: "Ontdekking", desc: "Kom in de kijker op de homepage, charts en afspeellijsten." },
-      { title: "Inkomsten", desc: "Verdien tot 30% van elke verkoop. Gegarandeerde maandelijkse uitbetaling." }
+      { title: "Inkomsten", desc: "Houd tot 70% van elke verkoop. Gegarandeerde maandelijkse uitbetaling." }
     ],
     charts_title: "Trending nu",
     charts_sub: "Maandelijkse ranking op basis van inkomsten & downloads",
@@ -88,7 +88,7 @@ export const nl: Dict = {
     sub_prefix: "Top artiesten op inkomsten & downloads —",
     podium_revenue: "Inkomsten",
     podium_downloads: "Downloads",
-    empty: "Rankings verschijnen aan het einde van elke maand.",
+    empty: "Geen rankingdata beschikbaar voor deze maand.",
     rank: "Rang"
   },
   common: {

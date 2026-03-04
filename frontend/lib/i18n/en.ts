@@ -24,7 +24,7 @@ export const en: Dict = {
     how_steps: [
       { title: "Upload", desc: "Drop your tracks, dubpacks and covers in a few clicks." },
       { title: "Discovery", desc: "Get featured on the homepage, charts and playlists." },
-      { title: "Revenue", desc: "Earn up to 30% of every sale. Guaranteed monthly payout." }
+      { title: "Revenue", desc: "Keep up to 70% of every sale. Guaranteed monthly payout." }
     ],
     charts_title: "Trending now",
     charts_sub: "Monthly ranking by revenue & downloads",
@@ -88,7 +88,7 @@ export const en: Dict = {
     sub_prefix: "Top artists by revenue & downloads —",
     podium_revenue: "Revenue",
     podium_downloads: "Downloads",
-    empty: "Rankings will appear at the end of each month.",
+    empty: "No ranking data available for this month.",
     rank: "Rank"
   },
   common: {

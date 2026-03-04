@@ -27,6 +27,7 @@ import { AdminController } from "./modules/admin/admin.controller";
 import { UploadModule } from "./modules/upload/upload.module";
 import { UsersModule } from "./modules/users/users.module";
 import { EmailModule } from "./modules/email/email.module";
+import { SupportModule } from "./modules/support/support.module";
 
 @Module({
   imports: [
@@ -57,7 +58,8 @@ import { EmailModule } from "./modules/email/email.module";
     RankingsModule,
     SubscriptionsModule,
     AgencyModule,
-    EmailModule
+    EmailModule,
+    SupportModule
   ],
   controllers: [AdminController],
   providers: [

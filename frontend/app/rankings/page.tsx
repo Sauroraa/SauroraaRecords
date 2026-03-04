@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchRankings } from "@/lib/api";
 import { motion } from "framer-motion";
@@ -11,14 +12,23 @@ import type { RankingItem } from "@/lib/types";
 
 export default function RankingsPage() {
   const { t } = useLanguage();
+  const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const { data: rankings = [], isLoading } = useQuery<RankingItem[]>({
-    queryKey: ["rankings"],
-    queryFn: () => fetchRankings()
+    queryKey: ["rankings", selectedMonth],
+    queryFn: () => fetchRankings(selectedMonth),
+    refetchInterval: selectedMonth === currentMonth ? 15000 : false
   });
 
-  const month = new Date().toLocaleString("fr-BE", { month: "long", year: "numeric" });
+  const monthLabel = useMemo(
+    () =>
+      new Date(`${selectedMonth}-01T00:00:00.000Z`).toLocaleString("fr-BE", {
+        month: "long",
+        year: "numeric"
+      }),
+    [selectedMonth]
+  );
   const top3 = rankings.slice(0, 3);
-  const rest = rankings.slice(3);
   const maxRevenue = rankings[0] ? Number(rankings[0].totalRevenue) : 1;
 
   // Podium order: 2nd | 1st | 3rd
@@ -39,9 +49,18 @@ export default function RankingsPage() {
           <Trophy className="h-6 w-6 text-violet-light" />
           <h1 className="text-3xl font-bold text-cream">{t.rankings.title}</h1>
         </motion.div>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }} className="text-sm text-cream/50 capitalize">
-          {t.rankings.sub_prefix} {month}
-        </motion.p>
+        <div className="flex flex-wrap items-center gap-3">
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }} className="text-sm text-cream/50 capitalize">
+            {t.rankings.sub_prefix} {monthLabel}
+          </motion.p>
+          <input
+            type="month"
+            value={selectedMonth}
+            max={currentMonth}
+            onChange={(event) => setSelectedMonth(event.target.value)}
+            className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-surface px-3 py-1.5 text-xs text-cream/85 outline-none transition-colors focus:border-violet/50"
+          />
+        </div>
       </div>
 
       {isLoading ? (

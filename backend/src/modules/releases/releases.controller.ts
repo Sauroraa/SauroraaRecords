@@ -151,19 +151,49 @@ export class ReleasesController {
     });
   }
 
+  @Get("stats/overview")
+  async statsOverview() {
+    const [releases, artists] = await Promise.all([
+      this.prisma.release.count({ where: { published: true } }),
+      this.prisma.artist.count({
+        where: {
+          releases: {
+            some: { published: true }
+          }
+        }
+      })
+    ]);
+
+    return {
+      artists,
+      releases,
+      maxCommissionPercent: 30
+    };
+  }
+
   // ─── Single release ───────────────────────────────────────────────────────────
 
   @Get(":slug")
   async one(@Param("slug") slug: string) {
-    const release = await this.prisma.release.findUnique({
+    const releaseBySlug = await this.prisma.release.findUnique({
       where: { slug },
       include: {
         ...ARTIST_INCLUDE,
         _count: { select: { downloadSessions: true, comments: true } }
       }
     });
-    if (!release) throw new NotFoundException("Release not found");
-    return release;
+    if (releaseBySlug) return releaseBySlug;
+
+    const decodedSlug = decodeURIComponent(slug);
+    const fallback = await this.prisma.release.findFirst({
+      where: { slug: { equals: decodedSlug } },
+      include: {
+        ...ARTIST_INCLUDE,
+        _count: { select: { downloadSessions: true, comments: true } }
+      }
+    });
+    if (!fallback) throw new NotFoundException("Release not found");
+    return fallback;
   }
 
   // ─── Gate config ──────────────────────────────────────────────────────────────

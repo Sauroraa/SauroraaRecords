@@ -22,7 +22,7 @@ export const fr = {
     how_steps: [
       { title: "Upload", desc: "Dépose tes tracks, dubpacks et covers en quelques clics." },
       { title: "Découverte", desc: "Sois mis en avant sur la homepage, les charts et les playlists." },
-      { title: "Revenus", desc: "Touche jusqu'à 30% de chaque vente. Paiement mensuel garanti." }
+      { title: "Revenus", desc: "Garde jusqu'à 70% de chaque vente. Paiement mensuel garanti." }
     ],
     charts_title: "Top du moment",
     charts_sub: "Classement mensuel par revenus & downloads",
@@ -86,7 +86,7 @@ export const fr = {
     sub_prefix: "Top artistes par revenus & downloads —",
     podium_revenue: "Revenus",
     podium_downloads: "Downloads",
-    empty: "Les classements apparaissent à la fin de chaque mois.",
+    empty: "Aucune donnée de classement pour ce mois.",
     rank: "Rang"
   },
   common: {
