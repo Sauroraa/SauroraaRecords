@@ -335,8 +335,8 @@ app.get("*", (_req, res) => {
         <button data-go="search">🔍 Recherche</button>
       </nav>
       <div class="side-links">
-        <a class="side-link brand-link" id="side-records-btn" href="#" onclick="openRecords()">Records →</a>
-        <a class="side-link" href="#" onclick="openRegister()">Créer un compte</a>
+        <a class="side-link brand-link" id="side-records-btn" href="javascript:void(0)" onclick="openRecords()">Records →</a>
+        <a class="side-link" href="javascript:void(0)" onclick="openRegister()">Créer un compte</a>
       </div>
     </aside>
 
@@ -669,7 +669,8 @@ app.get("*", (_req, res) => {
     }
 
     function getNewReleases(limit = 12) {
-      return [...state.releases]
+      const base = state.genre === "ALL" ? state.releases : state.releases.filter((r) => (r.genre || "").toUpperCase() === state.genre);
+      return [...base]
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
         .slice(0, limit);
     }
@@ -766,7 +767,7 @@ app.get("*", (_req, res) => {
           '</div>' +
           '<div class="actions" style="grid-template-columns:1fr 1fr">' +
             '<button class="a-btn" data-action="dubpack-open" data-slug="' + escapeHTML(d.slug || "") + '">Voir</button>' +
-            '<button class="a-btn play" data-action="dubpack-buy" data-id="' + escapeHTML(d.id) + '">Acheter</button>' +
+            '<button class="a-btn play" data-action="dubpack-buy" data-slug="' + escapeHTML(d.slug || "") + '">Acheter</button>' +
           '</div>' +
         '</article>';
       }).join("");
@@ -960,9 +961,11 @@ app.get("*", (_req, res) => {
     }
 
     function shareDiscord() {
+      const r = byId(state.shareTargetId);
       const url = shareUrl();
-      const text = encodeURIComponent("Écoute ça sur Sauroraa Music 🎧 " + url);
-      window.open("https://discord.com/channels/@me?message=" + text, "_blank");
+      const text = "🎧 " + (r ? r.title + " — " + releaseArtistName(r) : "Sauroraa Music") + "\n" + url;
+      navigator.clipboard.writeText(text).catch(() => {});
+      showNotice("Message copié ! Colle-le sur Discord.", true);
       registerShare();
     }
 
@@ -1068,14 +1071,14 @@ app.get("*", (_req, res) => {
           const res = await api("/follows/artist/" + encodeURIComponent(id), { method: "POST" });
           showNotice(res.ok ? "Follow envoyé !" : "Déjà suivi ou erreur.", res.ok);
         }
-        if (action === "artist-open") window.open(RECORDS + "/artists", "_blank");
+        if (action === "artist-open") window.open(RECORDS + "/artists/" + encodeURIComponent(id), "_blank");
         if (action === "artist-releases") {
           const list = state.releases.filter((r) => r.artistId === id);
           renderReleases("tracks", list);
           document.getElementById("discover").scrollIntoView({ behavior: "smooth" });
         }
         if (action === "dubpack-open" && slug) window.open(RECORDS + "/dubpacks/" + slug, "_blank");
-        if (action === "dubpack-buy") window.open(RECORDS + "/shop", "_blank");
+        if (action === "dubpack-buy" && slug) window.open(RECORDS + "/dubpacks/" + slug + "?buy=1", "_blank");
         if (action === "playlist-play") {
           const pl = state.playlists.find((p) => p.id === id);
           const firstId = pl?.tracks?.[0]?.release?.id || pl?.tracks?.[0]?.releaseId;
@@ -1123,6 +1126,13 @@ app.get("*", (_req, res) => {
           const txt = (card.textContent || "").toLowerCase();
           card.style.display = q === "" || txt.includes(q) ? "" : "none";
         }
+        // Show/hide section headings when all cards within are hidden
+        for (const section of document.querySelectorAll("section")) {
+          const cards = section.querySelectorAll(".card");
+          if (!cards.length) continue;
+          const anyVisible = Array.from(cards).some((c) => c.style.display !== "none");
+          section.style.display = anyVisible || q === "" ? "" : "none";
+        }
       });
 
       // Genre filter
@@ -1132,20 +1142,39 @@ app.get("*", (_req, res) => {
           b.classList.add("active");
           state.genre = b.getAttribute("data-genre");
           renderReleases("tracks", filteredReleases());
+          renderReleases("new-releases-grid", getNewReleases());
         });
       });
 
-      // Side menu
+      // Side menu — click scrolls to section
       document.querySelectorAll("#menu button").forEach((b) => {
         b.addEventListener("click", () => {
           document.querySelectorAll("#menu button").forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
           const target = b.getAttribute("data-go");
-          if (target === "search") { $("search-input").focus(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+          if (target === "search") {
+            $("search-input").focus();
+            $("search-input").scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+          }
           const el = document.getElementById(target);
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
         });
       });
+
+      // Side menu — auto-highlight active section on scroll
+      const sectionIds = ["home", "discover", "trending", "new-releases", "artists", "dubpacks", "playlists", "library"];
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            document.querySelectorAll("#menu button").forEach((b) => {
+              b.classList.toggle("active", b.getAttribute("data-go") === id);
+            });
+          }
+        });
+      }, { rootMargin: "-30% 0px -60% 0px", threshold: 0 });
+      sectionIds.forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
 
       // Player controls
       $("play-btn").addEventListener("click", togglePlay);
