@@ -324,6 +324,9 @@ app.get("*", (_req, res) => {
         <button data-go="discover">Discover</button>
         <button data-go="trending">Trending</button>
         <button data-go="artists">Artists</button>
+        <button data-go="playlists">Playlists</button>
+        <button data-go="dubpacks">Dubpacks</button>
+        <button data-go="new-releases">New Releases</button>
         <button data-go="library">Library</button>
         <button data-go="search">Search</button>
       </nav>
@@ -368,6 +371,21 @@ app.get("*", (_req, res) => {
       <section id="artists">
         <h2>Artists</h2>
         <div class="grid" id="artists-grid"></div>
+      </section>
+
+      <section id="playlists">
+        <h2>Playlists (Mon compte)</h2>
+        <div class="grid" id="playlists-grid"></div>
+      </section>
+
+      <section id="dubpacks">
+        <h2>Dubpacks</h2>
+        <div class="grid" id="dubpacks-grid"></div>
+      </section>
+
+      <section id="new-releases">
+        <h2>New Releases</h2>
+        <div class="grid" id="new-releases-grid"></div>
       </section>
 
       <section id="library">
@@ -433,6 +451,8 @@ app.get("*", (_req, res) => {
       releases: [],
       trending: [],
       artists: [],
+      dubpacks: [],
+      playlists: [],
       queue: [],
       currentIndex: -1,
       currentReleaseId: null,
@@ -521,6 +541,50 @@ app.get("*", (_req, res) => {
       }).join("");
     }
 
+    function renderDubpacks(list) {
+      const root = $("dubpacks-grid");
+      if (!list.length) {
+        root.innerHTML = '<div class="card"><p class="meta">No dubpacks found.</p></div>';
+        return;
+      }
+      root.innerHTML = list.map((d) => {
+        const cover = normalizeAudioPath(d.coverPath) || "";
+        const artist = d.artist?.displayName || d.artist?.user?.email || "Unknown artist";
+        return '<article class="card">' +
+          '<div class="cover" style="background-image:url(\\'' + escapeHTML(cover) + '\\')"></div>' +
+          '<p class="title">' + escapeHTML(d.title) + '</p>' +
+          '<p class="meta">' + escapeHTML(artist) + '</p>' +
+          '<div class="row"><span class="mono">' + escapeHTML(d.genre || "GEN") + '</span><span class="mono">' + escapeHTML(d.price || "0") + ' EUR</span></div>' +
+          '<div class="actions">' +
+            '<button class="a-btn" data-action="dubpack-open" data-slug="' + (d.slug || "") + '">Open</button>' +
+            '<button class="a-btn" data-action="dubpack-buy" data-id="' + d.id + '">Buy</button>' +
+            '<button class="a-btn" data-action="artist-open" data-id="' + (d.artistId || "") + '">Artist</button>' +
+            '<button class="a-btn" data-action="discover-scroll">Discover</button>' +
+          '</div>' +
+        '</article>';
+      }).join("");
+    }
+
+    function renderPlaylists(list) {
+      const root = $("playlists-grid");
+      if (!list.length) {
+        root.innerHTML = '<div class="card"><p class="meta">No playlists yet. Connecte-toi puis cree une playlist sur Records.</p></div>';
+        return;
+      }
+      root.innerHTML = list.map((p) => {
+        const tracks = p.tracks?.length || 0;
+        return '<article class="card">' +
+          '<p class="title">' + escapeHTML(p.title || "Untitled playlist") + '</p>' +
+          '<p class="meta">' + escapeHTML(p.description || "No description") + '</p>' +
+          '<div class="row"><span class="mono">' + tracks + ' tracks</span><span class="mono">' + (p.isPublic ? "PUBLIC" : "PRIVATE") + '</span></div>' +
+          '<div class="actions" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
+            '<button class="a-btn" data-action="playlist-open" data-id="' + p.id + '">Open</button>' +
+            '<button class="a-btn" data-action="playlist-play" data-id="' + p.id + '">Play first</button>' +
+          '</div>' +
+        '</article>';
+      }).join("");
+    }
+
     function updatePlayerMeta(r) {
       $("player-title").textContent = r ? r.title : "Aucun track";
       $("player-sub").textContent = r ? releaseArtistName(r) : "Selectionne un track";
@@ -589,6 +653,16 @@ app.get("*", (_req, res) => {
       state.artists = res.ok ? await res.json() : [];
     }
 
+    async function loadDubpacks() {
+      const res = await api("/dubpacks");
+      state.dubpacks = res.ok ? await res.json() : [];
+    }
+
+    async function loadPlaylists() {
+      const res = await api("/premium/playlists/me");
+      state.playlists = res.ok ? await res.json() : [];
+    }
+
     function filteredReleases() {
       return state.releases.filter((r) => {
         if (state.genre === "ALL") return true;
@@ -598,6 +672,16 @@ app.get("*", (_req, res) => {
 
     function byId(id) {
       return state.releases.find((r) => r.id === id) || state.trending.find((r) => r.id === id);
+    }
+
+    function getNewReleases(limit = 12) {
+      return [...state.releases]
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, limit);
+    }
+
+    function playlistById(id) {
+      return state.playlists.find((p) => p.id === id);
     }
 
     async function trackView(releaseId) {
@@ -744,6 +828,28 @@ app.get("*", (_req, res) => {
           renderReleases("tracks", list);
           document.getElementById("discover").scrollIntoView({ behavior: "smooth", block: "start" });
         }
+        if (action === "dubpack-open") {
+          const slug = btn.getAttribute("data-slug");
+          if (slug) window.open(RECORDS + "/dubpacks/" + slug, "_blank");
+        }
+        if (action === "dubpack-buy") {
+          window.open(RECORDS + "/shop", "_blank");
+        }
+        if (action === "discover-scroll") {
+          document.getElementById("discover").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (action === "playlist-open") {
+          window.open(RECORDS + "/dashboard/artist", "_blank");
+        }
+        if (action === "playlist-play") {
+          const p = playlistById(btn.getAttribute("data-id"));
+          const firstTrack = p?.tracks?.[0]?.release?.id;
+          if (firstTrack) {
+            await playReleaseById(firstTrack);
+          } else {
+            alert("Playlist vide.");
+          }
+        }
       });
     }
 
@@ -762,7 +868,7 @@ app.get("*", (_req, res) => {
 
       $("search-input").addEventListener("input", (e) => {
         const q = e.target.value.toLowerCase().trim();
-        for (const card of document.querySelectorAll("#tracks .card, #trending-grid .card, #artists-grid .card")) {
+        for (const card of document.querySelectorAll("#tracks .card, #trending-grid .card, #artists-grid .card, #dubpacks-grid .card, #new-releases-grid .card, #playlists-grid .card")) {
           const txt = (card.textContent || "").toLowerCase();
           card.style.display = txt.includes(q) ? "" : "none";
         }
@@ -782,6 +888,11 @@ app.get("*", (_req, res) => {
           document.querySelectorAll("#menu button").forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
           const target = b.getAttribute("data-go");
+          if (target === "search") {
+            $("search-input").focus();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+          }
           const el = document.getElementById(target);
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
         });
@@ -823,10 +934,13 @@ app.get("*", (_req, res) => {
       wireMainActions();
       wireAudio();
       await refreshAuthState();
-      await Promise.allSettled([loadReleases(), loadTrending(), loadArtists()]);
+      await Promise.allSettled([loadReleases(), loadTrending(), loadArtists(), loadDubpacks(), loadPlaylists()]);
       renderReleases("tracks", filteredReleases());
       renderReleases("trending-grid", state.trending);
       renderArtists(state.artists);
+      renderDubpacks(state.dubpacks);
+      renderPlaylists(state.playlists);
+      renderReleases("new-releases-grid", getNewReleases());
       updatePlayerMeta(null);
       if (state.queue.length) {
         await playReleaseById(state.queue[0].id);
