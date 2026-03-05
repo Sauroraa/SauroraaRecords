@@ -81,19 +81,68 @@ app.get("*", (_req, res) => {
     .btn:hover { border-color: rgba(123,76,255,0.45); }
     .btn.brand { background: linear-gradient(120deg,#7b4cff,#5f39d6); border-color: transparent; box-shadow: 0 8px 24px rgba(123,76,255,0.28); }
     .btn.brand:hover { box-shadow: 0 10px 28px rgba(123,76,255,0.4); }
-    .login-panel {
-      display: none; border: 1px solid var(--line); border-radius: 12px;
-      padding: 10px; background: var(--card); margin-bottom: 10px;
-      grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center;
-    }
-    .login-panel.open { display: grid; }
     .notice {
       display: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
       padding: 9px 12px; margin-bottom: 10px; font-size: 12px;
       font-family: "IBM Plex Mono", monospace;
     }
     .notice.show { display: block; }
-    .auth-bar { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    /* ---- User dropdown ---- */
+    .user-wrap { position: relative; }
+    .user-btn {
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: 11px;
+      background: var(--card); padding: 6px 12px 6px 7px;
+      cursor: pointer; transition: .14s ease; white-space: nowrap;
+      font-size: 13px; font-weight: 800; color: #f4f5ff;
+    }
+    .user-btn:hover { border-color: rgba(123,76,255,0.45); }
+    .user-btn.logged { border-color: rgba(123,76,255,0.35); background: rgba(123,76,255,0.10); }
+    .user-av {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
+      overflow: hidden;
+    }
+    .user-av img { width: 100%; height: 100%; object-fit: cover; }
+    .drop {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      min-width: 260px; background: #12121a; border: 1px solid rgba(123,76,255,0.25);
+      border-radius: 16px; box-shadow: 0 20px 48px rgba(0,0,0,0.55);
+      z-index: 200; overflow: hidden;
+    }
+    .drop.open { display: block; }
+    .drop-section { padding: 14px; display: grid; gap: 8px; }
+    .drop-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .drop-input {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+      background: #0b0b10; font-size: 13px; font-weight: 600; color: var(--text);
+      width: 100%; outline: none; transition: border-color .14s;
+    }
+    .drop-input:focus { border-color: rgba(123,76,255,0.55); }
+    .drop-input::placeholder { color: #6a7080; }
+    .drop-btn-full {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+      color: #f4f5ff; padding: 10px 14px; font-size: 13px; font-weight: 800;
+      cursor: pointer; transition: .14s ease; width: 100%; text-align: center;
+    }
+    .drop-btn-full:hover { border-color: rgba(123,76,255,0.45); background: rgba(255,255,255,0.05); }
+    .drop-btn-full.brand { background: linear-gradient(120deg,#7b4cff,#5f39d6); border-color: transparent; box-shadow: 0 6px 18px rgba(123,76,255,0.28); }
+    .drop-btn-full.brand:hover { box-shadow: 0 8px 24px rgba(123,76,255,0.4); }
+    .drop-btn-full.danger { color: #ff7070; border-color: rgba(255,80,80,0.2); }
+    .drop-btn-full.danger:hover { background: rgba(255,80,80,0.08); border-color: rgba(255,80,80,0.4); }
+    .drop-hr { border: none; border-top: 1px solid var(--line); margin: 2px 0; }
+    .drop-user { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 4px 0 8px; }
+    .drop-user-av {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: #fff; overflow: hidden;
+    }
+    .drop-user-av img { width: 100%; height: 100%; object-fit: cover; }
+    .drop-user-name { font-size: 14px; font-weight: 800; line-height: 1.2; }
+    .drop-user-email { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .hero {
       border: 1px solid rgba(255,255,255,0.09); border-radius: 20px;
       background: radial-gradient(700px 220px at 20% -35%, rgba(123,76,255,0.26), transparent 70%),
@@ -254,20 +303,17 @@ app.get("*", (_req, res) => {
   <main class="main">
     <header class="top">
       <input class="input" id="search-input" placeholder="Recherche tracks, artistes, genres, BPM..." />
-      <button class="btn" id="btn-login">Connexion</button>
-      <button class="btn" id="btn-logout" style="display:none">Deconnexion</button>
-      <button class="btn brand" id="btn-register">Records &#8599;</button>
+      <div class="user-wrap" id="user-wrap">
+        <button class="user-btn" id="user-btn">
+          <span class="user-av" id="user-av">?</span>
+          <span id="user-btn-label">Connexion</span>
+        </button>
+        <div class="drop" id="user-drop"></div>
+      </div>
+      <button class="btn brand" id="btn-records">Records &#8599;</button>
     </header>
 
-    <div class="login-panel" id="login-panel">
-      <input class="input" id="login-email" placeholder="Email" type="email" />
-      <input class="input" id="login-password" type="password" placeholder="Mot de passe" />
-      <button class="btn brand" id="btn-login-submit">Se connecter</button>
-      <button class="btn" id="btn-login-cancel">&#10005;</button>
-    </div>
-
     <div class="notice" id="notice"></div>
-    <p class="auth-bar" id="auth-bar">Session : invite</p>
 
     <section class="hero" id="home">
       <h1>Ecoute. Decouvre.<br>Tout connecte a Records.</h1>
@@ -456,9 +502,60 @@ app.get("*", (_req, res) => {
   function openDashboard() { window.open(RECORDS + "/dashboard", "_blank"); }
 
   // ---- Auth ----
-  function setLoginPanel(open) {
-    el("login-panel").classList.toggle("open", open);
-    if (open) el("login-email").focus();
+  function toggleDrop() {
+    el("user-drop").classList.toggle("open");
+  }
+
+  function closeDrop() {
+    el("user-drop").classList.remove("open");
+  }
+
+  function renderDrop() {
+    var drop = el("user-drop");
+    var btn = el("user-btn");
+    var av = el("user-av");
+    var lbl = el("user-btn-label");
+
+    if (S.user) {
+      var artist = S.user.artist;
+      var name = (artist && artist.displayName) || S.user.firstName || S.user.email.split("@")[0];
+      var initial = name.charAt(0).toUpperCase();
+      var avatarUrl = S.user.avatarUrl || (artist && artist.avatar) || "";
+      av.innerHTML = avatarUrl ? "<img src=\"" + esc(normUrl(avatarUrl)) + "\" />" : initial;
+      lbl.textContent = name;
+      btn.classList.add("logged");
+      drop.innerHTML =
+        "<div class=\"drop-section\">" +
+          "<div class=\"drop-user\">" +
+            "<div class=\"drop-user-av\">" + (avatarUrl ? "<img src=\"" + esc(normUrl(avatarUrl)) + "\" />" : initial) + "</div>" +
+            "<div>" +
+              "<p class=\"drop-user-name\">" + esc(name) + "</p>" +
+              "<p class=\"drop-user-email\">" + esc(S.user.email) + "</p>" +
+            "</div>" +
+          "</div>" +
+          "<hr class=\"drop-hr\" />" +
+          "<button class=\"drop-btn-full brand\" onclick=\"openDashboard()\">&#127968; Mon Profil sur Records</button>" +
+          "<button class=\"drop-btn-full\" onclick=\"openRecords()\">Records &#8599;</button>" +
+          "<hr class=\"drop-hr\" />" +
+          "<button class=\"drop-btn-full danger\" id=\"btn-logout\">Deconnexion</button>" +
+        "</div>";
+      el("btn-logout").addEventListener("click", function() { closeDrop(); logout(); });
+    } else {
+      av.innerHTML = "?";
+      lbl.textContent = "Connexion";
+      btn.classList.remove("logged");
+      drop.innerHTML =
+        "<div class=\"drop-section\">" +
+          "<p class=\"drop-title\">Connexion</p>" +
+          "<input class=\"drop-input\" id=\"login-email\" type=\"email\" placeholder=\"Email\" />" +
+          "<input class=\"drop-input\" id=\"login-password\" type=\"password\" placeholder=\"Mot de passe\" />" +
+          "<button class=\"drop-btn-full brand\" id=\"btn-login-submit\">Se connecter</button>" +
+          "<button class=\"drop-btn-full\" onclick=\"openRegister()\">Creer un compte &#8594;</button>" +
+        "</div>";
+      el("btn-login-submit").addEventListener("click", loginSubmit);
+      el("login-password").addEventListener("keydown", function(e) { if (e.key === "Enter") loginSubmit(); });
+      el("login-email").focus();
+    }
   }
 
   async function refreshAuth() {
@@ -466,15 +563,10 @@ app.get("*", (_req, res) => {
       var r = await apiFetch("/auth/me");
       if (!r.ok) throw new Error();
       S.user = await r.json();
-      el("btn-login").style.display = "none";
-      el("btn-logout").style.display = "";
-      el("auth-bar").textContent = "Session : " + (S.user.email || S.user.id || "connecte");
     } catch(e) {
       S.user = null;
-      el("btn-login").style.display = "";
-      el("btn-logout").style.display = "none";
-      el("auth-bar").textContent = "Session : invite";
     }
+    renderDrop();
   }
 
   async function loginSubmit() {
@@ -491,7 +583,7 @@ app.get("*", (_req, res) => {
         notice(err.message || "Connexion refusee."); return;
       }
       el("login-password").value = "";
-      setLoginPanel(false);
+      closeDrop();
       notice("Connexion reussie !", true);
       await refreshAuth();
       await loadPlaylists();
@@ -962,12 +1054,11 @@ app.get("*", (_req, res) => {
   }
 
   function wireUi() {
-    el("btn-login").addEventListener("click", function() { setLoginPanel(true); });
-    el("btn-logout").addEventListener("click", logout);
-    el("btn-login-submit").addEventListener("click", loginSubmit);
-    el("btn-login-cancel").addEventListener("click", function() { setLoginPanel(false); });
-    el("btn-register").addEventListener("click", openRegister);
-    el("login-password").addEventListener("keydown", function(e) { if (e.key === "Enter") loginSubmit(); });
+    el("user-btn").addEventListener("click", function(e) { e.stopPropagation(); toggleDrop(); });
+    el("btn-records").addEventListener("click", openRecords);
+    document.addEventListener("click", function(e) {
+      if (!el("user-wrap").contains(e.target)) closeDrop();
+    });
 
     el("comments-close").addEventListener("click", closeAll);
     el("comment-send").addEventListener("click", sendComment);
