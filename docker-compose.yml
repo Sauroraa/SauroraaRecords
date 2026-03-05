@@ -32,7 +32,7 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - API_BASE=http://backend:4000/api
-      - RECORDS_BASE=${RECORDS_BASE:-http://localhost:3100}
+      - RECORDS_BASE=${RECORDS_BASE:-https://sauroraarecords.be}
     depends_on:
       - backend
     restart: unless-stopped
