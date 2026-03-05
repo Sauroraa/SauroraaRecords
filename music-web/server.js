@@ -24,9 +24,10 @@ app.get("*", (_req, res) => {
   <style>
     :root {
       --bg: #050507;
-      --surface: #1c1c22;
+      --surface: #0b0b10;
+      --card: #12121a;
       --text: #ffffff;
-      --muted: #9fa3b4;
+      --muted: #9aa0aa;
       --violet: #7b4cff;
       --cyan: #00d1ff;
       --radius: 14px;
@@ -146,7 +147,7 @@ app.get("*", (_req, res) => {
     }
     .hero h1 {
       margin: 0 0 8px;
-      font: 700 44px/1.08 "Space Grotesk", sans-serif;
+      font: 700 48px/1.08 "Space Grotesk", sans-serif;
       max-width: 760px;
     }
     .hero p {
@@ -169,7 +170,7 @@ app.get("*", (_req, res) => {
     .card {
       border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+      background: linear-gradient(180deg, rgba(18, 18, 26, 1), rgba(18, 18, 26, 0.9));
       padding: 12px;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
       box-shadow: var(--shadow);
@@ -202,6 +203,7 @@ app.get("*", (_req, res) => {
     .title {
       font-weight: 700;
       margin: 0 0 4px;
+      font-family: "Space Grotesk", sans-serif;
     }
     .meta {
       margin: 0 0 10px;
