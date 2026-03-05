@@ -8,7 +8,7 @@ app.get("/health", (_req, res) => res.json({ ok: true, service: "music-web" }));
 
 app.get("*", (_req, res) => {
   const RB = JSON.stringify(recordsBase);
-  res.status(200).type("html").send(`<!doctype html>
+  res.status(200).type("html").send(String.raw`<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
