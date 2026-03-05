@@ -53,9 +53,9 @@ export class CommentsController {
       where,
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true } },
+        user: { select: { id: true, email: true, firstName: true, artist: { select: { displayName: true, avatar: true } } } },
         replies: {
-          include: { user: { select: { id: true, email: true } } },
+          include: { user: { select: { id: true, email: true, firstName: true, artist: { select: { displayName: true, avatar: true } } } } },
           orderBy: { createdAt: "asc" }
         }
       }
@@ -94,7 +94,7 @@ export class CommentsController {
         body: dto.body,
         isVerifiedPurchase
       },
-      include: { user: { select: { id: true, email: true } } }
+      include: { user: { select: { id: true, email: true, firstName: true, artist: { select: { displayName: true, avatar: true } } } } }
     });
   }
 

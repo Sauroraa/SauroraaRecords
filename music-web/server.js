@@ -215,6 +215,165 @@ app.get("*", (_req, res) => {
     .cmt .c-body { font-size: 13px; }
     .cmt .c-ts { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: #7b4cff; }
     .d-form { border-top: 1px solid var(--line); padding: 10px; display: grid; grid-template-columns: 1fr auto; gap: 8px; background: var(--card); }
+    /* ---- Track Detail Panel (SoundCloud style) ---- */
+    .tp {
+      position: fixed; inset: 0; z-index: 95;
+      background: rgba(5,5,7,0.0); backdrop-filter: blur(0px);
+      transition: background .25s, backdrop-filter .25s;
+      pointer-events: none;
+    }
+    .tp.open { background: rgba(5,5,7,0.88); backdrop-filter: blur(8px); pointer-events: all; }
+    .tp-panel {
+      position: absolute; top: 0; right: 0; height: 100vh;
+      width: min(780px, 100vw); background: #0d0d14;
+      border-left: 1px solid rgba(123,76,255,0.2);
+      box-shadow: -24px 0 60px rgba(0,0,0,0.7);
+      transform: translateX(110%); transition: transform .28s cubic-bezier(.22,.68,0,1.2);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .tp.open .tp-panel { transform: translateX(0); }
+    .tp-close {
+      position: absolute; top: 14px; right: 14px; z-index: 2;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid var(--line); background: rgba(0,0,0,0.5);
+      cursor: pointer; font-size: 16px; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      transition: .12s;
+    }
+    .tp-close:hover { border-color: rgba(123,76,255,0.6); background: rgba(123,76,255,0.15); }
+    .tp-body { flex: 1; overflow-y: auto; }
+    .tp-banner {
+      width: 100%; aspect-ratio: 16/7; position: relative; overflow: hidden;
+      background: linear-gradient(135deg,#1a1025,#0a0a14);
+    }
+    .tp-banner-bg {
+      position: absolute; inset: 0; background-size: cover; background-position: center;
+      filter: blur(2px) brightness(0.65); transform: scale(1.04);
+    }
+    .tp-banner-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+    }
+    .tp-banner-content {
+      position: absolute; inset: 0; display: grid;
+      grid-template-columns: auto 1fr; gap: 18px;
+      align-items: flex-end; padding: 18px;
+    }
+    .tp-cover {
+      width: 110px; height: 110px; border-radius: 12px;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      background-size: cover; background-position: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      flex-shrink: 0;
+    }
+    .tp-play-big {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      border: none; cursor: pointer;
+      font-size: 20px; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px rgba(123,76,255,0.5);
+      transition: .14s; flex-shrink: 0;
+    }
+    .tp-play-big:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(123,76,255,0.65); }
+    .tp-banner-info { display: flex; flex-direction: column; gap: 5px; }
+    .tp-banner-info .tp-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .tp-banner-info .tp-artist { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 700; cursor: pointer; }
+    .tp-banner-info .tp-artist:hover { color: #fff; }
+    .tp-banner-info .tp-meta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tp-meta-pill {
+      font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+      padding: 2px 7px; color: rgba(255,255,255,0.65);
+    }
+    /* Waveform */
+    .tp-waveform-wrap {
+      padding: 0 18px; margin: -1px 0 0; position: relative;
+      background: linear-gradient(to bottom, rgba(13,13,20,0) 0%, #0d0d14 40%);
+    }
+    .tp-canvas { width: 100%; height: 80px; cursor: pointer; display: block; }
+    .tp-time { display: flex; justify-content: space-between; font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted); padding: 4px 0 0; }
+    /* Actions row */
+    .tp-actions {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+    }
+    .tp-act {
+      display: flex; align-items: center; gap: 6px;
+      border: 1px solid var(--line); border-radius: 8px;
+      background: var(--card2); padding: 7px 12px;
+      font-size: 12px; font-weight: 800; color: #d0d4e0;
+      cursor: pointer; transition: .12s;
+    }
+    .tp-act:hover { border-color: rgba(123,76,255,0.5); color: #fff; }
+    .tp-act.liked { border-color: rgba(255,80,120,0.5); color: #ff5070; background: rgba(255,80,120,0.08); }
+    .tp-act.buy { background: linear-gradient(120deg,#7b4cff,#5f39d6); border-color: transparent; color: #fff; box-shadow: 0 4px 14px rgba(123,76,255,0.3); }
+    .tp-act-icon { font-size: 14px; line-height: 1; }
+    .tp-stats { margin-left: auto; display: flex; gap: 14px; font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; }
+    /* Body content */
+    .tp-content { display: grid; grid-template-columns: 1fr 240px; gap: 0; }
+    .tp-main { padding: 18px; border-right: 1px solid var(--line); }
+    .tp-side { padding: 18px; }
+    .tp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tp-tag {
+      font-size: 11px; font-weight: 700; color: #7b4cff;
+      border: 1px solid rgba(123,76,255,0.3); border-radius: 6px;
+      padding: 3px 8px; cursor: pointer; transition: .12s;
+    }
+    .tp-tag:hover { background: rgba(123,76,255,0.12); }
+    .tp-desc { font-size: 13px; line-height: 1.65; color: rgba(255,255,255,0.75); white-space: pre-wrap; word-break: break-word; margin-bottom: 18px; }
+    /* Comments in track panel */
+    .tp-comments-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+    .tp-cmt-form { display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center; margin-bottom: 14px; }
+    .tp-cmt-av {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; overflow: hidden; flex-shrink: 0;
+    }
+    .tp-cmt-av img { width: 100%; height: 100%; object-fit: cover; }
+    .tp-cmt { display: grid; grid-template-columns: 32px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .tp-cmt-body { font-size: 13px; line-height: 1.5; }
+    .tp-cmt-meta { font-size: 10px; color: var(--muted); margin-bottom: 3px; font-weight: 700; }
+    .tp-cmt-ts { color: #7b4cff; font-family: "IBM Plex Mono", monospace; font-size: 10px; cursor: pointer; }
+    .tp-cmt-ts:hover { color: #a070ff; }
+    /* Artist sidebar */
+    .tp-art-card { margin-bottom: 18px; }
+    .tp-art-av {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      background-size: cover; background-position: center;
+      margin: 0 auto 8px; display: block;
+    }
+    .tp-art-name { font-size: 14px; font-weight: 800; text-align: center; }
+    .tp-art-subs { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 10px; }
+    .tp-art-follow {
+      width: 100%; border: 1px solid rgba(123,76,255,0.5); border-radius: 8px;
+      background: rgba(123,76,255,0.12); color: #c8b0ff;
+      padding: 8px; font-size: 12px; font-weight: 800; cursor: pointer; transition: .12s;
+    }
+    .tp-art-follow:hover { background: rgba(123,76,255,0.22); color: #fff; }
+    .tp-side-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .tp-related { display: grid; gap: 8px; }
+    .tp-rel {
+      display: grid; grid-template-columns: 40px 1fr; gap: 8px;
+      align-items: center; cursor: pointer; padding: 6px;
+      border-radius: 8px; transition: .12s;
+    }
+    .tp-rel:hover { background: rgba(255,255,255,0.04); }
+    .tp-rel-cover {
+      width: 40px; height: 40px; border-radius: 6px;
+      background: linear-gradient(135deg,#7b4cff,#5f39d6);
+      background-size: cover; background-position: center; flex-shrink: 0;
+    }
+    .tp-rel-title { font-size: 12px; font-weight: 800; line-height: 1.2; }
+    .tp-rel-artist { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    @media (max-width: 600px) {
+      .tp-content { grid-template-columns: 1fr; }
+      .tp-side { border-top: 1px solid var(--line); border-right: none; }
+      .tp-banner-content { grid-template-columns: 1fr; }
+      .tp-cover { display: none; }
+    }
     .modal {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(110%);
       width: 480px; max-width: 96vw; background: var(--card);
@@ -355,6 +514,14 @@ app.get("*", (_req, res) => {
       </div>
     </section>
   </main>
+</div>
+
+<!-- Track Detail Panel -->
+<div class="tp" id="tp">
+  <div class="tp-panel">
+    <button class="tp-close" id="tp-close">&#10005;</button>
+    <div class="tp-body" id="tp-body"></div>
+  </div>
 </div>
 
 <aside class="drawer" id="comments-drawer">
@@ -672,13 +839,9 @@ app.get("*", (_req, res) => {
       "</div>" +
       "<div class=\"actions\">" +
         "<button class=\"a-btn play\" data-action=\"play\" data-id=\"" + id + "\">&#9654; Play</button>" +
-        "<button class=\"a-btn\" data-action=\"comments\" data-id=\"" + id + "\">Cmts</button>" +
+        "<button class=\"a-btn\" data-action=\"track-detail\" data-id=\"" + id + "\">&#9776; D\u00e9tail</button>" +
         "<button class=\"a-btn\" data-action=\"share\" data-id=\"" + id + "\">Share</button>" +
-        "<button class=\"a-btn\" data-action=\"report\" data-id=\"" + id + "\">Flag</button>" +
-      "</div>" +
-      "<div class=\"actions\" style=\"grid-template-columns:1fr 1fr;margin-top:0\">" +
-        "<button class=\"a-btn\" data-action=\"open\" data-slug=\"" + slug + "\">Records</button>" +
-        "<button class=\"a-btn\" data-action=\"queue-add\" data-id=\"" + id + "\">+ Queue</button>" +
+        "<button class=\"a-btn\" data-action=\"queue-add\" data-id=\"" + id + "\">+ Q</button>" +
       "</div>";
   }
 
@@ -695,11 +858,11 @@ app.get("*", (_req, res) => {
       var wf = normUrl(r.waveformPath);
       var verified = r.artist && r.artist.isVerified;
       html += "<article class=\"card\">";
-      html += "<div class=\"cover\"" + coverStyle + ">";
+      html += "<div class=\"cover\" data-action=\"track-detail\" data-id=\"" + esc(r.id) + "\" style=\"cursor:pointer\"" + coverStyle + ">";
       if (verified) html += "<span class=\"cover-badge\">&#10003; Verifie</span>";
       html += "</div>";
       if (wf) html += "<img class=\"waveform\" src=\"" + esc(wf) + "\" alt=\"waveform\" loading=\"lazy\" />";
-      html += "<p class=\"title\">" + esc(r.title || "Sans titre") + "</p>";
+      html += "<p class=\"title\" data-action=\"track-detail\" data-id=\"" + esc(r.id) + "\" style=\"cursor:pointer\">" + esc(r.title || "Sans titre") + "</p>";
       html += "<p class=\"meta\">" + esc(artistName(r)) + "</p>";
       html += cardActions(r);
       html += "</article>";
@@ -893,6 +1056,273 @@ app.get("*", (_req, res) => {
     apiFetch("/ecosystem/heatmap/" + id + "/events", { method: "POST", body: JSON.stringify({ secondMark: Math.floor(sec) }) }).catch(function() {});
   }
 
+  // ---- Track Detail Panel ----
+  function userPseudo(u) {
+    if (!u) return "Utilisateur";
+    return (u.artist && u.artist.displayName) || u.firstName || u.email.split("@")[0];
+  }
+
+  function userAvHtml(u, size) {
+    size = size || 32;
+    var pseudo = userPseudo(u);
+    var initial = pseudo.charAt(0).toUpperCase();
+    var av = u && u.artist && u.artist.avatar ? normUrl(u.artist.avatar) : (u && u.avatarUrl ? normUrl(u.avatarUrl) : "");
+    var style = "width:" + size + "px;height:" + size + "px;border-radius:50%;background:linear-gradient(135deg,#7b4cff,#5f39d6);display:flex;align-items:center;justify-content:center;font-size:" + Math.round(size * 0.38) + "px;font-weight:800;overflow:hidden;flex-shrink:0;";
+    return "<div style=\"" + style + "\">" + (av ? "<img src=\"" + esc(av) + "\" style=\"width:100%;height:100%;object-fit:cover\" />" : initial) + "</div>";
+  }
+
+  function drawWaveform(canvas, progress) {
+    var ctx = canvas.getContext("2d");
+    var W = canvas.offsetWidth || 700;
+    var H = canvas.offsetHeight || 80;
+    canvas.width = W; canvas.height = H;
+    var bars = Math.floor(W / 4);
+    var id = (S.trackDetail && S.trackDetail.id) || "x";
+    // deterministic pseudo-random heights from track id
+    var seed = 0;
+    for (var k = 0; k < id.length; k++) seed = (seed * 31 + id.charCodeAt(k)) & 0xffff;
+    function rand(i) {
+      var v = (seed * 1664525 + i * 22695477 + 1013904223) & 0xffffff;
+      return (v & 0xffff) / 0xffff;
+    }
+    var played = Math.min(1, Math.max(0, progress || 0));
+    for (var i = 0; i < bars; i++) {
+      var r = rand(i);
+      var h = (0.2 + r * 0.8) * H * 0.88;
+      var x = i * (W / bars);
+      var w = W / bars - 1.5;
+      var frac = i / bars;
+      if (frac < played) {
+        var g = ctx.createLinearGradient(0, (H - h) / 2, 0, (H + h) / 2);
+        g.addColorStop(0, "#a070ff"); g.addColorStop(1, "#5f39d6");
+        ctx.fillStyle = g;
+      } else {
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+      }
+      ctx.beginPath();
+      ctx.roundRect(x, (H - h) / 2, w, h, 2);
+      ctx.fill();
+    }
+  }
+
+  function openTrackDetail(id) {
+    var r = byId(id) || S.releases.find(function(x) { return x.id === id; });
+    if (!r) return;
+    S.trackDetail = r;
+    var tp = el("tp");
+    var body = el("tp-body");
+    var coverStyle = r.coverPath ? "background-image:url('" + esc(normUrl(r.coverPath)) + "')" : "";
+    var artistN = esc(artistName(r));
+    var artistId = (r.artist && r.artist.id) || r.artistId || "";
+    var isFree = !r.price || r.price === 0;
+    var tags = [r.genre, r.bpm ? r.bpm + " BPM" : null, r.musicalKey ? r.musicalKey : null].filter(Boolean);
+
+    body.innerHTML =
+      "<div class=\"tp-banner\">" +
+        "<div class=\"tp-banner-bg\" style=\"" + coverStyle + "\"></div>" +
+        "<div class=\"tp-banner-overlay\"></div>" +
+        "<div class=\"tp-banner-content\">" +
+          "<div class=\"tp-cover\" style=\"" + coverStyle + "\"></div>" +
+          "<div class=\"tp-banner-info\">" +
+            "<div class=\"tp-title\">" + esc(r.title) + "</div>" +
+            "<div class=\"tp-artist\" data-action=\"artist-open\" data-id=\"" + esc(artistId) + "\">" + artistN + "</div>" +
+            "<div class=\"tp-meta-row\">" +
+              tags.map(function(t) { return "<span class=\"tp-meta-pill\">" + esc(t) + "</span>"; }).join("") +
+              (r.isPreorder ? "<span class=\"tp-meta-pill\" style=\"color:#f0a030;border-color:rgba(240,160,48,0.4)\">P&#201;COMMANDER</span>" : "") +
+            "</div>" +
+          "</div>" +
+          "<button class=\"tp-play-big\" id=\"tp-play-btn\">&#9654;</button>" +
+        "</div>" +
+      "</div>" +
+      "<div class=\"tp-waveform-wrap\">" +
+        "<canvas class=\"tp-canvas\" id=\"tp-canvas\"></canvas>" +
+        "<div class=\"tp-time\"><span id=\"tp-cur\">0:00</span><span id=\"tp-dur\">--:--</span></div>" +
+      "</div>" +
+      "<div class=\"tp-actions\">" +
+        "<div class=\"tp-act\" id=\"tp-like\"><span class=\"tp-act-icon\">&#9825;</span><span id=\"tp-like-lbl\">Like</span></div>" +
+        "<div class=\"tp-act\" id=\"tp-repost\"><span class=\"tp-act-icon\">&#8634;</span>Repost</div>" +
+        "<div class=\"tp-act\" id=\"tp-share-btn\"><span class=\"tp-act-icon\">&#8680;</span>Share</div>" +
+        "<div class=\"tp-act\" id=\"tp-report-btn\"><span class=\"tp-act-icon\">&#9873;</span>Signaler</div>" +
+        (isFree
+          ? "<div class=\"tp-act buy\" id=\"tp-download\"><span class=\"tp-act-icon\">&#11015;</span>T&#233;l&#233;charger</div>"
+          : "<div class=\"tp-act buy\" id=\"tp-buy\"><span class=\"tp-act-icon\">&#128722;</span>" + (r.price || "0") + "&#8364;</div>") +
+        "<div class=\"tp-stats\">" +
+          (r._count && r._count.downloads !== undefined ? "<span>&#11015; " + (r._count.downloads || 0) + "</span>" : "") +
+          (r._count && r._count.comments !== undefined ? "<span>&#128172; " + (r._count.comments || 0) + "</span>" : "") +
+        "</div>" +
+      "</div>" +
+      "<div class=\"tp-content\">" +
+        "<div class=\"tp-main\">" +
+          "<div class=\"tp-tags\" id=\"tp-tags\">" +
+            (r.genre ? "<span class=\"tp-tag\">#" + esc(r.genre.toLowerCase()) + "</span>" : "") +
+            (r.tags ? r.tags.split(",").map(function(t) { return "<span class=\"tp-tag\">#" + esc(t.trim().toLowerCase()) + "</span>"; }).join("") : "") +
+          "</div>" +
+          (r.description ? "<div class=\"tp-desc\">" + esc(r.description) + "</div>" : "") +
+          "<div class=\"tp-comments-title\" id=\"tp-cmt-count\">Commentaires</div>" +
+          "<div class=\"tp-cmt-form\" id=\"tp-cmt-form\">" +
+            "<div class=\"tp-cmt-av\">" + (S.user ? userPseudo(S.user).charAt(0).toUpperCase() : "?") + "</div>" +
+            "<input class=\"input\" id=\"tp-cmt-input\" placeholder=\"Ajoute un commentaire... (@1:23 pour timecode)\" />" +
+            "<button class=\"btn brand\" id=\"tp-cmt-send\">Publier</button>" +
+          "</div>" +
+          "<div id=\"tp-cmt-list\"><div style=\"color:var(--muted);font-size:13px\">Chargement...</div></div>" +
+        "</div>" +
+        "<div class=\"tp-side\">" +
+          "<div class=\"tp-art-card\" id=\"tp-art-card\">Chargement artiste...</div>" +
+          "<div class=\"tp-side-title\">Titres similaires</div>" +
+          "<div class=\"tp-related\" id=\"tp-related\"></div>" +
+        "</div>" +
+      "</div>";
+
+    tp.classList.add("open");
+
+    // Wire inner buttons
+    el("tp-play-btn").addEventListener("click", function() { playById(r.id); });
+    el("tp-like").addEventListener("click", function() { toggleTrackLike(r.id); });
+    el("tp-repost").addEventListener("click", function() { doRepost(r.id); });
+    el("tp-share-btn").addEventListener("click", function() { el("tp").classList.remove("open"); openShare(r.id); });
+    el("tp-report-btn").addEventListener("click", function() { el("tp").classList.remove("open"); openReport(r.id); });
+    if (isFree) {
+      el("tp-download").addEventListener("click", function() { window.open(RECORDS + "/release/" + (r.slug || r.id), "_blank"); });
+    } else {
+      el("tp-buy").addEventListener("click", function() { window.open(RECORDS + "/release/" + (r.slug || r.id) + "?buy=1", "_blank"); });
+    }
+    el("tp-cmt-send").addEventListener("click", function() { sendTpComment(r.id); });
+    el("tp-cmt-input").addEventListener("keydown", function(e) { if (e.key === "Enter") sendTpComment(r.id); });
+
+    // Wire canvas progress
+    var canvas = el("tp-canvas");
+    setTimeout(function() {
+      drawWaveform(canvas, audio.duration ? audio.currentTime / audio.duration : 0);
+    }, 50);
+    canvas.addEventListener("click", function(e) {
+      var rect = canvas.getBoundingClientRect();
+      var frac = (e.clientX - rect.left) / rect.width;
+      if (audio.src && audio.duration) { audio.currentTime = frac * audio.duration; }
+    });
+
+    // Load data
+    loadTpComments(r.id);
+    loadTpArtist(r);
+    renderTpRelated(r);
+  }
+
+  function closeTrackDetail() {
+    el("tp").classList.remove("open");
+    S.trackDetail = null;
+  }
+
+  function toggleTrackLike(id) {
+    if (!S.user) { notice("Connecte-toi pour liker."); return; }
+    var act = el("tp-like");
+    var lbl = el("tp-like-lbl");
+    var liked = act.classList.contains("liked");
+    // optimistic toggle
+    act.classList.toggle("liked", !liked);
+    lbl.textContent = liked ? "Like" : "Lik\u00e9";
+    // fire engagement view as proxy (real like endpoint if available)
+    apiFetch("/engagement/view", { method: "POST", body: JSON.stringify({ releaseId: id }) }).catch(function() {});
+  }
+
+  function doRepost(id) {
+    if (!S.user) { notice("Connecte-toi pour repost."); return; }
+    apiFetch("/engagement/share", { method: "POST", body: JSON.stringify({ releaseId: id }) })
+      .then(function(r) { notice(r.ok ? "Repost\u00e9 !" : "Erreur.", r.ok); })
+      .catch(function() {});
+  }
+
+  async function loadTpComments(id) {
+    var listEl = el("tp-cmt-list");
+    var countEl = el("tp-cmt-count");
+    if (!listEl) return;
+    try {
+      var res = await apiFetch("/comments?releaseId=" + encodeURIComponent(id));
+      if (!res.ok) throw new Error();
+      var list = await res.json();
+      if (!Array.isArray(list)) list = [];
+      countEl.textContent = list.length + " commentaire" + (list.length !== 1 ? "s" : "");
+      if (!list.length) { listEl.innerHTML = "<div style=\"color:var(--muted);font-size:13px;padding:10px 0\">Aucun commentaire. Sois le premier !</div>"; return; }
+      var html = "";
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        var pseudo = userPseudo(c.user);
+        var avHtml = userAvHtml(c.user, 32);
+        var ts = c.timestampSec != null ? "<span class=\"tp-cmt-ts\" data-ts=\"" + c.timestampSec + "\">" + fmtTime(c.timestampSec) + "</span> " : "";
+        html += "<div class=\"tp-cmt\">" + avHtml +
+          "<div><div class=\"tp-cmt-meta\">" + esc(pseudo) + " &middot; " + new Date(c.createdAt).toLocaleDateString("fr-FR") + "</div>" +
+          "<div class=\"tp-cmt-body\">" + ts + esc(c.body) + "</div></div></div>";
+      }
+      listEl.innerHTML = html;
+      // Wire timestamp clicks
+      listEl.querySelectorAll(".tp-cmt-ts").forEach(function(el) {
+        el.addEventListener("click", function() {
+          var sec = Number(this.getAttribute("data-ts"));
+          if (audio.src && isFinite(sec)) audio.currentTime = sec;
+        });
+      });
+    } catch(e) { listEl.innerHTML = "<div style=\"color:var(--muted);font-size:13px\">Impossible de charger.</div>"; }
+  }
+
+  async function sendTpComment(id) {
+    if (!S.user) { notice("Connecte-toi pour commenter."); return; }
+    var input = el("tp-cmt-input");
+    var body = input.value.trim();
+    if (!body) return;
+    var m = body.match(/^@(\d+):(\d{2})\s*/);
+    var ts = m ? Number(m[1]) * 60 + Number(m[2]) : undefined;
+    var r = await apiFetch("/comments", {
+      method: "POST",
+      body: JSON.stringify({ releaseId: id, body: body.replace(/^@\d+:\d{2}\s*/, ""), timestampSec: ts })
+    });
+    if (!r.ok) { notice("Commentaire refus\u00e9."); return; }
+    input.value = "";
+    await loadTpComments(id);
+  }
+
+  async function loadTpArtist(release) {
+    var card = el("tp-art-card");
+    if (!card) return;
+    var artist = release.artist;
+    if (!artist) { card.innerHTML = ""; return; }
+    var name = esc(artist.displayName || (artist.user && artist.user.email && artist.user.email.split("@")[0]) || "Artiste");
+    var avUrl = artist.avatar ? normUrl(artist.avatar) : "";
+    var subs = (artist._count && artist._count.followers) || 0;
+    var avStyle = avUrl ? "background-image:url('" + esc(avUrl) + "')" : "";
+    card.innerHTML =
+      "<div class=\"tp-side-title\">Artiste</div>" +
+      "<div class=\"tp-art-av\" style=\"" + avStyle + "\">" + (avUrl ? "" : name.charAt(0)) + "</div>" +
+      "<div class=\"tp-art-name\">" + name + "</div>" +
+      "<div class=\"tp-art-subs\">" + subs + " abonn\u00e9" + (subs !== 1 ? "s" : "") + "</div>" +
+      "<button class=\"tp-art-follow\" data-action=\"artist-follow\" data-id=\"" + esc(artist.id || "") + "\">+ Suivre</button>" +
+      "<div style=\"height:10px\"></div>" +
+      "<button class=\"tp-art-follow\" data-action=\"artist-open\" data-id=\"" + esc(artist.id || "") + "\" style=\"background:transparent;color:var(--muted)\">Voir le profil &#8599;</button>";
+  }
+
+  function renderTpRelated(release) {
+    var el2 = el("tp-related");
+    if (!el2) return;
+    var related = S.releases.filter(function(r) { return r.id !== release.id && (r.genre === release.genre || (r.artistId && r.artistId === release.artistId)); }).slice(0, 5);
+    var html = "";
+    for (var i = 0; i < related.length; i++) {
+      var r = related[i];
+      var cs = r.coverPath ? "background-image:url('" + esc(normUrl(r.coverPath)) + "')" : "";
+      html += "<div class=\"tp-rel\" data-action=\"track-detail\" data-id=\"" + esc(r.id) + "\">" +
+        "<div class=\"tp-rel-cover\" style=\"" + cs + "\"></div>" +
+        "<div><div class=\"tp-rel-title\">" + esc(r.title) + "</div><div class=\"tp-rel-artist\">" + esc(artistName(r)) + "</div></div>" +
+        "</div>";
+    }
+    el2.innerHTML = html || "<div style=\"color:var(--muted);font-size:12px\">Aucun titre similaire</div>";
+  }
+
+  // Update waveform progress while playing
+  function updateTpWaveform() {
+    var canvas = el("tp-canvas");
+    if (canvas && S.trackDetail && audio.duration) {
+      drawWaveform(canvas, audio.currentTime / audio.duration);
+      el("tp-cur") && (el("tp-cur").textContent = fmtTime(audio.currentTime));
+      el("tp-dur") && (el("tp-dur").textContent = fmtTime(audio.duration));
+    }
+  }
+
   // ---- Report ----
   function openReport(id) {
     if (!S.user) { notice("Connecte-toi pour signaler."); return; }
@@ -1017,7 +1447,8 @@ app.get("*", (_req, res) => {
       var slug = btn.getAttribute("data-slug") || "";
 
       if (action === "play") playById(id);
-      else if (action === "comments") openComments(id);
+      else if (action === "track-detail") openTrackDetail(id);
+      else if (action === "comments") openTrackDetail(id);
       else if (action === "share") openShare(id);
       else if (action === "report") openReport(id);
       else if (action === "open" && slug) window.open(RECORDS + "/release/" + slug, "_blank");
@@ -1060,6 +1491,7 @@ app.get("*", (_req, res) => {
       if (!el("user-wrap").contains(e.target)) closeDrop();
     });
 
+    el("tp-close").addEventListener("click", closeTrackDetail);
     el("comments-close").addEventListener("click", closeAll);
     el("comment-send").addEventListener("click", sendComment);
     el("comment-input").addEventListener("keydown", function(e) { if (e.key === "Enter") sendComment(); });
@@ -1162,6 +1594,7 @@ app.get("*", (_req, res) => {
       el("progress").style.width = pct.toFixed(2) + "%";
       var sec = Math.floor(audio.currentTime);
       if (sec - lastHeat >= 10 && S.releaseId) { lastHeat = sec; trackHeatmap(S.releaseId, sec); }
+      updateTpWaveform();
     });
     audio.addEventListener("ended", function() {
       if (S.repeat && S.releaseId) { playById(S.releaseId); return; }
