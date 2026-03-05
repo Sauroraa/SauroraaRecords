@@ -293,6 +293,97 @@ app.get("*", (_req, res) => {
       color: #3f4e6e;
     }
     .vol { width: 88px; }
+
+    /* Sauroraa dark/purple theme override */
+    :root {
+      --bg: #050507;
+      --bg-2: #0b0b10;
+      --card: #12121a;
+      --text: #ffffff;
+      --muted: #9aa0aa;
+      --line: rgba(255, 255, 255, 0.12);
+      --brand: #7b4cff;
+      --brand-2: #5f39d6;
+      --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    }
+    body {
+      background:
+        radial-gradient(900px 500px at 12% -10%, rgba(123, 76, 255, 0.2), transparent 70%),
+        radial-gradient(900px 500px at 100% 120%, rgba(123, 76, 255, 0.12), transparent 70%),
+        linear-gradient(180deg, var(--bg), var(--bg-2));
+      color: var(--text);
+    }
+    .side {
+      background: rgba(8, 8, 14, 0.88);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .brand { border-bottom-color: rgba(255, 255, 255, 0.08); }
+    .brand .t1, .meta, .status, .mono, .p-sub, .p-right { color: var(--muted); }
+    .brand .t2, .title, section h2, .hero h1, .p-title { color: #fff; }
+    .nav button { color: #d6d7df; }
+    .nav button:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .nav button.active {
+      border-color: rgba(123, 76, 255, 0.6);
+      background: linear-gradient(90deg, rgba(123, 76, 255, 0.24), rgba(123, 76, 255, 0.12));
+      color: #ffffff;
+    }
+    .side-footer,
+    .input,
+    .btn,
+    .pill,
+    .card,
+    .hero,
+    .drawer,
+    .d-form,
+    .player,
+    .icon-btn,
+    .a-btn {
+      background: #12121a;
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    .input::placeholder { color: #8c90a1; }
+    .btn { color: #f4f5ff; }
+    .btn.brand,
+    .a-btn.play,
+    .icon-btn.playing {
+      background: linear-gradient(120deg, #7b4cff, #5f39d6);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(123, 76, 255, 0.28);
+    }
+    .hero {
+      border-color: rgba(255, 255, 255, 0.1);
+      background:
+        radial-gradient(700px 220px at 20% -35%, rgba(123, 76, 255, 0.28), transparent 70%),
+        radial-gradient(700px 220px at 100% 130%, rgba(95, 57, 214, 0.2), transparent 70%),
+        #0f1017;
+    }
+    .cover {
+      background: linear-gradient(130deg, rgba(123, 76, 255, 0.94), rgba(95, 57, 214, 0.88));
+    }
+    .pill.active {
+      border-color: rgba(123, 76, 255, 0.5);
+      background: rgba(123, 76, 255, 0.2);
+      color: #ffffff;
+    }
+    .bar { background: rgba(255, 255, 255, 0.15); }
+    .bar i { background: linear-gradient(90deg, #7b4cff, #5f39d6); }
+    .avatar {
+      border-color: rgba(123, 76, 255, 0.55);
+      background: linear-gradient(120deg, #7b4cff, #5f39d6);
+    }
+    .card:hover {
+      border-color: rgba(123, 76, 255, 0.45);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.42);
+    }
+    .cmt {
+      background: #151622;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
     @media (max-width: 1200px) {
       .grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
       .top { grid-template-columns: 1fr auto auto; }
