@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Post, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { Request, Response } from "express";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthService } from "./auth.service";
@@ -9,16 +9,19 @@ const COOKIE_REFRESH = "refresh_token";
 
 function setCookies(res: Response, accessToken: string, refreshToken: string) {
   const isProd = process.env.NODE_ENV === "production";
-  res.cookie(COOKIE_ACCESS, accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
+  const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+  const baseCookieOptions = {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
     secure: isProd,
+    ...(cookieDomain ? { domain: cookieDomain } : {})
+  };
+  res.cookie(COOKIE_ACCESS, accessToken, {
+    ...baseCookieOptions,
     maxAge: 15 * 60 * 1000
   });
   res.cookie(COOKIE_REFRESH, refreshToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,
+    ...baseCookieOptions,
     maxAge: 30 * 24 * 60 * 60 * 1000
   });
 }
@@ -28,7 +31,18 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("register")
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body() dto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const host = req.headers.host ?? "";
+    const origin = req.headers.origin ?? "";
+    if (host.includes("music.sauroraarecords.be") || origin.includes("music.sauroraarecords.be")) {
+      const redirect = process.env.RECORDS_PUBLIC_URL || "https://sauroraarecords.be/register";
+      throw new ForbiddenException(`Registration is only available on SauroraaRecords: ${redirect}`);
+    }
+
     const tokens = await this.authService.register(dto);
     setCookies(res, tokens.accessToken, tokens.refreshToken);
     return { user: tokens.user };
@@ -59,8 +73,16 @@ export class AuthController {
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedException("Invalid user");
     await this.authService.logout(userId);
-    res.clearCookie(COOKIE_ACCESS);
-    res.clearCookie(COOKIE_REFRESH);
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+    const baseCookieOptions = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: isProd,
+      ...(cookieDomain ? { domain: cookieDomain } : {})
+    };
+    res.clearCookie(COOKIE_ACCESS, baseCookieOptions);
+    res.clearCookie(COOKIE_REFRESH, baseCookieOptions);
     return { success: true };
   }
 

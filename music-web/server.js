@@ -102,7 +102,7 @@ app.get("*", (_req, res) => {
     }
     .topbar {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       gap: 12px;
       align-items: center;
       margin-bottom: 20px;
@@ -131,6 +131,12 @@ app.get("*", (_req, res) => {
       color: #fff;
       box-shadow: var(--shadow);
       font-weight: 700;
+    }
+    .auth-state {
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .hero {
       position: relative;
@@ -389,9 +395,11 @@ app.get("*", (_req, res) => {
     <main class="main">
       <header class="topbar">
         <input class="search" id="search" placeholder="Search track, artist, playlist, dubpack..." />
-        <button class="chip">Genre: All</button>
-        <button class="chip premium">Go PRO</button>
+        <button class="chip" id="btn-login">Connexion</button>
+        <button class="chip" id="btn-logout" style="display:none">Logout</button>
+        <button class="chip premium" id="btn-register">Inscription (Records)</button>
       </header>
+      <div class="mono auth-state" id="auth-state">Not connected</div>
 
       <section class="hero">
         <span class="badge">Cosmic Sound Engine</span>
@@ -446,28 +454,25 @@ app.get("*", (_req, res) => {
       <span class="mono">BPM <strong id="now-bpm">---</strong></span>
       <span class="mono">VOL 72%</span>
       <span class="mono">QUEUE 12</span>
+      <button class="btn" id="btn-share">Share</button>
     </div>
   </footer>
 
   <script>
-    const tracks = [
-      { title: "Nebula Drive", artist: "SXR", bpm: 128, tag: "Melodic Techno" },
-      { title: "Gravity Drop", artist: "Klyx", bpm: 140, tag: "Bass House" },
-      { title: "Aurora Pulse", artist: "Luna Vox", bpm: 124, tag: "Deep House" },
-      { title: "Dark Matter", artist: "N8", bpm: 136, tag: "Drum & Bass" },
-      { title: "Ion Drift", artist: "Mira", bpm: 130, tag: "Afro House" },
-      { title: "Orbit Shift", artist: "Rika", bpm: 122, tag: "Progressive" },
-      { title: "Skyline Repost", artist: "Tavor", bpm: 144, tag: "Trap" },
-      { title: "Quantum Step", artist: "Elya", bpm: 126, tag: "Electro" }
+    const apiClientBase = "/api";
+    const recordsRegisterUrl = "https://sauroraarecords.be/register";
+    const fallbackTracks = [
+      { releaseId: "", title: "Nebula Drive", artist: "SXR", bpm: 128, tag: "Melodic Techno" },
+      { releaseId: "", title: "Gravity Drop", artist: "Klyx", bpm: 140, tag: "Bass House" },
+      { releaseId: "", title: "Aurora Pulse", artist: "Luna Vox", bpm: 124, tag: "Deep House" },
+      { releaseId: "", title: "Dark Matter", artist: "N8", bpm: 136, tag: "Drum & Bass" }
     ];
-
     const artists = [
       { title: "Luna Vox", artist: "2.4M streams", bpm: 91, tag: "Top 1 Trend" },
       { title: "Klyx", artist: "1.8M streams", bpm: 88, tag: "Top 2 Trend" },
       { title: "Mira", artist: "1.4M streams", bpm: 85, tag: "Top 3 Trend" },
       { title: "SXR", artist: "1.1M streams", bpm: 83, tag: "Top 4 Trend" }
     ];
-
     const dubpacks = [
       { title: "Warehouse Drums Vol.1", artist: "128 one-shots", bpm: 126, tag: "DUBPACK" },
       { title: "Future Bass FX", artist: "94 loops", bpm: 140, tag: "DUBPACK" },
@@ -475,29 +480,162 @@ app.get("*", (_req, res) => {
       { title: "Synth Atmos Pack", artist: "68 textures", bpm: 110, tag: "DUBPACK" }
     ];
 
+    let tracks = [...fallbackTracks];
+    let currentReleaseId = "";
+
+    function escapeAttr(value) {
+      return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\\\'");
+    }
+
     function renderCards(targetId, data, kind) {
       const root = document.getElementById(targetId);
-      root.innerHTML = data.map((item, idx) => \`
-        <article class="card" data-kind="\${kind}" data-title="\${item.title.toLowerCase()}" data-artist="\${item.artist.toLowerCase()}">
+      root.innerHTML = data
+        .map((item) => {
+          const title = String(item.title || "");
+          const artist = String(item.artist || "");
+          const bpm = Number(item.bpm || 0);
+          const releaseId = String(item.releaseId || "");
+          return \`
+        <article class="card" data-kind="\${kind}" data-title="\${title.toLowerCase()}" data-artist="\${artist.toLowerCase()}">
           <div class="cover"></div>
-          <p class="title">\${item.title}</p>
-          <p class="meta">\${item.artist}</p>
+          <p class="title">\${title}</p>
+          <p class="meta">\${artist}</p>
           <div class="row">
-            <span class="mono">\${item.bpm} BPM</span>
-            <button class="btn \${kind === "track" ? "play" : ""}" onclick="selectTrack('\${item.title.replace(/'/g, "\\\\'")}', '\${item.artist.replace(/'/g, "\\\\'")}', '\${item.bpm}')">
+            <span class="mono">\${bpm || "---"} BPM</span>
+            <button class="btn \${kind === "track" ? "play" : ""}" onclick="selectTrack('\${escapeAttr(title)}', '\${escapeAttr(artist)}', '\${bpm}', '\${escapeAttr(releaseId)}')">
               \${kind === "track" ? "Play" : "Open"}
             </button>
           </div>
-          <div class="badge" style="margin-top:8px">\${item.tag}</div>
-        </article>
-      \`).join("");
+          <div class="badge" style="margin-top:8px">\${item.tag || ""}</div>
+        </article>\`;
+        })
+        .join("");
     }
 
-    function selectTrack(title, artist, bpm) {
+    async function refreshStats(releaseId) {
+      const nowMeta = document.getElementById("now-meta");
+      if (!releaseId) return;
+      try {
+        const res = await fetch(\`\${apiClientBase}/engagement/release/\${encodeURIComponent(releaseId)}/summary\`, {
+          credentials: "include"
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        nowMeta.textContent = \`\${nowMeta.textContent.split(" • ")[0]} • \${data.views} views • \${data.comments} comments • \${data.shares} shares\`;
+      } catch {
+      }
+    }
+
+    async function sendView(releaseId) {
+      if (!releaseId) return;
+      try {
+        await fetch(\`\${apiClientBase}/engagement/view\`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            releaseId,
+            scope: "PREVIEW",
+            playlistPath: window.location.pathname
+          })
+        });
+      } catch {
+      }
+    }
+
+    async function shareCurrent() {
+      if (!currentReleaseId) {
+        alert("Select a track first.");
+        return;
+      }
+      const res = await fetch(\`\${apiClientBase}/engagement/share\`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ releaseId: currentReleaseId })
+      });
+      if (res.status === 401) {
+        alert("Login required to share.");
+        return;
+      }
+      if (!res.ok) {
+        alert("Share failed.");
+        return;
+      }
+      await refreshStats(currentReleaseId);
+      alert("Shared.");
+    }
+
+    async function refreshAuthState() {
+      const authState = document.getElementById("auth-state");
+      const btnLogin = document.getElementById("btn-login");
+      const btnLogout = document.getElementById("btn-logout");
+      try {
+        const res = await fetch(\`\${apiClientBase}/auth/me\`, { credentials: "include" });
+        if (!res.ok) throw new Error("not-auth");
+        const user = await res.json();
+        authState.textContent = \`Connected: \${user.email || user.userId}\`;
+        btnLogin.style.display = "none";
+        btnLogout.style.display = "";
+      } catch {
+        authState.textContent = "Not connected";
+        btnLogin.style.display = "";
+        btnLogout.style.display = "none";
+      }
+    }
+
+    async function loginFromMusic() {
+      const email = window.prompt("Email");
+      if (!email) return;
+      const password = window.prompt("Mot de passe");
+      if (!password) return;
+      const res = await fetch(\`\${apiClientBase}/auth/login\`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) {
+        alert("Login failed");
+        return;
+      }
+      await refreshAuthState();
+    }
+
+    async function logoutFromMusic() {
+      await fetch(\`\${apiClientBase}/auth/logout\`, {
+        method: "POST",
+        credentials: "include"
+      });
+      await refreshAuthState();
+    }
+
+    async function loadTracks() {
+      try {
+        const res = await fetch(\`\${apiClientBase}/releases\`, { credentials: "include" });
+        if (!res.ok) throw new Error("release-fetch-failed");
+        const list = await res.json();
+        tracks = list.slice(0, 8).map((r) => ({
+          releaseId: r.id,
+          title: r.title,
+          artist: r.artist?.displayName || r.artist?.user?.email || "Unknown Artist",
+          bpm: r.bpm || 0,
+          tag: r.genre || "Release"
+        }));
+        if (!tracks.length) tracks = [...fallbackTracks];
+      } catch {
+        tracks = [...fallbackTracks];
+      }
+    }
+
+    async function selectTrack(title, artist, bpm, releaseId) {
+      currentReleaseId = releaseId || "";
       document.getElementById("now-title").textContent = title;
       document.getElementById("now-meta").textContent = artist;
-      document.getElementById("now-bpm").textContent = bpm;
-      document.getElementById("wave").style.setProperty("--progress", (10 + Math.floor(Math.random() * 70)) + "%");
+      document.getElementById("now-bpm").textContent = bpm || "---";
+      document.getElementById("wave").style.setProperty("--progress", 10 + Math.floor(Math.random() * 70) + "%");
+      await sendView(currentReleaseId);
+      await refreshStats(currentReleaseId);
     }
 
     document.getElementById("search").addEventListener("input", (e) => {
@@ -508,10 +646,22 @@ app.get("*", (_req, res) => {
       }
     });
 
-    renderCards("tracks", tracks, "track");
-    renderCards("artists", artists, "artist");
-    renderCards("dubpacks", dubpacks, "dubpack");
-    selectTrack("Nebula Drive", "SXR", 128);
+    document.getElementById("btn-login").addEventListener("click", loginFromMusic);
+    document.getElementById("btn-logout").addEventListener("click", logoutFromMusic);
+    document.getElementById("btn-register").addEventListener("click", () => {
+      window.location.href = recordsRegisterUrl;
+    });
+    document.getElementById("btn-share").addEventListener("click", shareCurrent);
+
+    (async () => {
+      await loadTracks();
+      renderCards("tracks", tracks, "track");
+      renderCards("artists", artists, "artist");
+      renderCards("dubpacks", dubpacks, "dubpack");
+      const first = tracks[0];
+      if (first) await selectTrack(first.title, first.artist, first.bpm, first.releaseId);
+      await refreshAuthState();
+    })();
   </script>
 </body>
 </html>`);

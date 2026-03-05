@@ -33,6 +33,7 @@ import { SearchModule } from "./modules/search/search.module";
 import { LedgerModule } from "./modules/ledger/ledger.module";
 import { PremiumModule } from "./modules/premium/premium.module";
 import { EcosystemModule } from "./modules/ecosystem/ecosystem.module";
+import { EngagementModule } from "./modules/engagement/engagement.module";
 
 @Module({
   imports: [
@@ -69,7 +70,8 @@ import { EcosystemModule } from "./modules/ecosystem/ecosystem.module";
     SearchModule,
     LedgerModule,
     PremiumModule,
-    EcosystemModule
+    EcosystemModule,
+    EngagementModule
   ],
   controllers: [AdminController],
   providers: [
