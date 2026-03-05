@@ -11,6 +11,7 @@ type Filter = "ALL" | "FREE" | "PAID";
 
 export default function CatalogPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
+  const [genreFilter, setGenreFilter] = useState<string>("ALL");
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
 
   const { data: releases = [], isLoading } = useQuery({
@@ -18,9 +19,14 @@ export default function CatalogPage() {
     queryFn: fetchReleases
   });
 
+  const genres = Array.from(
+    new Set(releases.map((r) => r.genre).filter((genre): genre is string => Boolean(genre)))
+  );
+
   const filtered = releases.filter((r) => {
-    if (filter === "FREE") return r.type === "FREE";
-    if (filter === "PAID") return r.type === "PAID";
+    if (filter === "FREE" && r.type !== "FREE") return false;
+    if (filter === "PAID" && r.type !== "PAID") return false;
+    if (genreFilter !== "ALL" && r.genre !== genreFilter) return false;
     return true;
   });
 
@@ -32,20 +38,33 @@ export default function CatalogPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex gap-1 rounded-sm border border-[rgba(255,255,255,0.08)] bg-surface p-1 w-fit">
-        {(["ALL", "FREE", "PAID"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-sm px-4 py-1.5 text-sm transition-colors ${
-              filter === f
-                ? "bg-violet text-white"
-                : "text-cream/50 hover:text-cream"
-            }`}
-          >
-            {f === "ALL" ? "All" : f === "FREE" ? "Free" : "Paid"}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 rounded-sm border border-[rgba(255,255,255,0.08)] bg-surface p-1 w-fit">
+          {(["ALL", "FREE", "PAID"] as Filter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-sm px-4 py-1.5 text-sm transition-colors ${
+                filter === f
+                  ? "bg-violet text-white"
+                  : "text-cream/50 hover:text-cream"
+              }`}
+            >
+              {f === "ALL" ? "All" : f === "FREE" ? "Free" : "Paid"}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={genreFilter}
+          onChange={(e) => setGenreFilter(e.target.value)}
+          className="rounded-sm border border-[rgba(255,255,255,0.08)] bg-surface px-3 py-2 text-sm text-cream/70 outline-none focus:border-violet/40"
+        >
+          <option value="ALL">All genres</option>
+          {genres.map((genre) => (
+            <option key={genre} value={genre}>{genre.replace(/_/g, " ")}</option>
+          ))}
+        </select>
       </div>
 
       {isLoading ? (

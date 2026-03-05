@@ -3,7 +3,7 @@ import {
   Post, Query, Req, UseGuards
 } from "@nestjs/common";
 import { ReleaseType, UserRole } from "@prisma/client";
-import { IsBoolean, IsEnum, IsNumberString, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEnum, IsIn, IsNumberString, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
@@ -23,15 +23,52 @@ const ARTIST_INCLUDE = {
   }
 };
 
+const MUSIC_GENRES = [
+  "ELECTRO",
+  "HOUSE",
+  "TECHNO",
+  "DNB",
+  "BASS",
+  "TRAP",
+  "DRILL",
+  "RAP",
+  "HIP_HOP",
+  "RNB",
+  "AFRO",
+  "AMAPIANO",
+  "REGGAE",
+  "POP",
+  "OTHER"
+] as const;
+
+function normalizeGenre(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const upper = raw.trim().toUpperCase();
+  return MUSIC_GENRES.includes(upper as typeof MUSIC_GENRES[number]) ? upper : undefined;
+}
+
 class CreateReleaseDto {
   @IsOptional() @IsString() slug?: string;
   @IsString() title!: string;
   @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsIn(MUSIC_GENRES) genre?: string;
   @IsNumberString() price!: string;
   @IsEnum(ReleaseType) type!: ReleaseType;
   @IsString() audioPath!: string;
   @IsOptional() @IsString() coverPath?: string;
   @IsOptional() @IsString() previewClip?: string;
+  @IsOptional() @IsString() hlsPreviewPath?: string;
+  @IsOptional() @IsString() hlsFullPath?: string;
+  @IsOptional() @IsString() waveformPath?: string;
+  @IsOptional() @IsBoolean() hlsReady?: boolean;
+  @IsOptional() @IsString() processingStatus?: string;
+  @IsOptional() @IsBoolean() isPaid?: boolean;
+  @IsOptional() @IsNumberString() previewDuration?: string;
+  @IsOptional() @IsNumberString() bpm?: string;
+  @IsOptional() @IsString() tags?: string;
+  @IsOptional() @IsString() mood?: string;
+  @IsOptional() @IsNumberString() energy?: string;
+  @IsOptional() @IsString() earlyAccessAt?: string;
   @IsOptional() @IsBoolean() exclusiveFollowersOnly?: boolean;
   @IsOptional() @IsString() releaseDate?: string;
   @IsOptional() @IsBoolean() gateEnabled?: boolean;
@@ -45,9 +82,15 @@ class CreateReleaseDto {
 class UpdateReleaseDto {
   @IsOptional() @IsString() title?: string;
   @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsIn(MUSIC_GENRES) genre?: string;
   @IsOptional() @IsBoolean() published?: boolean;
   @IsOptional() @IsBoolean() exclusiveFollowersOnly?: boolean;
   @IsOptional() @IsString() releaseDate?: string;
+  @IsOptional() @IsNumberString() bpm?: string;
+  @IsOptional() @IsString() tags?: string;
+  @IsOptional() @IsString() mood?: string;
+  @IsOptional() @IsNumberString() energy?: string;
+  @IsOptional() @IsString() earlyAccessAt?: string;
 }
 
 class UpdateGateDto {
@@ -124,12 +167,17 @@ export class ReleasesController {
   // ─── List ────────────────────────────────────────────────────────────────────
 
   @Get()
-  async list(@Req() req: Request & { user?: { role?: UserRole } }, @Query("admin") admin?: string) {
+  async list(
+    @Req() req: Request & { user?: { role?: UserRole } },
+    @Query("admin") admin?: string,
+    @Query("genre") genre?: string
+  ) {
     const isAdmin = req.user?.role === UserRole.ADMIN;
     if (admin === "true" && isAdmin) return this.listAll();
+    const normalizedGenre = normalizeGenre(genre);
 
     return this.prisma.release.findMany({
-      where: { published: true },
+      where: { published: true, ...(normalizedGenre ? { genre: normalizedGenre } : {}) },
       orderBy: { createdAt: "desc" },
       include: {
         ...ARTIST_INCLUDE,
@@ -274,12 +322,25 @@ export class ReleasesController {
         artistId: artist!.id,
         slug,
         title: dto.title,
+        genre: dto.genre,
         description: dto.description,
         price: dto.price,
         type: dto.type,
         audioPath: dto.audioPath,
         coverPath: dto.coverPath,
         previewClip: dto.previewClip,
+        hlsPreviewPath: dto.hlsPreviewPath,
+        hlsFullPath: dto.hlsFullPath,
+        waveformPath: dto.waveformPath,
+        hlsReady: dto.hlsReady ?? false,
+        processingStatus: dto.processingStatus ?? "PENDING",
+        isPaid: dto.isPaid ?? dto.type === ReleaseType.PAID,
+        previewDuration: dto.previewDuration ? Number(dto.previewDuration) : 30,
+        bpm: dto.bpm ? Number(dto.bpm) : null,
+        tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        mood: dto.mood,
+        energy: dto.energy ? Number(dto.energy) : null,
+        earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : null,
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly ?? false,
         releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
         gateEnabled: dto.gateEnabled ?? false,
@@ -312,10 +373,16 @@ export class ReleasesController {
       where: { id },
       data: {
         title: dto.title,
+        genre: dto.genre,
         description: dto.description,
         published: dto.published,
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly,
-        releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined
+        releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
+        bpm: dto.bpm ? Number(dto.bpm) : undefined,
+        tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        mood: dto.mood,
+        energy: dto.energy ? Number(dto.energy) : undefined,
+        earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : undefined
       }
     });
   }

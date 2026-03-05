@@ -42,6 +42,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
     release.artist?.displayName ?? release.artist?.user?.email?.split("@")[0] ?? "Sauroraa Artist";
 
   const isPreorder = release.releaseDate && new Date(release.releaseDate) > new Date();
+  const genreLabel = release.genre ? release.genre.replace(/_/g, " ") : null;
 
   const handlePreorder = async () => {
     if (!user) { toast.error("Sign in to pre-order"); return; }
@@ -157,6 +158,9 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
               <Badge variant={release.type === "FREE" ? "green" : "violet"}>
                 {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
               </Badge>
+              {genreLabel && (
+                <Badge variant="gray">{genreLabel}</Badge>
+              )}
               {release.exclusiveFollowersOnly && (
                 <Badge variant="exclusive">Exclusive Drop</Badge>
               )}

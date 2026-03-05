@@ -64,6 +64,24 @@ const ACTION_OPTIONS = [
   { value: "JOIN_DISCORD", label: "Join Discord" }
 ];
 
+const GENRE_OPTIONS = [
+  { value: "ELECTRO", label: "Electro" },
+  { value: "HOUSE", label: "House" },
+  { value: "TECHNO", label: "Techno" },
+  { value: "DNB", label: "Drum & Bass" },
+  { value: "BASS", label: "Bass Music" },
+  { value: "TRAP", label: "Trap" },
+  { value: "DRILL", label: "Drill" },
+  { value: "RAP", label: "Rap" },
+  { value: "HIP_HOP", label: "Hip-Hop" },
+  { value: "RNB", label: "R&B" },
+  { value: "AFRO", label: "Afro" },
+  { value: "AMAPIANO", label: "Amapiano" },
+  { value: "REGGAE", label: "Reggae" },
+  { value: "POP", label: "Pop" },
+  { value: "OTHER", label: "Other" }
+];
+
 function slugifyTitle(value: string): string {
   return value
     .toLowerCase()
@@ -482,7 +500,14 @@ function SubscriptionTab() {
 function UploadReleaseTab() {
   const audioRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ title: "", description: "", price: "0", type: "FREE", previewClip: "" });
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    genre: "ELECTRO",
+    price: "0",
+    type: "FREE",
+    previewClip: ""
+  });
   const [gate, setGate] = useState({
     gateEnabled: false,
     gateFollowArtist: false,
@@ -583,6 +608,7 @@ function UploadReleaseTab() {
         body: JSON.stringify({
           title: form.title,
           description: form.description || undefined,
+          genre: form.genre,
           price: String(form.type === "FREE" ? "0" : form.price || "0"),
           type: form.type,
           audioPath,
@@ -593,7 +619,7 @@ function UploadReleaseTab() {
       });
       if (!res.ok) throw new Error("Failed to create release");
       toast.success("Release created! Pending admin approval.");
-      setForm({ title: "", description: "", price: "0", type: "FREE", previewClip: "" });
+      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "" });
       setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
       setAudioFile(null);
       setCoverFile(null);
@@ -626,6 +652,14 @@ function UploadReleaseTab() {
             rows={3}
             className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50"
           />
+        </div>
+        <div className="space-y-1.5 col-span-2">
+          <label className="text-xs font-medium text-cream/60">Genre</label>
+          <Select value={form.genre} onChange={(e) => setForm({ ...form, genre: e.target.value })}>
+            {GENRE_OPTIONS.map((genre) => (
+              <option key={genre.value} value={genre.value}>{genre.label}</option>
+            ))}
+          </Select>
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-cream/60">Type</label>
@@ -771,7 +805,7 @@ function UploadReleaseTab() {
 function UploadDubpackTab() {
   const zipRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ title: "", description: "", price: "0", type: "FREE" });
+  const [form, setForm] = useState({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE" });
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -804,6 +838,7 @@ function UploadDubpackTab() {
           slug: slugifyTitle(form.title),
           title: form.title,
           description: form.description || undefined,
+          genre: form.genre,
           price: String(form.type === "FREE" ? "0" : form.price || "0"),
           type: form.type,
           zipPath,
@@ -812,7 +847,7 @@ function UploadDubpackTab() {
       });
       if (!res.ok) throw new Error();
       toast.success("Dubpack submitted! Pending admin approval.");
-      setForm({ title: "", description: "", price: "0", type: "FREE" });
+      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE" });
       setZipFile(null);
       setCoverFile(null);
     } catch {
@@ -838,6 +873,14 @@ function UploadDubpackTab() {
             placeholder="What's included in this pack?"
             className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50"
           />
+        </div>
+        <div className="col-span-2 space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Genre</label>
+          <Select value={form.genre} onChange={(e) => setForm({ ...form, genre: e.target.value })}>
+            {GENRE_OPTIONS.map((genre) => (
+              <option key={genre.value} value={genre.value}>{genre.label}</option>
+            ))}
+          </Select>
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-cream/60">Type</label>

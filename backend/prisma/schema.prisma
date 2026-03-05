@@ -30,6 +30,133 @@ enum ReleaseType {
   PAID
 }
 
+enum ReleaseFileType {
+  MASTER
+  HLS_FULL_PLAYLIST
+  HLS_PREVIEW_PLAYLIST
+  HLS_SEGMENT
+  WAVEFORM
+}
+
+enum StreamScope {
+  PREVIEW
+  FULL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  FAILED
+}
+
+enum LedgerEntryType {
+  SALE_GROSS
+  PLATFORM_COMMISSION
+  ARTIST_NET
+  PAYOUT
+  REFUND
+}
+
+enum PrivateLinkScope {
+  STREAM
+  DOWNLOAD
+}
+
+enum PromotionType {
+  HOMEPAGE_FEATURE
+  FOLLOWER_PUSH
+  DISCOVERY_BOOST
+}
+
+enum PromotionStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum CollaboratorRole {
+  PRIMARY
+  FEATURED
+  PRODUCER
+  REMIXER
+}
+
+enum AiTaggingJobStatus {
+  QUEUED
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum ClaimStatus {
+  OPEN
+  UNDER_REVIEW
+  SUSPENDED_CONTENT
+  RESOLVED
+  REJECTED
+}
+
+enum ReportTargetType {
+  RELEASE
+  COMMENT
+  USER
+}
+
+enum ReportStatus {
+  OPEN
+  BOT_REVIEWED
+  STAFF_REVIEW
+  ACTION_TAKEN
+  CLOSED
+}
+
+enum ModerationActionType {
+  WARNING
+  REMOVE_CONTENT
+  SUSPEND_USER
+  REINSTATE_CONTENT
+  BAN_USER
+}
+
+enum DuplicateAlertStatus {
+  NEW
+  CONFIRMED
+  FALSE_POSITIVE
+  IGNORED
+}
+
+enum PayoutProvider {
+  STRIPE_CONNECT
+  PAYPAL
+  SEPA
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum ExportFormat {
+  CSV
+  PDF
+}
+
+enum ExportStatus {
+  QUEUED
+  DONE
+  FAILED
+}
+
+enum AssetPackType {
+  STEM
+  SAMPLE_PACK
+  PRESET_PACK
+}
+
 enum RevenueStatus {
   PENDING
   PAID
@@ -110,6 +237,27 @@ model User {
   requestedSupportTickets SupportTicket[] @relation("SupportRequester")
   assignedSupportTickets  SupportTicket[] @relation("SupportAssignee")
   supportMessages         SupportMessage[] @relation("SupportAuthor")
+  streamEvents            StreamEvent[]
+  playlists               Playlist[]
+  reposts                 Repost[]
+  privateLinks            PrivateListeningLink[]
+  fanScores               FanScore[] @relation("FanUser")
+  leakFingerprints        LeakFingerprint[]
+  aiTaggingJobs           AiTaggingJob[]
+  dmcaClaimsFiled         DmcaClaim[] @relation("ClaimReporter")
+  reportsFiled            ContentReport[] @relation("ReportReporter")
+  reportedAsUser          ContentReport[] @relation("ReportTargetUser")
+  moderationActions       ModerationAction[]
+  fanBadgeAssignments     UserFanBadge[]
+  premiereChatMessages    PremiereChatMessage[]
+  broadcastRecipients     ArtistBroadcastRecipient[]
+  accountingExports       AccountingExport[]
+  recoveryTokens          SecurityRecoveryToken[]
+  twoFactor               UserTwoFactor?
+  loginAlerts             LoginAlert[]
+  pushDevices             PushDevice[]
+  publicApiClientsCreated PublicApiClient[]
+  embedWidgets            EmbedWidget[]
 }
 
 model RefreshToken {
@@ -148,6 +296,17 @@ model Artist {
   tipsReceived   Tip[]                 @relation("TipArtist")
   agencyLinks    AgencyArtist[]
   gateSubmissions GateSubmission[]
+  invoices       Invoice[]
+  ledgerEntries  LedgerEntry[]
+  collaborations ReleaseCollaborator[]
+  fanScores      FanScore[] @relation("FanArtist")
+  promotions     PromotionCampaign[]
+  trustScore     ArtistTrustScore?
+  premiereEvents PremiereEvent[]
+  broadcasts     ArtistBroadcast[]
+  payoutAccount  PayoutAccount?
+  payouts        PayoutTransaction[]
+  fanBadgeAssignments UserFanBadge[]
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
@@ -199,6 +358,7 @@ model Release {
   artistId               String
   slug                   String      @unique
   title                  String
+  genre                  String?
   description            String?     @db.Text
   price                  Decimal     @db.Decimal(10, 2)
   type                   ReleaseType
@@ -208,6 +368,18 @@ model Release {
   published              Boolean     @default(false)
   exclusiveFollowersOnly Boolean     @default(false)
   releaseDate            DateTime?
+  bpm                    Int?
+  tags                   Json?
+  mood                   String?
+  energy                 Int?
+  earlyAccessAt          DateTime?
+  previewDuration        Int         @default(30)
+  isPaid                 Boolean     @default(false)
+  hlsFullPath            String?
+  hlsPreviewPath         String?
+  waveformPath           String?
+  hlsReady               Boolean     @default(false)
+  processingStatus       String      @default("PENDING")
   // HypeEdit gate
   gateEnabled            Boolean     @default(false)
   gateFollowArtist       Boolean     @default(false)
@@ -223,6 +395,33 @@ model Release {
   downloadSessions FreeDownloadSession[]
   preorders        Preorder[]
   gateSubmissions  GateSubmission[]
+  files            ReleaseFile[]
+  streamEvents     StreamEvent[]
+  ledgerEntries    LedgerEntry[]
+  collaborators    ReleaseCollaborator[]
+  privateLinks     PrivateListeningLink[]
+  reposts          Repost[]
+  promotions       PromotionCampaign[]
+  aiTaggingJobs    AiTaggingJob[]
+  leakFingerprints LeakFingerprint[]
+  playlistTracks   PlaylistTrack[]
+  dmcaClaims       DmcaClaim[]
+  contentReports   ContentReport[]
+  duplicateAlerts  DuplicateAudioAlert[] @relation("DuplicateRelease")
+  matchedDuplicateAlerts DuplicateAudioAlert[] @relation("DuplicateMatchedRelease")
+  moderationFlags  AiModerationFlag[]
+  releaseSchedule  ReleaseSchedule?
+  shareCards       ViralShareCard[]
+  premiereEvent    PremiereEvent?
+  trackVersions    TrackVersion[]
+  listeningHeatmap ListeningHeatmap[]
+  assetPacks       ReleaseAssetPack[]
+  embedWidgets     EmbedWidget[]
+  smartTagSuggestion SmartTagSuggestion?
+
+  @@index([artistId, published, createdAt])
+  @@index([published, genre, createdAt])
+  @@index([slug, published])
 }
 
 // ─── Dubpack ──────────────────────────────────────────────────────────────────
@@ -232,6 +431,7 @@ model Dubpack {
   artistId               String
   slug                   String      @unique
   title                  String
+  genre                  String?
   description            String?     @db.Text
   price                  Decimal     @db.Decimal(10, 2)
   type                   ReleaseType
@@ -261,6 +461,10 @@ model Order {
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items OrderItem[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model OrderItem {
@@ -289,6 +493,7 @@ model ArtistRevenue {
   artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 
   @@unique([artistId, month])
+  @@index([month])
 }
 
 model ArtistRanking {
@@ -313,6 +518,7 @@ model Comment {
   dubpackId          String?
   parentId           String?
   body               String   @db.Text
+  timestampSec       Int?
   likesCount         Int      @default(0)
   isVerifiedPurchase Boolean  @default(false)
   createdAt          DateTime @default(now())
@@ -323,6 +529,7 @@ model Comment {
   parent  Comment?    @relation("Replies", fields: [parentId], references: [id])
   replies Comment[]   @relation("Replies")
   likes   CommentLike[]
+  reports ContentReport[]
 }
 
 model CommentLike {
@@ -349,6 +556,37 @@ model Follow {
   artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, artistId])
+  @@index([artistId, createdAt])
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?  @db.Text
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracks PlaylistTrack[]
+
+  @@index([userId, createdAt])
+}
+
+model PlaylistTrack {
+  id         String   @id @default(cuid())
+  playlistId String
+  releaseId  String
+  position   Int
+  addedAt    DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  release  Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, releaseId])
+  @@unique([playlistId, position])
+  @@index([releaseId])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -484,6 +722,9 @@ model GateSubmission {
   release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
   artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
   user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([releaseId, createdAt])
+  @@index([artistId, createdAt])
 }
 
 // ─── Support ─────────────────────────────────────────────────────────────────
@@ -515,4 +756,577 @@ model SupportMessage {
 
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author User?         @relation("SupportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model ReleaseCollaborator {
+  id          String           @id @default(cuid())
+  releaseId   String
+  artistId    String
+  role        CollaboratorRole @default(FEATURED)
+  invitedById String?
+  accepted    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, artistId, role])
+  @@index([artistId, accepted])
+}
+
+model PrivateListeningLink {
+  id          String           @id @default(cuid())
+  token       String           @unique
+  scope       PrivateLinkScope @default(STREAM)
+  releaseId   String
+  creatorId   String
+  expiresAt   DateTime
+  maxPlays    Int              @default(50)
+  playsCount  Int              @default(0)
+  createdAt   DateTime         @default(now())
+  lastUsedAt  DateTime?
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, expiresAt])
+}
+
+model Repost {
+  id        String   @id @default(cuid())
+  userId    String
+  releaseId String
+  message   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, releaseId])
+  @@index([createdAt])
+}
+
+model FanScore {
+  id          String   @id @default(cuid())
+  userId      String
+  artistId    String
+  score       Int      @default(0)
+  streams     Int      @default(0)
+  purchases   Int      @default(0)
+  reposts     Int      @default(0)
+  comments    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation("FanUser", fields: [userId], references: [id], onDelete: Cascade)
+  artist Artist @relation("FanArtist", fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artistId])
+  @@index([artistId, score])
+}
+
+model PromotionCampaign {
+  id            String          @id @default(cuid())
+  artistId      String
+  releaseId     String?
+  promotionType PromotionType
+  title         String
+  budgetCents   Int             @default(0)
+  status        PromotionStatus @default(DRAFT)
+  startAt       DateTime?
+  endAt         DateTime?
+  createdAt     DateTime        @default(now())
+
+  artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  release Release? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+
+  @@index([artistId, status, createdAt])
+}
+
+model AiTaggingJob {
+  id           String             @id @default(cuid())
+  releaseId    String
+  requestedBy  String
+  status       AiTaggingJobStatus @default(QUEUED)
+  result       Json?
+  errorMessage String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [requestedBy], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([releaseId, createdAt])
+}
+
+model LeakFingerprint {
+  id              String   @id @default(cuid())
+  releaseId       String
+  userId          String?
+  fingerprintHash String
+  watermarkRef    String?
+  createdAt       DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([releaseId, createdAt])
+  @@index([fingerprintHash])
+}
+
+model DmcaClaim {
+  id             String      @id @default(cuid())
+  releaseId       String
+  reporterId      String
+  claimantName    String
+  claimantEmail   String
+  evidenceUrl     String?
+  description     String      @db.Text
+  status          ClaimStatus  @default(OPEN)
+  resolutionNote  String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  release  Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  reporter User    @relation("ClaimReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([releaseId, createdAt])
+}
+
+model ContentReport {
+  id              String          @id @default(cuid())
+  reporterId      String
+  targetType      ReportTargetType
+  releaseId       String?
+  commentId       String?
+  reportedUserId  String?
+  reason          String
+  details         String?         @db.Text
+  botScore        Int             @default(0)
+  status          ReportStatus    @default(OPEN)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  release      Release?     @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  comment      Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reportedUser User?        @relation("ReportTargetUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  flags        AiModerationFlag[]
+  actions      ModerationAction[]
+
+  @@index([status, createdAt])
+  @@index([targetType, createdAt])
+}
+
+model AiModerationFlag {
+  id            String      @id @default(cuid())
+  reportId      String?
+  releaseId     String?
+  targetType    ReportTargetType
+  label         String
+  score         Int
+  textSnippet   String?     @db.Text
+  createdAt     DateTime    @default(now())
+
+  report  ContentReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  release Release?       @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([score, createdAt])
+  @@index([targetType, createdAt])
+}
+
+model ModerationAction {
+  id          String               @id @default(cuid())
+  reportId    String
+  staffId     String
+  actionType  ModerationActionType
+  note        String?              @db.Text
+  createdAt   DateTime             @default(now())
+
+  report ContentReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  staff  User          @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, createdAt])
+}
+
+model DuplicateAudioAlert {
+  id               String               @id @default(cuid())
+  releaseId        String
+  matchedReleaseId String?
+  audioHash        String
+  similarityScore  Int
+  status           DuplicateAlertStatus @default(NEW)
+  createdAt        DateTime             @default(now())
+
+  release        Release  @relation("DuplicateRelease", fields: [releaseId], references: [id], onDelete: Cascade)
+  matchedRelease Release? @relation("DuplicateMatchedRelease", fields: [matchedReleaseId], references: [id], onDelete: SetNull)
+
+  @@index([audioHash])
+  @@index([status, createdAt])
+}
+
+model ArtistTrustScore {
+  id         String   @id @default(cuid())
+  artistId   String   @unique
+  score      Int      @default(50)
+  factors    Json?
+  updatedAt  DateTime @updatedAt
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+model ReleaseSchedule {
+  id          String   @id @default(cuid())
+  releaseId   String   @unique
+  scheduledAt DateTime
+  timezone    String
+  autoPublish Boolean  @default(true)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt, autoPublish])
+}
+
+model ViralShareCard {
+  id         String   @id @default(cuid())
+  releaseId  String
+  imagePath  String
+  createdAt  DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, createdAt])
+}
+
+model FanBadge {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  users UserFanBadge[]
+}
+
+model UserFanBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  artistId  String?
+  awardedAt DateTime @default(now())
+
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge FanBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  artist Artist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, badgeId, artistId])
+}
+
+model PremiereEvent {
+  id         String   @id @default(cuid())
+  releaseId  String   @unique
+  artistId   String
+  startsAt   DateTime
+  endsAt     DateTime?
+  isLive     Boolean  @default(false)
+  chatEnabled Boolean @default(true)
+  createdAt  DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  messages PremiereChatMessage[]
+}
+
+model PremiereChatMessage {
+  id         String   @id @default(cuid())
+  premiereId String
+  userId     String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  premiere PremiereEvent @relation(fields: [premiereId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([premiereId, createdAt])
+}
+
+model ArtistBroadcast {
+  id        String   @id @default(cuid())
+  artistId  String
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  artist     Artist                    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  recipients ArtistBroadcastRecipient[]
+}
+
+model ArtistBroadcastRecipient {
+  id          String   @id @default(cuid())
+  broadcastId String
+  userId      String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  broadcast ArtistBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, userId])
+}
+
+model PayoutAccount {
+  id          String         @id @default(cuid())
+  artistId    String         @unique
+  provider    PayoutProvider
+  accountRef  String
+  status      String         @default("active")
+  createdAt   DateTime       @default(now())
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+model PayoutTransaction {
+  id           String       @id @default(cuid())
+  artistId      String
+  invoiceId     String?
+  provider      PayoutProvider
+  amount        Decimal      @db.Decimal(10, 2)
+  currency      String       @default("EUR")
+  status        PayoutStatus @default(PENDING)
+  providerRef   String?
+  createdAt     DateTime     @default(now())
+  paidAt        DateTime?
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+model AccountingExport {
+  id          String       @id @default(cuid())
+  requestedBy String
+  format      ExportFormat
+  periodFrom  DateTime
+  periodTo    DateTime
+  filePath    String?
+  status      ExportStatus @default(QUEUED)
+  createdAt   DateTime     @default(now())
+
+  requester User @relation(fields: [requestedBy], references: [id], onDelete: Cascade)
+}
+
+model SmartTagSuggestion {
+  id             String   @id @default(cuid())
+  releaseId      String   @unique
+  suggestedGenre String?
+  suggestedBpm   Int?
+  suggestedTags  Json?
+  confidence     Int?
+  createdAt      DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+}
+
+model ListeningHeatmap {
+  id         String   @id @default(cuid())
+  releaseId  String
+  secondMark Int
+  listeners  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, secondMark])
+}
+
+model ReleaseAssetPack {
+  id         String       @id @default(cuid())
+  releaseId  String
+  assetType  AssetPackType
+  filePath   String
+  label      String?
+  createdAt  DateTime     @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, assetType])
+}
+
+model EmbedWidget {
+  id            String   @id @default(cuid())
+  releaseId      String
+  token          String   @unique
+  theme          String?
+  allowDownload  Boolean  @default(false)
+  createdBy      String
+  createdAt      DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, createdAt])
+}
+
+model TrackVersion {
+  id             String   @id @default(cuid())
+  releaseId      String
+  versionLabel   String
+  audioPath      String
+  changelog      String?  @db.Text
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, createdAt])
+}
+
+model SecurityRecoveryToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model UserTwoFactor {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  secret        String
+  enabled       Boolean  @default(false)
+  recoveryCodes Json?
+  lastVerifiedAt DateTime?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  location  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model PublicApiClient {
+  id          String   @id @default(cuid())
+  name        String
+  keyHash     String   @unique
+  scopes      Json?
+  rateLimit   Int      @default(120)
+  active      Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model PushDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String
+  p256dh     String
+  auth       String
+  platform   String?
+  locale     String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+}
+
+model ReleaseFile {
+  id          String          @id @default(cuid())
+  releaseId   String
+  fileType    ReleaseFileType
+  path        String
+  bucket      String?
+  objectKey   String?
+  sizeBytes   BigInt?
+  mimeType    String?
+  createdAt   DateTime        @default(now())
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, fileType])
+}
+
+model StreamEvent {
+  id           String      @id @default(cuid())
+  userId       String?
+  releaseId    String
+  scope        StreamScope
+  playlistPath String
+  ipAddress    String?
+  userAgent    String?
+  country      String?
+  createdAt    DateTime    @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  release Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, createdAt])
+  @@index([userId, createdAt])
+  @@index([scope, createdAt])
+}
+
+model Invoice {
+  id            String       @id @default(cuid())
+  artistId      String
+  periodMonth   String
+  grossAmount   Decimal      @db.Decimal(10, 2)
+  commission    Decimal      @db.Decimal(10, 2)
+  netAmount     Decimal      @db.Decimal(10, 2)
+  currency      String       @default("EUR")
+  filePath      String?
+  status        InvoiceStatus @default(DRAFT)
+  externalRef   String?      @unique
+  issuedAt      DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime     @default(now())
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  payoutTransactions PayoutTransaction[]
+
+  @@unique([artistId, periodMonth])
+  @@index([periodMonth, status])
+}
+
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  artistId      String
+  releaseId     String?
+  orderId       String?
+  entryType     LedgerEntryType
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("EUR")
+  description   String?
+  metadata      Json?
+  eventDate     DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+
+  artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  release Release? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([artistId, eventDate])
+  @@index([entryType, eventDate])
+  @@index([orderId])
 }

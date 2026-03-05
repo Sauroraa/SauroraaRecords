@@ -11,12 +11,36 @@ import {
   UseGuards
 } from "@nestjs/common";
 import { ReleaseType, UserRole } from "@prisma/client";
-import { IsBoolean, IsEnum, IsNumberString, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEnum, IsIn, IsNumberString, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
+
+const MUSIC_GENRES = [
+  "ELECTRO",
+  "HOUSE",
+  "TECHNO",
+  "DNB",
+  "BASS",
+  "TRAP",
+  "DRILL",
+  "RAP",
+  "HIP_HOP",
+  "RNB",
+  "AFRO",
+  "AMAPIANO",
+  "REGGAE",
+  "POP",
+  "OTHER"
+] as const;
+
+function normalizeGenre(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const upper = raw.trim().toUpperCase();
+  return MUSIC_GENRES.includes(upper as typeof MUSIC_GENRES[number]) ? upper : undefined;
+}
 
 class CreateDubpackDto {
   @IsString()
@@ -28,6 +52,10 @@ class CreateDubpackDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsIn(MUSIC_GENRES)
+  genre?: string;
 
   @IsNumberString()
   price!: string;
@@ -57,6 +85,10 @@ class UpdateDubpackDto {
   description?: string;
 
   @IsOptional()
+  @IsIn(MUSIC_GENRES)
+  genre?: string;
+
+  @IsOptional()
   @IsBoolean()
   published?: boolean;
 
@@ -80,8 +112,9 @@ export class DubpacksController {
     if (adminQuery && isAdmin) {
       return this.listAll();
     }
+    const genre = normalizeGenre(typeof req.query.genre === "string" ? req.query.genre : undefined);
     return this.prisma.dubpack.findMany({
-      where: { published: true },
+      where: { published: true, ...(genre ? { genre } : {}) },
       orderBy: { createdAt: "desc" },
       include: { artist: { include: { user: { select: { email: true } } } } }
     });
@@ -125,6 +158,7 @@ export class DubpacksController {
         artistId: artist!.id,
         slug: dto.slug,
         title: dto.title,
+        genre: dto.genre,
         description: dto.description,
         price: dto.price,
         type: dto.type,

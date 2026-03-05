@@ -78,6 +78,7 @@ export default function DubpacksPage() {
                     )}
                     <div className="absolute left-3 top-3 flex gap-1.5">
                       <Badge variant="violet">DUBPACK</Badge>
+                      {dp.genre && <Badge variant="gray">{dp.genre.replace(/_/g, " ")}</Badge>}
                       {dp.isExclusive && <Badge variant="exclusive">Exclusive</Badge>}
                     </div>
                   </div>

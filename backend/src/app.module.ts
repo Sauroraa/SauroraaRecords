@@ -28,6 +28,11 @@ import { UploadModule } from "./modules/upload/upload.module";
 import { UsersModule } from "./modules/users/users.module";
 import { EmailModule } from "./modules/email/email.module";
 import { SupportModule } from "./modules/support/support.module";
+import { StreamModule } from "./modules/stream/stream.module";
+import { SearchModule } from "./modules/search/search.module";
+import { LedgerModule } from "./modules/ledger/ledger.module";
+import { PremiumModule } from "./modules/premium/premium.module";
+import { EcosystemModule } from "./modules/ecosystem/ecosystem.module";
 
 @Module({
   imports: [
@@ -59,7 +64,12 @@ import { SupportModule } from "./modules/support/support.module";
     SubscriptionsModule,
     AgencyModule,
     EmailModule,
-    SupportModule
+    SupportModule,
+    StreamModule,
+    SearchModule,
+    LedgerModule,
+    PremiumModule,
+    EcosystemModule
   ],
   controllers: [AdminController],
   providers: [

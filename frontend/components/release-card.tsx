@@ -56,6 +56,8 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
     openCart();
   };
 
+  const genreLabel = release.genre ? release.genre.replace(/_/g, " ") : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -92,6 +94,9 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
             <Badge variant={release.type === "FREE" ? "green" : "violet"}>
               {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
             </Badge>
+            {genreLabel && (
+              <Badge variant="gray">{genreLabel}</Badge>
+            )}
             {release.exclusiveFollowersOnly && (
               <Badge variant="exclusive">Exclusive</Badge>
             )}

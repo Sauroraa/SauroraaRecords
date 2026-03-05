@@ -20,6 +20,7 @@ export type ReleaseItem = {
   id: string;
   slug: string;
   title: string;
+  genre?: string | null;
   description?: string | null;
   price: number | string;
   type: "FREE" | "PAID";
@@ -47,6 +48,7 @@ export type DubpackItem = {
   id: string;
   slug: string;
   title: string;
+  genre?: string | null;
   description?: string | null;
   price: number | string;
   type: "FREE" | "PAID";

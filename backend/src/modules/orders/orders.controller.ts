@@ -7,6 +7,7 @@ import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
+import { getPlatformCommission } from "../../utils/commission";
 
 class ItemDto {
   @IsString()
@@ -18,9 +19,6 @@ class ItemDto {
 }
 
 class CreateOrderDto {
-  @IsString()
-  userId!: string;
-
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ItemDto)
@@ -50,21 +48,97 @@ export class OrdersController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT, UserRole.ADMIN)
-  async create(@Body() dto: CreateOrderDto) {
+  async create(
+    @Body() dto: CreateOrderDto,
+    @Req() req: Request & { user?: { userId: string; role: UserRole } }
+  ) {
     const total = dto.items.reduce((sum, i) => sum + i.price, 0);
+    const currentUserId = req.user!.userId;
 
-    return this.prisma.order.create({
-      data: {
-        userId: dto.userId,
-        total,
-        items: {
-          create: dto.items.map((item) => ({
-            releaseId: item.releaseId,
-            price: item.price
-          }))
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          userId: currentUserId,
+          total,
+          items: {
+            create: dto.items.map((item) => ({
+              releaseId: item.releaseId,
+              price: item.price
+            }))
+          }
+        },
+        include: { items: true }
+      });
+
+      const orderWithRelease = await tx.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: {
+            include: {
+              release: {
+                select: {
+                  id: true,
+                  artistId: true
+                }
+              }
+            }
+          }
         }
-      },
-      include: { items: true }
+      });
+
+      for (const item of orderWithRelease?.items ?? []) {
+        if (!item.release) continue;
+
+        const artist = await tx.artist.findUnique({
+          where: { id: item.release.artistId },
+          select: { userId: true }
+        });
+        if (!artist) continue;
+
+        const subscription = await tx.subscription.findUnique({
+          where: { userId: artist.userId },
+          select: { plan: true }
+        });
+
+        const gross = Number(item.price);
+        const commissionRate = getPlatformCommission(subscription?.plan);
+        const commission = Number((gross * commissionRate).toFixed(2));
+        const net = Number((gross - commission).toFixed(2));
+
+        await tx.ledgerEntry.createMany({
+          data: [
+            {
+              artistId: item.release.artistId,
+              releaseId: item.release.id,
+              orderId: order.id,
+              entryType: "SALE_GROSS",
+              amount: gross,
+              currency: "EUR",
+              description: "Release sale gross amount"
+            },
+            {
+              artistId: item.release.artistId,
+              releaseId: item.release.id,
+              orderId: order.id,
+              entryType: "PLATFORM_COMMISSION",
+              amount: commission,
+              currency: "EUR",
+              description: "Platform commission"
+            },
+            {
+              artistId: item.release.artistId,
+              releaseId: item.release.id,
+              orderId: order.id,
+              entryType: "ARTIST_NET",
+              amount: net,
+              currency: "EUR",
+              description: "Artist net due"
+            }
+          ]
+        });
+      }
+
+      return order;
     });
   }
 }
