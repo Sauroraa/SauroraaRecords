@@ -50,15 +50,19 @@ export default function PricingPage() {
         credentials: "include",
         body: JSON.stringify({ plan: key })
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(body.message ?? "Une erreur est survenue.");
+      }
       const data = await res.json() as { sessionUrl?: string; message?: string };
       if (data.sessionUrl) {
         window.location.href = data.sessionUrl;
       } else {
         toast.success(data.message ?? "Plan activé !");
       }
-    } catch {
-      toast.error("Une erreur est survenue.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue.";
+      toast.error(msg);
     } finally {
       setLoading(null);
     }
@@ -323,18 +327,41 @@ export default function PricingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[rgba(255,255,255,0.04)]">
-                {[
-                  { label: t.pricing.features.releases, free: "3/mois", basic: "∞", pro: "∞" },
-                  { label: t.pricing.features.commission, free: "10/90", basic: "20/80", pro: "30/70" },
-                  { label: t.pricing.features.analytics, free: false, basic: true, pro: true },
-                  { label: t.pricing.features.branding, free: false, basic: false, pro: true },
-                  { label: t.pricing.features.support, free: "Standard", basic: "Prioritaire", pro: "Dédié" }
-                ].map((row) => (
+                {([
+                  { label: "Releases par mois", free: "3/mois", basic: "∞", pro: "∞" },
+                  { label: "Commission artiste", free: "70% / 30%", basic: "80% / 20%", pro: "90% / 10%" },
+                  { label: "Streaming sur Sauroraa Music", free: true, basic: true, pro: true },
+                  { label: "Preview sécurisé (30–90s)", free: true, basic: true, pro: true },
+                  { label: "Waveform interactive", free: true, basic: true, pro: true },
+                  { label: "DJ Metadata (BPM / Key)", free: true, basic: true, pro: true },
+                  { label: "AI Genre Tagging", free: true, basic: true, pro: true },
+                  { label: "AI Drop Detection", free: true, basic: true, pro: true },
+                  { label: "Scheduled releases", free: false, basic: true, pro: true },
+                  { label: "Multi-artist (collabs)", free: false, basic: true, pro: true },
+                  { label: "Private track links (promo DJs)", free: false, basic: true, pro: true },
+                  { label: "Engage system (type Hypeddit)", free: true, basic: true, pro: true },
+                  { label: "Analytics basiques", free: true, basic: true, pro: true },
+                  { label: "Analytics avancées", free: false, basic: true, pro: true },
+                  { label: "Heatmap d'écoute", free: false, basic: false, pro: true },
+                  { label: "Export données (CSV)", free: false, basic: true, pro: true },
+                  { label: "Dubpacks / bundles", free: false, basic: true, pro: true },
+                  { label: "Sample packs / stems", free: false, basic: true, pro: true },
+                  { label: "Artist profile customization", free: false, basic: false, pro: true },
+                  { label: "Artist verified badge", free: false, basic: false, pro: true },
+                  { label: "Featured playlists", free: false, basic: true, pro: true },
+                  { label: "Homepage feature promotion", free: false, basic: false, pro: true },
+                  { label: "Trending boost promotion", free: false, basic: false, pro: true },
+                  { label: "Fan messaging (annonces)", free: false, basic: false, pro: true },
+                  { label: "Mailing list export", free: false, basic: true, pro: true },
+                  { label: "Custom landing pages", free: false, basic: false, pro: true },
+                  { label: "API access (dev tools)", free: false, basic: false, pro: true },
+                  { label: "Support", free: "Standard", basic: "Prioritaire", pro: "Dédié" }
+                ] as { label: string; free: boolean | string; basic: boolean | string; pro: boolean | string }[]).map((row) => (
                   <tr key={row.label} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-6 py-3.5 text-cream/70">{row.label}</td>
-                    <td className="px-6 py-3.5 text-center">{renderCell(row.free)}</td>
-                    <td className="px-6 py-3.5 text-center">{renderCell(row.basic)}</td>
-                    <td className="px-6 py-3.5 text-center">{renderCell(row.pro)}</td>
+                    <td className="px-6 py-3 text-cream/70">{row.label}</td>
+                    <td className="px-6 py-3 text-center">{renderCell(row.free)}</td>
+                    <td className="px-6 py-3 text-center">{renderCell(row.basic)}</td>
+                    <td className="px-6 py-3 text-center">{renderCell(row.pro)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -13,6 +13,7 @@ import type { ReleaseItem, ArtistProfile, HomeOverviewStats } from "@/lib/types"
 import { ReleaseCard } from "./release-card";
 import { FreeDownloadModal } from "./free-download-modal";
 import { ArtistBadges } from "./artist-badges";
+import { LiveRankingsIndicator } from "./live-rankings-indicator";
 import { Button } from "./ui/button";
 import { useLanguage } from "@/context/language-context";
 
@@ -200,6 +201,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                 Trending cette semaine
               </p>
               <h2 className="text-3xl font-bold text-cream">En ce moment</h2>
+              <LiveRankingsIndicator className="mt-2" />
             </div>
             <Link
               href="/catalog"

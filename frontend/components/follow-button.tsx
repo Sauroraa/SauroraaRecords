@@ -1,7 +1,8 @@
 "use client";
 
 import { UserCheck, UserPlus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "./ui/button";
@@ -14,26 +15,21 @@ interface FollowButtonProps {
 
 export function FollowButton({ artistId }: FollowButtonProps) {
   const { user } = useAuthStore();
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [count, setCount] = useState(0);
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    void fetchStatus();
-  }, [artistId, user]);
+  const { data } = useQuery({
+    queryKey: ["follow-status", artistId],
+    queryFn: async () => {
+      const res = await fetch(`${API}/follows/artist/${artistId}`, { credentials: "include" });
+      if (!res.ok) return { count: 0, isFollowing: false };
+      return res.json() as Promise<{ count: number; isFollowing: boolean }>;
+    },
+    staleTime: 10000
+  });
 
-  const fetchStatus = async () => {
-    try {
-      const res = await fetch(`${API}/follows/artist/${artistId}`, {
-        credentials: "include"
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { count: number; isFollowing: boolean };
-        setIsFollowing(data.isFollowing);
-        setCount(data.count);
-      }
-    } catch {}
-  };
+  const isFollowing = data?.isFollowing ?? false;
+  const count = data?.count ?? 0;
 
   const toggle = async () => {
     if (!user) {
@@ -41,6 +37,11 @@ export function FollowButton({ artistId }: FollowButtonProps) {
       return;
     }
     setLoading(true);
+    // Optimistic update
+    queryClient.setQueryData(["follow-status", artistId], {
+      isFollowing: !isFollowing,
+      count: isFollowing ? count - 1 : count + 1
+    });
     try {
       const method = isFollowing ? "DELETE" : "POST";
       const res = await fetch(`${API}/follows/artist/${artistId}`, {
@@ -48,10 +49,15 @@ export function FollowButton({ artistId }: FollowButtonProps) {
         credentials: "include"
       });
       if (res.ok) {
-        setIsFollowing(!isFollowing);
-        setCount((c) => (isFollowing ? c - 1 : c + 1));
+        // Refetch to get authoritative count from server
+        void queryClient.invalidateQueries({ queryKey: ["follow-status", artistId] });
         toast.success(isFollowing ? "Unfollowed" : "Following!");
+      } else {
+        // Revert optimistic update
+        queryClient.setQueryData(["follow-status", artistId], data);
       }
+    } catch {
+      queryClient.setQueryData(["follow-status", artistId], data);
     } finally {
       setLoading(false);
     }

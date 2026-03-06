@@ -13,7 +13,8 @@
       "Bash(npm install --save-dev @types/nodemailer)",
       "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/.env\")",
       "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/backend/.env\")",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)"
     ],
     "additionalDirectories": [
       "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite"

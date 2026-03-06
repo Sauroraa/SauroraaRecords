@@ -64,12 +64,19 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-cream/50">
-          No account?{" "}
-          <Link href="/register" className="text-violet-light hover:underline">
-            Create one
-          </Link>
-        </p>
+        <div className="mt-5 text-center space-y-2">
+          <p className="text-sm text-cream/50">
+            <Link href="/forgot-password" className="text-violet-light hover:underline">
+              Mot de passe oublié ?
+            </Link>
+          </p>
+          <p className="text-sm text-cream/50">
+            No account?{" "}
+            <Link href="/register" className="text-violet-light hover:underline">
+              Create one
+            </Link>
+          </p>
+        </div>
       </Card>
     </section>
   );

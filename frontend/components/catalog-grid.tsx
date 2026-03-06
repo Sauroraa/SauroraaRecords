@@ -43,7 +43,8 @@ export function CatalogGrid() {
                     title: release.title,
                     artist: release.artist?.user?.email ?? "Sauroraa Artist",
                     src: release.audioPath,
-                    coverPath: release.coverPath ?? null
+                    coverPath: release.coverPath ?? null,
+                    releaseId: release.id
                   });
                   setPlaying(true);
                 }}

@@ -48,9 +48,9 @@ export const nl: Dict = {
     features_title: "Functievergelijking",
     faq_title: "Veelgestelde vragen",
     plans: {
-      artist_free: { name: "Artist Free", commission: "10/90", releases: "3 releases/maand", support: "Standaard support", analytics: false, branding: false },
-      artist_basic: { name: "Artist Basic", commission: "20/80", releases: "Onbeperkte releases", support: "Prioritaire support", analytics: true, branding: false },
-      artist_pro: { name: "Artist Pro", commission: "30/70", releases: "Onbeperkte releases", support: "Toegewijde support", analytics: true, branding: true },
+      artist_free: { name: "Artist Free", commission: "70/30", releases: "3 releases/maand", support: "Standaard support", analytics: false, branding: false },
+      artist_basic: { name: "Artist Basic", commission: "80/20", releases: "Onbeperkte releases", support: "Prioritaire support", analytics: true, branding: false },
+      artist_pro: { name: "Artist Pro", commission: "90/10", releases: "Onbeperkte releases", support: "Toegewijde support", analytics: true, branding: true },
       agency_start: { name: "Agency Start", commission: "80/20", artists: "Tot 5 artiesten", support: "Prioritaire support" },
       agency_pro: { name: "Agency Pro", commission: "90/10", artists: "Onbeperkte artiesten", support: "Toegewijde support" }
     },

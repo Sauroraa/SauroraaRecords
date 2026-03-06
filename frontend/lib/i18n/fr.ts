@@ -46,9 +46,9 @@ export const fr = {
     features_title: "Comparatif des fonctionnalités",
     faq_title: "Questions fréquentes",
     plans: {
-      artist_free: { name: "Artist Free", commission: "10/90", releases: "3 releases/mois", support: "Support standard", analytics: false, branding: false },
-      artist_basic: { name: "Artist Basic", commission: "20/80", releases: "Releases illimitées", support: "Support prioritaire", analytics: true, branding: false },
-      artist_pro: { name: "Artist Pro", commission: "30/70", releases: "Releases illimitées", support: "Support dédié", analytics: true, branding: true },
+      artist_free: { name: "Artist Free", commission: "70/30", releases: "3 releases/mois", support: "Support standard", analytics: false, branding: false },
+      artist_basic: { name: "Artist Basic", commission: "80/20", releases: "Releases illimitées", support: "Support prioritaire", analytics: true, branding: false },
+      artist_pro: { name: "Artist Pro", commission: "90/10", releases: "Releases illimitées", support: "Support dédié", analytics: true, branding: true },
       agency_start: { name: "Agency Start", commission: "80/20", artists: "Jusqu'à 5 artistes", support: "Support prioritaire" },
       agency_pro: { name: "Agency Pro", commission: "90/10", artists: "Artistes illimités", support: "Support dédié" }
     },

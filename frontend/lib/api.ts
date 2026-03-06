@@ -31,9 +31,11 @@ function normalizeAssetPath(path?: string | null): string | null | undefined {
 
 function normalizeArtist(artist?: ArtistProfile | null): ArtistProfile | undefined {
   if (!artist) return undefined;
+  const userWithSub = artist.user as (typeof artist.user & { subscription?: { plan: string; status: string } | null }) | undefined;
   return {
     ...artist,
-    avatar: normalizeAssetPath(artist.avatar) ?? null
+    avatar: normalizeAssetPath(artist.avatar) ?? null,
+    subscription: artist.subscription ?? userWithSub?.subscription ?? null
   };
 }
 

@@ -18,6 +18,8 @@ interface AuthState {
   register: (email: string, password: string, role?: UserRole, extraData?: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
@@ -87,6 +89,40 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch {
           set({ user: null });
+        }
+      },
+
+      forgotPassword: async (email) => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch(`${API}/auth/forgot-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          });
+          if (!res.ok) {
+            const err = (await res.json()) as { message?: string };
+            throw new Error(err.message ?? "Failed to send reset email");
+          }
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      resetPassword: async (token, newPassword) => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch(`${API}/auth/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, newPassword })
+          });
+          if (!res.ok) {
+            const err = (await res.json()) as { message?: string };
+            throw new Error(err.message ?? "Failed to reset password");
+          }
+        } finally {
+          set({ isLoading: false });
         }
       }
     }),

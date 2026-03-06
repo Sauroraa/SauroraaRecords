@@ -1,24 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchRankings } from "@/lib/api";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, Share2, Trophy, Download, TrendingUp } from "lucide-react";
 import { useLanguage } from "@/context/language-context";
+import { useRankings } from "@/lib/hooks/use-rankings";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LiveRankingsIndicator } from "@/components/live-rankings-indicator";
 import type { RankingItem } from "@/lib/types";
 
 export default function RankingsPage() {
   const { t } = useLanguage();
   const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const { data: rankings = [], isLoading } = useQuery<RankingItem[]>({
-    queryKey: ["rankings", selectedMonth],
-    queryFn: () => fetchRankings(selectedMonth),
-    refetchInterval: selectedMonth === currentMonth ? 15000 : false
-  });
+
+  const { rankings, isLoading } = useRankings(selectedMonth);
 
   const monthLabel = useMemo(
     () =>
@@ -65,6 +63,7 @@ export default function RankingsPage() {
             className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-surface px-3 py-1.5 text-xs text-cream/85 outline-none transition-colors focus:border-violet/50"
           />
         </div>
+        <LiveRankingsIndicator className="mt-2" />
       </div>
 
       {isLoading ? (

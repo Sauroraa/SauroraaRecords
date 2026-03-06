@@ -13,6 +13,8 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  ExternalLink,
+  Link2,
   Plus,
   ToggleLeft,
   ToggleRight,
@@ -22,7 +24,15 @@ import {
   Instagram,
   Globe,
   Save,
-  Loader2
+  Loader2,
+  Zap,
+  Bell,
+  Key,
+  Copy,
+  Music2,
+  Cpu,
+  Send,
+  Package
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -41,7 +51,12 @@ type Tab =
   | "upload-dubpack"
   | "downloads-config"
   | "revenue"
-  | "releases";
+  | "releases"
+  | "engage-campaigns"
+  | "analytics"
+  | "broadcasts"
+  | "private-links"
+  | "api-keys";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <BarChart2 className="h-4 w-4" /> },
@@ -51,7 +66,12 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "upload-dubpack", label: "Upload Dubpack", icon: <Archive className="h-4 w-4" /> },
   { id: "downloads-config", label: "Downloads Config", icon: <Settings2 className="h-4 w-4" /> },
   { id: "revenue", label: "Revenue", icon: <TrendingUp className="h-4 w-4" /> },
-  { id: "releases", label: "My Releases", icon: <Disc3 className="h-4 w-4" /> }
+  { id: "releases", label: "My Releases", icon: <Disc3 className="h-4 w-4" /> },
+  { id: "engage-campaigns", label: "Engage", icon: <Zap className="h-4 w-4" /> },
+  { id: "analytics", label: "Analytics +", icon: <BarChart2 className="h-4 w-4" /> },
+  { id: "broadcasts", label: "Broadcasts", icon: <Bell className="h-4 w-4" /> },
+  { id: "private-links", label: "Private Links", icon: <Link2 className="h-4 w-4" /> },
+  { id: "api-keys", label: "API Keys", icon: <Key className="h-4 w-4" /> }
 ];
 
 const ACTION_OPTIONS = [
@@ -96,6 +116,7 @@ function slugifyTitle(value: string): string {
 
 function ProfilTab() {
   const coverRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     displayName: "",
     bio: "",
@@ -107,6 +128,8 @@ function ProfilTab() {
   });
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -119,6 +142,7 @@ function ProfilTab() {
             displayName?: string | null;
             bio?: string | null;
             avatar?: string | null;
+            bannerUrl?: string | null;
             instagramUrl?: string | null;
             soundcloudUrl?: string | null;
             discordUrl?: string | null;
@@ -136,6 +160,7 @@ function ProfilTab() {
               payoutIban: data.payoutIban ?? ""
             });
             setAvatar(data.avatar ?? null);
+            setBanner(data.bannerUrl ?? null);
           }
         }
       } catch {} finally {
@@ -144,7 +169,7 @@ function ProfilTab() {
     })();
   }, []);
 
-  const uploadAvatar = async (file: File): Promise<string> => {
+  const uploadImage = async (file: File): Promise<string> => {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch(`${API}/upload/cover`, { method: "POST", credentials: "include", body: fd });
@@ -157,18 +182,24 @@ function ProfilTab() {
     try {
       let avatarPath = avatar;
       if (avatarFile) {
-        avatarPath = await uploadAvatar(avatarFile);
+        avatarPath = await uploadImage(avatarFile);
         setAvatar(avatarPath);
+        setAvatarFile(null);
+      }
+      let bannerPath = banner;
+      if (bannerFile) {
+        bannerPath = await uploadImage(bannerFile);
+        setBanner(bannerPath);
+        setBannerFile(null);
       }
       const res = await fetch(`${API}/artists/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...form, avatar: avatarPath ?? undefined })
+        body: JSON.stringify({ ...form, avatar: avatarPath ?? undefined, bannerUrl: bannerPath ?? undefined })
       });
       if (!res.ok) throw new Error();
       toast.success("Profil mis à jour !");
-      setAvatarFile(null);
     } catch {
       toast.error("Impossible de sauvegarder le profil");
     } finally {
@@ -178,8 +209,48 @@ function ProfilTab() {
 
   if (loading) return <LoadingSpinner />;
 
+  const bannerPreview = bannerFile
+    ? URL.createObjectURL(bannerFile)
+    : banner
+    ? `${API.replace("/api", "")}${banner}`
+    : null;
+
   return (
     <div className="max-w-xl space-y-6">
+      {/* Banner */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-cream/40">Bannière de profil</p>
+        <div
+          onClick={() => bannerRef.current?.click()}
+          className="relative h-32 w-full cursor-pointer overflow-hidden rounded-[12px] border-2 border-dashed border-[rgba(255,255,255,0.12)] bg-surface2 hover:border-violet/40 transition-colors"
+        >
+          {bannerPreview ? (
+            <img src={bannerPreview} alt="banner" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1">
+              <Upload className="h-6 w-6 text-cream/20" />
+              <p className="text-xs text-cream/30">Clique pour uploader une bannière</p>
+            </div>
+          )}
+        </div>
+        <input
+          ref={bannerRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && setBannerFile(e.target.files[0])}
+        />
+        {bannerPreview && (
+          <button
+            type="button"
+            onClick={() => { setBanner(null); setBannerFile(null); }}
+            className="text-xs text-cream/40 hover:text-red-400 transition-colors"
+          >
+            Supprimer la bannière
+          </button>
+        )}
+      </div>
+
       {/* Avatar */}
       <div className="flex items-center gap-5">
         <div
@@ -506,7 +577,10 @@ function UploadReleaseTab() {
     genre: "ELECTRO",
     price: "0",
     type: "FREE",
-    previewClip: ""
+    previewClip: "",
+    bpm: "",
+    musicalKey: "",
+    previewDuration: "30"
   });
   const [gate, setGate] = useState({
     gateEnabled: false,
@@ -614,12 +688,15 @@ function UploadReleaseTab() {
           audioPath,
           coverPath,
           previewClip: form.previewClip || undefined,
+          bpm: form.bpm || undefined,
+          musicalKey: form.musicalKey || undefined,
+          previewDuration: form.previewDuration || "30",
           ...(form.type === "FREE" && gate.gateEnabled ? gate : {})
         })
       });
       if (!res.ok) throw new Error("Failed to create release");
-      toast.success("Release created! Pending admin approval.");
-      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "" });
+      toast.success("Release publiée automatiquement !");
+      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "", bpm: "", musicalKey: "", previewDuration: "30" });
       setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
       setAudioFile(null);
       setCoverFile(null);
@@ -678,6 +755,24 @@ function UploadReleaseTab() {
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             disabled={form.type === "FREE"}
           />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">BPM</label>
+          <Input type="number" min="60" max="220" placeholder="128" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Key (tonalité)</label>
+          <Select value={form.musicalKey} onChange={(e) => setForm({ ...form, musicalKey: e.target.value })}>
+            <option value="">-- Sélectionner --</option>
+            {["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].flatMap((note) => [
+              <option key={`${note}m`} value={`${note}m`}>{note} minor</option>,
+              <option key={note} value={note}>{note} major</option>
+            ])}
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Preview duration (s)</label>
+          <Input type="number" min="15" max="90" value={form.previewDuration} onChange={(e) => setForm({ ...form, previewDuration: e.target.value })} />
         </div>
       </div>
 
@@ -1201,12 +1296,732 @@ function ReleasesTab() {
   );
 }
 
+// ─── Engage Campaigns ─────────────────────────────────────────────────────────
+
+type EngageActionType =
+  | "FOLLOW_SOUNDCLOUD" | "LIKE_SOUNDCLOUD" | "REPOST_SOUNDCLOUD"
+  | "FOLLOW_INSTAGRAM" | "JOIN_DISCORD" | "SUBSCRIBE_NEWSLETTER"
+  | "FOLLOW_ARTIST" | "LEAVE_COMMENT";
+
+interface EngageCampaign {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "ACTIVE" | "PAUSED" | "ENDED";
+  downloadPath: string | null;
+  soundcloudArtistId: string | null;
+  soundcloudTrackId: string | null;
+  instagramHandle: string | null;
+  discordServerId: string | null;
+  discordInviteUrl: string | null;
+  newsletterTag: string | null;
+  releaseCountdown: string | null;
+  createdAt: string;
+  actions: { id: string; actionType: EngageActionType; required: boolean; position: number }[];
+  _count?: { sessions: number; subscribers: number };
+}
+
+const ENGAGE_ACTIONS: { value: EngageActionType; label: string }[] = [
+  { value: "FOLLOW_SOUNDCLOUD", label: "Follow on SoundCloud" },
+  { value: "LIKE_SOUNDCLOUD", label: "Like track on SoundCloud" },
+  { value: "REPOST_SOUNDCLOUD", label: "Repost on SoundCloud" },
+  { value: "FOLLOW_INSTAGRAM", label: "Follow on Instagram" },
+  { value: "JOIN_DISCORD", label: "Join Discord server" },
+  { value: "SUBSCRIBE_NEWSLETTER", label: "Subscribe to newsletter" },
+  { value: "FOLLOW_ARTIST", label: "Follow on Sauroraa" },
+  { value: "LEAVE_COMMENT", label: "Leave a comment" }
+];
+
+function EngageCampaignsTab() {
+  const [campaigns, setCampaigns] = useState<EngageCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [analytics, setAnalytics] = useState<Record<string, { totalSessions: number; completedSessions: number; conversionRate: number; subscribers: number }>>({});
+
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    downloadPath: "",
+    soundcloudArtistId: "",
+    soundcloudTrackId: "",
+    instagramHandle: "",
+    discordServerId: "",
+    discordInviteUrl: "",
+    releaseCountdown: ""
+  });
+  const [selectedActions, setSelectedActions] = useState<{ actionType: EngageActionType; required: boolean }[]>([]);
+
+  const load = async () => {
+    try {
+      const res = await fetch(`${API}/engage/me/campaigns`, { credentials: "include" });
+      if (res.ok) {
+        const data = (await res.json()) as EngageCampaign[];
+        setCampaigns(data);
+        // Load analytics for each campaign
+        await Promise.all(data.map(async (c) => {
+          try {
+            const r = await fetch(`${API}/engage/me/campaigns/${c.id}/analytics`, { credentials: "include" });
+            if (r.ok) {
+              const a = await r.json() as { totalSessions: number; completedSessions: number; conversionRate: number; subscribers: number };
+              setAnalytics((prev) => ({ ...prev, [c.id]: a }));
+            }
+          } catch {}
+        }));
+      }
+    } catch {} finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const handleCreate = async () => {
+    if (!form.title.trim()) { toast.error("Titre requis"); return; }
+    if (selectedActions.length === 0) { toast.error("Ajoute au moins une action"); return; }
+    setCreating(true);
+    try {
+      const res = await fetch(`${API}/engage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ...form,
+          releaseCountdown: form.releaseCountdown || undefined,
+          actions: selectedActions.map((a, idx) => ({ ...a, position: idx }))
+        })
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Campagne créée !");
+      setShowForm(false);
+      setForm({ title: "", description: "", downloadPath: "", soundcloudArtistId: "", soundcloudTrackId: "", instagramHandle: "", discordServerId: "", discordInviteUrl: "", releaseCountdown: "" });
+      setSelectedActions([]);
+      void load();
+    } catch {
+      toast.error("Impossible de créer la campagne");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleStatusToggle = async (campaign: EngageCampaign) => {
+    const newStatus = campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
+    try {
+      await fetch(`${API}/engage/me/campaigns/${campaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus })
+      });
+      void load();
+    } catch {
+      toast.error("Impossible de modifier la campagne");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette campagne ?")) return;
+    try {
+      await fetch(`${API}/engage/me/campaigns/${id}`, { method: "DELETE", credentials: "include" });
+      void load();
+    } catch {
+      toast.error("Impossible de supprimer");
+    }
+  };
+
+  const toggleAction = (actionType: EngageActionType) => {
+    setSelectedActions((prev) => {
+      const exists = prev.find((a) => a.actionType === actionType);
+      if (exists) return prev.filter((a) => a.actionType !== actionType);
+      return [...prev, { actionType, required: true }];
+    });
+  };
+
+  const toggleRequired = (actionType: EngageActionType) => {
+    setSelectedActions((prev) =>
+      prev.map((a) => a.actionType === actionType ? { ...a, required: !a.required } : a)
+    );
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-cream">Sauroraa Engage</h2>
+          <p className="text-xs text-cream/50 mt-0.5">Crée des campagnes de fan-gate pour débloquer tes téléchargements</p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-1.5">
+          <Plus className="h-4 w-4" />
+          Nouvelle campagne
+        </Button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="rounded-[14px] border border-violet/30 bg-surface p-5 space-y-5">
+          <h3 className="text-sm font-semibold text-cream">Nouvelle campagne Engage</h3>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">Titre *</label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Free DL — Follow & Download" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">Fichier à débloquer (path)</label>
+              <Input value={form.downloadPath} onChange={(e) => setForm({ ...form, downloadPath: e.target.value })} placeholder="/uploads/audio/track.wav" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-xs font-medium text-cream/60">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+                placeholder="Décris le contenu à télécharger..."
+                className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50 resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">SoundCloud Artist ID</label>
+              <Input value={form.soundcloudArtistId} onChange={(e) => setForm({ ...form, soundcloudArtistId: e.target.value })} placeholder="ton-username-soundcloud" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">SoundCloud Track ID / slug</label>
+              <Input value={form.soundcloudTrackId} onChange={(e) => setForm({ ...form, soundcloudTrackId: e.target.value })} placeholder="nom-du-track" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">Instagram handle</label>
+              <Input value={form.instagramHandle} onChange={(e) => setForm({ ...form, instagramHandle: e.target.value })} placeholder="@tonhandle" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">Discord invite URL</label>
+              <Input value={form.discordInviteUrl} onChange={(e) => setForm({ ...form, discordInviteUrl: e.target.value })} placeholder="https://discord.gg/..." />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cream/60">Release countdown</label>
+              <Input type="datetime-local" value={form.releaseCountdown} onChange={(e) => setForm({ ...form, releaseCountdown: e.target.value })} />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cream/40">Actions requises pour débloquer</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ENGAGE_ACTIONS.map((action) => {
+                const selected = selectedActions.find((a) => a.actionType === action.value);
+                return (
+                  <div key={action.value} className={`flex items-center justify-between rounded-[10px] border p-2.5 cursor-pointer transition-colors ${selected ? "border-violet/40 bg-violet/10" : "border-[rgba(255,255,255,0.08)] bg-surface2"}`}>
+                    <button type="button" onClick={() => toggleAction(action.value)} className="flex items-center gap-2 flex-1 text-left">
+                      <div className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-violet bg-violet" : "border-cream/20"}`}>
+                        {selected && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <span className="text-xs text-cream">{action.label}</span>
+                    </button>
+                    {selected && (
+                      <button
+                        type="button"
+                        onClick={() => toggleRequired(action.value)}
+                        className={`ml-2 text-[10px] rounded px-1.5 py-0.5 ${selected.required ? "bg-red-500/20 text-red-400" : "bg-black/20 text-cream/40"}`}
+                      >
+                        {selected.required ? "Requis" : "Optionnel"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={() => void handleCreate()} disabled={creating} className="gap-2">
+              {creating ? <><Loader2 className="h-4 w-4 animate-spin" /> Création...</> : <><Check className="h-4 w-4" /> Créer la campagne</>}
+            </Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign list */}
+      {campaigns.length === 0 && !showForm ? (
+        <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-8 text-center">
+          <Zap className="mx-auto mb-3 h-8 w-8 text-violet/40" />
+          <p className="text-sm text-cream/50">Aucune campagne Engage. Crée ta première campagne de fan-gate !</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {campaigns.map((campaign) => {
+            const stats = analytics[campaign.id];
+            const engageUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/engage/${campaign.id}`;
+
+            return (
+              <div key={campaign.id} className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-cream">{campaign.title}</p>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        campaign.status === "ACTIVE" ? "bg-green-500/20 text-green-400" :
+                        campaign.status === "PAUSED" ? "bg-yellow-500/20 text-yellow-400" :
+                        "bg-cream/10 text-cream/40"
+                      }`}>
+                        {campaign.status}
+                      </span>
+                    </div>
+                    {campaign.description && (
+                      <p className="mt-1 text-xs text-cream/50 line-clamp-1">{campaign.description}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {campaign.actions.map((a) => (
+                        <span key={a.id} className="rounded-[6px] bg-violet/10 px-2 py-0.5 text-[10px] text-violet-light">
+                          {a.actionType.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(engageUrl);
+                        toast.success("Lien copié !");
+                      }}
+                      title="Copier le lien"
+                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
+                    >
+                      <Link2 className="h-4 w-4" />
+                    </button>
+                    <a
+                      href={`/engage/${campaign.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Voir la page"
+                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                    <button
+                      onClick={() => void handleStatusToggle(campaign)}
+                      title={campaign.status === "ACTIVE" ? "Mettre en pause" : "Activer"}
+                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
+                    >
+                      {campaign.status === "ACTIVE" ? <ToggleRight className="h-4 w-4 text-green-400" /> : <ToggleLeft className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => void handleDelete(campaign.id)}
+                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                {stats && (
+                  <div className="mt-3 grid grid-cols-4 gap-2 border-t border-[rgba(255,255,255,0.06)] pt-3">
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-cream">{stats.totalSessions}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Sessions</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-cream">{stats.completedSessions}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Downloads</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-violet-light">{stats.conversionRate}%</p>
+                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Conversion</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-cream">{stats.subscribers}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Emails</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Export subscribers */}
+                {stats && stats.subscribers > 0 && (
+                  <div className="mt-2 text-right">
+                    <a
+                      href={`${API}/engage/me/campaigns/${campaign.id}/subscribers/export`}
+                      className="text-xs text-violet-light hover:underline"
+                    >
+                      Exporter {stats.subscribers} emails (CSV)
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function LoadingSpinner() {
   return (
     <div className="flex justify-center py-12">
       <div className="h-6 w-6 rounded-full border-2 border-violet border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
+// ─── Advanced Analytics Tab ────────────────────────────────────────────────────
+
+function AdvancedAnalyticsTab() {
+  const [data, setData] = useState<{
+    streamsByDay: Record<string, number>;
+    downloadsByDay: Record<string, number>;
+    topTracks: { id: string; title: string; coverPath?: string | null; streams: number; downloads: number; comments: number }[];
+    followerGrowth: string[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/artists/me/analytics/advanced`, { credentials: "include" });
+        if (res.ok) setData(await res.json() as typeof data);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-violet" /></div>;
+  if (!data) return <div className="text-cream/40 text-center py-12">Aucune donnée disponible.</div>;
+
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(Date.now() - (29 - i) * 86400000);
+    return d.toISOString().slice(0, 10);
+  });
+  const maxStreams = Math.max(...days.map((d) => data.streamsByDay[d] ?? 0), 1);
+
+  return (
+    <div className="space-y-6">
+      {/* Streams chart */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="h-4 w-4 text-violet" />
+          <p className="text-sm font-semibold text-cream">Streams — 30 derniers jours</p>
+        </div>
+        <div className="flex items-end gap-0.5 h-24">
+          {days.map((day) => {
+            const v = data.streamsByDay[day] ?? 0;
+            const h = Math.max(4, (v / maxStreams) * 100);
+            return (
+              <div key={day} className="flex-1 relative group">
+                <div className="w-full rounded-sm bg-violet/60 hover:bg-violet transition-colors" style={{ height: `${h}%` }} />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:flex flex-col items-center z-10">
+                  <div className="rounded-[6px] bg-surface2 border border-[rgba(255,255,255,0.12)] px-2 py-1 text-[10px] text-cream whitespace-nowrap">{day.slice(5)}: {v}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-[10px] text-cream/30">
+          <span>{days[0]?.slice(5)}</span><span>Aujourd'hui</span>
+        </div>
+      </div>
+
+      {/* Downloads chart */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-green-400" />
+          <p className="text-sm font-semibold text-cream">Downloads — 30 derniers jours</p>
+        </div>
+        <div className="flex items-end gap-0.5 h-20">
+          {days.map((day) => {
+            const v = data.downloadsByDay[day] ?? 0;
+            const maxDl = Math.max(...days.map((d) => data.downloadsByDay[d] ?? 0), 1);
+            const h = Math.max(4, (v / maxDl) * 100);
+            return (
+              <div key={day} className="flex-1">
+                <div className="w-full rounded-sm bg-green-400/60 hover:bg-green-400 transition-colors" style={{ height: `${h}%` }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top tracks */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <p className="text-sm font-semibold text-cream">Top Tracks</p>
+        <div className="space-y-2">
+          {data.topTracks.slice(0, 5).map((track, i) => (
+            <div key={track.id} className="flex items-center gap-3">
+              <span className="text-sm font-bold text-cream/30 w-4">#{i + 1}</span>
+              <p className="flex-1 text-sm text-cream truncate">{track.title}</p>
+              <div className="flex gap-3 text-xs text-cream/50">
+                <span>{track.streams} streams</span>
+                <span>{track.downloads} DL</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Follower growth */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5">
+        <p className="text-sm font-semibold text-cream mb-2">Nouveaux followers (30j)</p>
+        <p className="text-3xl font-bold text-violet">{data.followerGrowth.length}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Broadcasts Tab ────────────────────────────────────────────────────────────
+
+function BroadcastsTab() {
+  const [broadcasts, setBroadcasts] = useState<{ id: string; title: string; body: string; createdAt: string; _count: { recipients: number } }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ title: "", message: "" });
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/artists/me/broadcasts`, { credentials: "include" });
+        if (res.ok) setBroadcasts(await res.json() as typeof broadcasts);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const send = async () => {
+    if (!form.title.trim() || !form.message.trim()) { toast.error("Titre et message requis"); return; }
+    setSending(true);
+    try {
+      const res = await fetch(`${API}/artists/me/broadcasts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title: form.title, message: form.message })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { id: string; title: string; body: string; createdAt: string; recipientCount: number; _count: { recipients: number } };
+      setBroadcasts((prev) => [{ ...data, _count: { recipients: data.recipientCount ?? 0 } }, ...prev]);
+      setForm({ title: "", message: "" });
+      toast.success(`Broadcast envoyé à ${(data.recipientCount ?? 0)} abonné(s) !`);
+    } catch { toast.error("Erreur lors de l'envoi"); }
+    setSending(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-4">
+        <p className="text-sm font-semibold text-cream flex items-center gap-2"><Bell className="h-4 w-4 text-violet" /> Nouvelle annonce</p>
+        <Input placeholder="Titre de l'annonce" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <textarea
+          rows={4}
+          placeholder="Message pour vos fans…"
+          value={form.message}
+          onChange={(e) => setForm({ ...form, message: e.target.value })}
+          className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream placeholder-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50 resize-none"
+        />
+        <Button onClick={() => void send()} disabled={sending} className="gap-2">
+          <Send className="h-3.5 w-3.5" />{sending ? "Envoi…" : "Envoyer à tous les abonnés"}
+        </Button>
+      </div>
+
+      {loading ? <Loader2 className="h-5 w-5 animate-spin text-violet mx-auto" /> : (
+        <div className="space-y-2">
+          {broadcasts.map((b) => (
+            <div key={b.id} className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-sm font-medium text-cream">{b.title}</p>
+                <span className="text-xs text-cream/40">{b._count.recipients} destinataires</span>
+              </div>
+              <p className="text-xs text-cream/60 line-clamp-2">{b.body}</p>
+              <p className="text-[10px] text-cream/30 mt-1">{new Date(b.createdAt).toLocaleDateString("fr-BE")}</p>
+            </div>
+          ))}
+          {broadcasts.length === 0 && <p className="text-sm text-cream/30 text-center py-8">Aucun broadcast envoyé.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Private Links Tab ────────────────────────────────────────────────────────
+
+function PrivateLinksTab() {
+  const [releases, setReleases] = useState<{ id: string; title: string }[]>([]);
+  const [links, setLinks] = useState<{ token: string; scope: string; maxPlays: number; playsCount: number; expiresAt: string; createdAt: string }[]>([]);
+  const [selectedRelease, setSelectedRelease] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch(`${API}/releases`, { credentials: "include" });
+      if (res.ok) setReleases(await res.json() as typeof releases);
+    })();
+  }, []);
+
+  const loadLinks = async (releaseId: string) => {
+    const res = await fetch(`${API}/releases/${releaseId}/private-links`, { credentials: "include" });
+    if (res.ok) setLinks(await res.json() as typeof links);
+  };
+
+  const handleSelect = async (id: string) => {
+    setSelectedRelease(id);
+    if (id) await loadLinks(id);
+    else setLinks([]);
+  };
+
+  const createLink = async () => {
+    if (!selectedRelease) return;
+    setCreating(true);
+    try {
+      const res = await fetch(`${API}/releases/${selectedRelease}/private-links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ scope: "STREAM", maxPlays: 50, expiryDays: 30 })
+      });
+      if (!res.ok) throw new Error();
+      await loadLinks(selectedRelease);
+      toast.success("Lien créé !");
+    } catch { toast.error("Erreur"); }
+    setCreating(false);
+  };
+
+  const deleteLink = async (token: string) => {
+    await fetch(`${API}/releases/private-links/${token}`, { method: "DELETE", credentials: "include" });
+    setLinks((prev) => prev.filter((l) => l.token !== token));
+    toast.success("Lien supprimé");
+  };
+
+  const copyLink = (token: string) => {
+    void navigator.clipboard.writeText(`${window.location.origin}/release/private/${token}`);
+    toast.success("Lien copié !");
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-4">
+        <p className="text-sm font-semibold text-cream flex items-center gap-2"><Link2 className="h-4 w-4 text-violet" /> Créer un lien privé</p>
+        <Select value={selectedRelease} onChange={(e) => void handleSelect(e.target.value)}>
+          <option value="">-- Sélectionner une release --</option>
+          {releases.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+        </Select>
+        {selectedRelease && (
+          <Button onClick={() => void createLink()} disabled={creating} className="gap-2">
+            <Plus className="h-3.5 w-3.5" />{creating ? "Création…" : "Générer un lien"}
+          </Button>
+        )}
+      </div>
+
+      {links.length > 0 && (
+        <div className="space-y-2">
+          {links.map((l) => (
+            <div key={l.token} className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-xs font-mono text-cream/60 truncate">/release/private/{l.token.slice(0, 12)}…</p>
+                  <p className="text-[10px] text-cream/30 mt-0.5">{l.playsCount}/{l.maxPlays} plays · Expire {new Date(l.expiresAt).toLocaleDateString("fr-BE")}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => copyLink(l.token)} className="gap-1.5"><Copy className="h-3 w-3" />Copier</Button>
+                  <Button size="sm" variant="outline" onClick={() => void deleteLink(l.token)} className="text-red-400"><Trash2 className="h-3 w-3" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── API Keys Tab ─────────────────────────────────────────────────────────────
+
+function ApiKeysTab() {
+  const [keys, setKeys] = useState<{ id: string; name: string; active: boolean; createdAt: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/artists/me/api-keys`, { credentials: "include" });
+        if (res.ok) setKeys(await res.json() as typeof keys);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const create = async () => {
+    if (!name.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch(`${API}/artists/me/api-keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { key: string };
+      setNewKey(data.key);
+      setName("");
+      const listRes = await fetch(`${API}/artists/me/api-keys`, { credentials: "include" });
+      if (listRes.ok) setKeys(await listRes.json() as typeof keys);
+    } catch { toast.error("Erreur"); }
+    setCreating(false);
+  };
+
+  const revoke = async (id: string) => {
+    await fetch(`${API}/artists/me/api-keys/${id}/revoke`, { method: "PATCH", credentials: "include" });
+    setKeys((prev) => prev.map((k) => k.id === id ? { ...k, active: false } : k));
+    toast.success("Clé révoquée");
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-4">
+        <p className="text-sm font-semibold text-cream flex items-center gap-2"><Key className="h-4 w-4 text-violet" /> Créer une clé API</p>
+        <p className="text-xs text-cream/50">Les clés API te permettent d'intégrer Sauroraa à tes propres applications.</p>
+        <div className="flex gap-3">
+          <Input placeholder="Nom de la clé (ex: Mon site)" value={name} onChange={(e) => setName(e.target.value)} className="flex-1" />
+          <Button onClick={() => void create()} disabled={creating || !name.trim()} className="gap-1.5 shrink-0">
+            <Plus className="h-3.5 w-3.5" />{creating ? "Création…" : "Créer"}
+          </Button>
+        </div>
+        {newKey && (
+          <div className="rounded-[10px] bg-violet/10 border border-violet/30 p-3 space-y-2">
+            <p className="text-xs text-cream/70 font-medium">⚠️ Copie cette clé maintenant — elle ne sera plus visible.</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs font-mono text-cream bg-black/40 rounded px-2 py-1 truncate">{newKey}</code>
+              <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(newKey); toast.success("Copié !"); }} className="gap-1 shrink-0"><Copy className="h-3 w-3" /></Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {loading ? <Loader2 className="h-5 w-5 animate-spin text-violet mx-auto" /> : (
+        <div className="space-y-2">
+          {keys.map((k) => (
+            <div key={k.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+              <div>
+                <p className="text-sm font-medium text-cream">{k.name}</p>
+                <p className="text-[10px] text-cream/30">{new Date(k.createdAt).toLocaleDateString("fr-BE")}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${k.active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{k.active ? "Active" : "Révoquée"}</span>
+                {k.active && <Button size="sm" variant="outline" onClick={() => void revoke(k.id)} className="text-red-400 text-xs">Révoquer</Button>}
+              </div>
+            </div>
+          ))}
+          {keys.length === 0 && <p className="text-sm text-cream/30 text-center py-8">Aucune clé API.</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -1240,7 +2055,12 @@ export default function ArtistDashboard() {
     "upload-dubpack": <UploadDubpackTab />,
     "downloads-config": <DownloadsConfigTab />,
     revenue: <RevenueTab />,
-    releases: <ReleasesTab />
+    releases: <ReleasesTab />,
+    analytics: <AdvancedAnalyticsTab />,
+    broadcasts: <BroadcastsTab />,
+    "private-links": <PrivateLinksTab />,
+    "api-keys": <ApiKeysTab />,
+    "engage-campaigns": <EngageCampaignsTab />
   };
 
   return (

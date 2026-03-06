@@ -1125,7 +1125,7 @@ app.get("*", (_req, res) => {
           "<div class=\"tp-cover\" style=\"" + coverStyle + "\"></div>" +
           "<div class=\"tp-banner-info\">" +
             "<div class=\"tp-title\">" + esc(r.title) + "</div>" +
-            "<div class=\"tp-artist\" data-action=\"artist-open\" data-id=\"" + esc(artistId) + "\">" + artistN + "</div>" +
+            "<div class=\"tp-artist\" data-action=\"artist-open\" data-id=\"" + esc(artistId) + "\">" + artistN + (r.artist && r.artist.isVerified ? " <span class=\"badge badge-verified\">&#10003; V\u00e9rifi\u00e9</span>" : "") + "</div>" +
             "<div class=\"tp-meta-row\">" +
               tags.map(function(t) { return "<span class=\"tp-meta-pill\">" + esc(t) + "</span>"; }).join("") +
               (r.isPreorder ? "<span class=\"tp-meta-pill\" style=\"color:#f0a030;border-color:rgba(240,160,48,0.4)\">P&#201;COMMANDER</span>" : "") +
@@ -1290,7 +1290,7 @@ app.get("*", (_req, res) => {
     card.innerHTML =
       "<div class=\"tp-side-title\">Artiste</div>" +
       "<div class=\"tp-art-av\" style=\"" + avStyle + "\">" + (avUrl ? "" : name.charAt(0)) + "</div>" +
-      "<div class=\"tp-art-name\">" + name + "</div>" +
+      "<div class=\"tp-art-name\">" + name + (artist.isVerified ? " <span class=\"badge badge-verified\">&#10003;</span>" : "") + (artist.subscription && artist.subscription.plan === "ARTIST_PRO" ? " <span class=\"badge\" style=\"background:rgba(123,76,255,0.25);color:#c8b0ff\">Pro</span>" : "") + "</div>" +
       "<div class=\"tp-art-subs\">" + subs + " abonn\u00e9" + (subs !== 1 ? "s" : "") + "</div>" +
       "<button class=\"tp-art-follow\" data-action=\"artist-follow\" data-id=\"" + esc(artist.id || "") + "\">+ Suivre</button>" +
       "<div style=\"height:10px\"></div>" +

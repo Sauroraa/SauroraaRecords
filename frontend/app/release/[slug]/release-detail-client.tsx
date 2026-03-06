@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { Download, ShoppingCart, Play, Pause, Disc3, Heart, ArrowLeft, Clock, Lock, Users, Globe, Instagram } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { usePlayerStore } from "@/store/player-store";
 import { useCartStore } from "@/store/cart-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -13,6 +14,8 @@ import type { ReleaseItem, CommentItem } from "@/lib/types";
 import { FreeDownloadModal } from "@/components/free-download-modal";
 import { CommentThread } from "@/components/comment-thread";
 import { ReleaseWaveform } from "@/components/release-waveform";
+import { ArtistBadges } from "@/components/artist-badges";
+import { FollowButton } from "@/components/follow-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +40,19 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
   const { user } = useAuthStore();
   const [freeDownloadOpen, setFreeDownloadOpen] = useState(false);
   const [preordering, setPreordering] = useState(false);
+  const [heatmap, setHeatmap] = useState<{ secondMark: number; count: number }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/engagement/heatmap/${release.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setHeatmap(data);
+        }
+      } catch {}
+    })();
+  }, [release.id]);
 
   const artistName =
     release.artist?.displayName ?? release.artist?.user?.email?.split("@")[0] ?? "Sauroraa Artist";
@@ -72,13 +88,13 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
       setPlaying(!playing);
       return;
     }
-    setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null });
+    setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id });
     setPlaying(true);
   };
 
   const handleSeek = (percent: number) => {
     if (!isActiveTrack) {
-      setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null });
+      setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id });
       setPlaying(true);
     }
     requestSeekPercent(percent);
@@ -167,12 +183,24 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
               {isPreorder && (
                 <Badge variant="gray">Pre-order</Badge>
               )}
+              {release.bpm && (
+                <Badge variant="gray">{release.bpm} BPM</Badge>
+              )}
+              {release.musicalKey && (
+                <Badge variant="gray">{release.musicalKey}</Badge>
+              )}
+              {release.previewDuration && release.previewDuration !== 30 && (
+                <Badge variant="gray">{release.previewDuration}s preview</Badge>
+              )}
             </div>
             <h1 className="text-4xl font-bold text-cream">{release.title}</h1>
             {release.artist && (
-              <Link href={`/artist/${release.artist.id}`}>
-                <p className="text-lg text-cream/60 hover:text-cream transition-colors">{artistName}</p>
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/artist/${release.artist.id}`}>
+                  <p className="text-lg text-cream/60 hover:text-cream transition-colors">{artistName}</p>
+                </Link>
+                <ArtistBadges artist={release.artist} size="sm" />
+              </div>
             )}
           </div>
 
@@ -243,8 +271,8 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           {/* Artist profile card */}
           {release.artist && (
             <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full bg-surface2">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative h-12 w-12 overflow-hidden rounded-full bg-surface2 shrink-0">
                   {release.artist.avatar ? (
                     <Image src={release.artist.avatar} alt={artistName} fill className="object-cover" />
                   ) : (
@@ -253,12 +281,11 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-cream truncate">{artistName}</p>
-                  <p className="text-xs text-cream/45 flex items-center gap-1.5">
-                    <Users className="h-3 w-3" />
-                    {(release.artist._count?.followers ?? 0).toLocaleString()} followers
-                  </p>
+                  <div className="mt-1">
+                    <FollowButton artistId={release.artist.id} />
+                  </div>
                 </div>
                 <Link href={`/artist/${release.artist.id}`} className="ml-auto">
                   <Button size="sm" variant="outline">View profile</Button>
@@ -291,6 +318,21 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           )}
         </motion.div>
       </div>
+
+      {/* Heatmap */}
+      {heatmap.length > 0 && (
+        <div className="border-t border-[rgba(255,255,255,0.06)] pt-10">
+          <h3 className="text-lg font-semibold text-cream mb-4">Listening Heatmap</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={heatmap}>
+              <XAxis dataKey="secondMark" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#8b5cf6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Comments */}
       <div className="border-t border-[rgba(255,255,255,0.06)] pt-10">

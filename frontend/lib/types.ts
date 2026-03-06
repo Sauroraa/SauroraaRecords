@@ -3,6 +3,7 @@ export type ArtistProfile = {
   displayName: string | null;
   bio: string | null;
   avatar: string | null;
+  bannerUrl: string | null;
   instagramUrl: string | null;
   soundcloudUrl: string | null;
   discordUrl: string | null;
@@ -39,6 +40,12 @@ export type ReleaseItem = {
   gateInstagram?: boolean;
   gateSoundcloud?: boolean;
   gateDiscord?: boolean;
+  // DJ Metadata
+  bpm?: number | null;
+  musicalKey?: string | null;
+  mood?: string | null;
+  energy?: number | null;
+  previewDuration?: number | null;
   // Trending score (computed by backend)
   trendScore?: number;
   _count?: { downloadSessions?: number; comments?: number };

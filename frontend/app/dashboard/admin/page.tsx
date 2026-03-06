@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Disc3, Users, TrendingUp, FileText, Tag, Trophy,
   Check, X, Search, Plus, Trash2, Edit3, Crown,
-  Building2, Mail, CreditCard
+  Building2, Mail, CreditCard, BadgeCheck, Music2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -17,10 +17,11 @@ import type { ReleaseItem, DubpackItem, RankingItem } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-type Tab = "releases" | "users" | "agencies" | "subscriptions" | "revenue" | "invoices" | "promo-codes" | "rankings";
+type Tab = "releases" | "artists" | "users" | "agencies" | "subscriptions" | "revenue" | "invoices" | "promo-codes" | "rankings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "releases", label: "Releases", icon: <Disc3 className="h-4 w-4" /> },
+  { id: "artists", label: "Artistes", icon: <Music2 className="h-4 w-4" /> },
   { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
   { id: "agencies", label: "Agences", icon: <Building2 className="h-4 w-4" /> },
   { id: "subscriptions", label: "Abonnements", icon: <CreditCard className="h-4 w-4" /> },
@@ -127,6 +128,89 @@ function ReleasesTab() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Artists ───────────────────────────────────────────────────────────────────
+
+type AdminArtist = {
+  id: string;
+  displayName: string | null;
+  isVerified: boolean;
+  user: { email: string };
+  _count: { releases: number; followers: number };
+};
+
+function ArtistsTab() {
+  const [artists, setArtists] = useState<AdminArtist[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/admin/artists`, { credentials: "include" });
+        if (res.ok) setArtists((await res.json()) as AdminArtist[]);
+      } catch {}
+      setLoading(false);
+    })();
+  }, []);
+
+  const toggleVerify = async (artist: AdminArtist) => {
+    try {
+      const res = await fetch(`${API}/admin/artists/${artist.id}/verify`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ verified: !artist.isVerified })
+      });
+      if (!res.ok) throw new Error();
+      setArtists((prev) => prev.map((a) => a.id === artist.id ? { ...a, isVerified: !artist.isVerified } : a));
+      toast.success(artist.isVerified ? "Badge retiré" : "Compte vérifié !");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
+
+  const filtered = artists.filter((a) => {
+    const q = search.toLowerCase();
+    return (a.displayName ?? a.user.email).toLowerCase().includes(q) || a.user.email.toLowerCase().includes(q);
+  });
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cream/30" />
+        <Input placeholder="Rechercher un artiste..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      </div>
+
+      {filtered.length === 0 ? <EmptyState message="Aucun artiste trouvé" /> : (
+        <div className="space-y-2">
+          {filtered.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-4 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-cream truncate">{a.displayName ?? a.user.email}</p>
+                  {a.isVerified && <BadgeCheck className="h-4 w-4 text-blue-400 shrink-0" />}
+                </div>
+                <p className="text-xs text-cream/40">{a.user.email} · {a._count.releases} releases · {a._count.followers} followers</p>
+              </div>
+              <Button
+                size="sm"
+                variant={a.isVerified ? "outline" : "default"}
+                onClick={() => void toggleVerify(a)}
+                className="gap-1.5 shrink-0"
+              >
+                <BadgeCheck className="h-3.5 w-3.5" />
+                {a.isVerified ? "Retirer badge" : "Vérifier"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -873,6 +957,7 @@ export default function AdminDashboard() {
 
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     releases: <ReleasesTab />,
+    artists: <ArtistsTab />,
     users: <UsersTab />,
     agencies: <AgenciesTab />,
     subscriptions: <SubscriptionsTab />,

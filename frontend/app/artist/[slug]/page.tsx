@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Disc3, Eye, Globe, Heart, Instagram, MessageCircle, Music, Play, Pause, Users } from "lucide-react";
+import { Camera, Disc3, Eye, Globe, Heart, Instagram, MessageCircle, Music, Play, Pause, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -10,6 +10,7 @@ import { fetchArtist, fetchArtistStats, fetchDubpacks, fetchReleases } from "@/l
 import type { ReleaseItem } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { usePlayerStore } from "@/store/player-store";
+import { ArtistBadges } from "@/components/artist-badges";
 import { FollowButton } from "@/components/follow-button";
 import { FreeDownloadModal } from "@/components/free-download-modal";
 import { Modal } from "@/components/ui/modal";
@@ -116,7 +117,10 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const [tab, setTab] = useState<"all" | "tracks" | "dubpacks">("all");
   const [tipOpen, setTipOpen] = useState(false);
   const [freeDownload, setFreeDownload] = useState<ReleaseItem | null>(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  const { user } = useAuthStore();
   const { setTrack, setPlaying, src, playing, currentTime, duration, requestSeekPercent } = usePlayerStore();
 
   const { data: artist, isLoading: artistLoading } = useQuery({
@@ -132,6 +136,16 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const { data: artistStats } = useQuery({
     queryKey: ["artist-stats", artistId],
     queryFn: () => fetchArtistStats(artistId)
+  });
+
+  const { data: liveFollowData } = useQuery({
+    queryKey: ["follow-status", artistId],
+    queryFn: async () => {
+      const res = await fetch(`${API}/follows/artist/${artistId}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json() as Promise<{ count: number; isFollowing: boolean }>;
+    },
+    refetchInterval: 30000
   });
 
   const { data: dubpacks = [], isLoading: dubpacksLoading } = useQuery({
@@ -171,9 +185,34 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
     );
   }
 
+  const isOwnProfile = user?.role === "ARTIST" && (artist as { userId?: string }).userId === user?.id;
+
+  const handleBannerUpload = async (file: File) => {
+    setBannerUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const uploadRes = await fetch(`${API}/upload/cover`, { method: "POST", credentials: "include", body: fd });
+      if (!uploadRes.ok) throw new Error();
+      const { path } = (await uploadRes.json()) as { path: string };
+      await fetch(`${API}/artists/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ bannerUrl: path })
+      });
+      toast.success("Bannière mise à jour !");
+      window.location.reload();
+    } catch {
+      toast.error("Impossible d'uploader la bannière");
+    } finally {
+      setBannerUploading(false);
+    }
+  };
+
   const artistName = artist.displayName ?? artist.user?.email?.split("@")[0] ?? "Sauroraa Artist";
-  const coverImage = artistReleases[0]?.coverPath ?? artist.avatar;
-  const followersCount = artist._count?.followers ?? 0;
+  const coverImage = artist.bannerUrl ?? artistReleases[0]?.coverPath ?? artist.avatar;
+  const followersCount = liveFollowData?.count ?? artist._count?.followers ?? 0;
   const releasesCount = artistReleases.length;
   const dubpacksCount = artistDubpacks.length;
   const agencies = (artist.agencyLinks ?? [])
@@ -196,6 +235,26 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/10" />
 
+          {isOwnProfile && (
+            <>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && void handleBannerUpload(e.target.files[0])}
+              />
+              <button
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={bannerUploading}
+                className="absolute right-3 top-3 flex items-center gap-1.5 rounded-[8px] bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm hover:bg-black/80 transition-colors disabled:opacity-50"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {bannerUploading ? "Upload..." : "Modifier la bannière"}
+              </button>
+            </>
+          )}
+
           <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="flex items-end gap-4">
@@ -209,7 +268,10 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <h1 className="text-3xl font-bold text-white md:text-4xl">{artistName}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-3xl font-bold text-white md:text-4xl">{artistName}</h1>
+                    <ArtistBadges artist={artist} />
+                  </div>
                   <p className="text-sm text-white/70">
                     {agencies.length > 0 ? `Agence: ${agencies.join(" · ")}` : "Sauroraa Artist Profile"}
                   </p>
@@ -285,7 +347,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                               title: release.title,
                               artist: artistName,
                               src: release.audioPath,
-                              coverPath: release.coverPath ?? null
+                              coverPath: release.coverPath ?? null,
+                              releaseId: release.id
                             });
                             setPlaying(true);
                           }

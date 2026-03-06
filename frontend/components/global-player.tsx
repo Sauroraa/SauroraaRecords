@@ -5,12 +5,16 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePlayerStore } from "@/store/player-store";
 
+const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+const VIEW_THRESHOLD_SECONDS = 15;
+
 export function GlobalPlayer() {
   const {
     title,
     artist,
     coverPath,
     src,
+    releaseId,
     playing,
     setPlaying,
     setPlayback,
@@ -22,6 +26,26 @@ export function GlobalPlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
+  const viewTrackedRef = useRef<string | null>(null);
+  const playSecondsRef = useRef(0);
+  const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fireViewEvent = (rId: string) => {
+    void fetch(`${API}/engagement/view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ releaseId: rId, scope: "PREVIEW", playlistPath: `/release/${rId}` })
+    }).catch(() => {});
+  };
+
+  const fireHeatmapEvent = (rId: string, secondMark: number) => {
+    void fetch(`${API}/engagement/heatmap/${rId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secondMark })
+    }).catch(() => {});
+  };
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -29,6 +53,41 @@ export function GlobalPlayer() {
       audioRef.current.volume = volume;
     }
   }, []);
+
+  // Reset view tracking when track changes
+  useEffect(() => {
+    playSecondsRef.current = 0;
+    if (viewTrackedRef.current !== src) {
+      viewTrackedRef.current = null;
+    }
+  }, [src]);
+
+  // Start/stop the play-time counter for view tracking
+  useEffect(() => {
+    if (playTimerRef.current) {
+      clearInterval(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+
+    if (playing && releaseId) {
+      playTimerRef.current = setInterval(() => {
+        playSecondsRef.current += 1;
+        // Fire view event after threshold
+        if (playSecondsRef.current >= VIEW_THRESHOLD_SECONDS && releaseId && !viewTrackedRef.current) {
+          viewTrackedRef.current = releaseId;
+          fireViewEvent(releaseId);
+        }
+        // Fire heatmap every 5 seconds
+        if (playSecondsRef.current % 5 === 0 && releaseId && audioRef.current?.currentTime) {
+          fireHeatmapEvent(releaseId, Math.floor(audioRef.current.currentTime));
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (playTimerRef.current) clearInterval(playTimerRef.current);
+    };
+  }, [playing, releaseId]);
 
   useEffect(() => {
     const audio = audioRef.current;
