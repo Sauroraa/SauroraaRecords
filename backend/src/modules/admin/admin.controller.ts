@@ -223,6 +223,26 @@ export class AdminController {
     return this.prisma.agency.delete({ where: { id } });
   }
 
+  // ─── Revenue ────────────────────────────────────────────────────────────────
+
+  @Get("revenue")
+  async listRevenue() {
+    const rows = await this.prisma.artistRevenue.findMany({
+      include: { artist: { include: { user: { select: { email: true } } } } },
+      orderBy: { month: "desc" }
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      artistId: r.artistId,
+      artistName: r.artist.displayName ?? r.artist.user.email,
+      gross: Number(r.totalSales),
+      net: Number(r.netDue),
+      label: Number(r.commission),
+      month: r.month,
+      status: r.status
+    }));
+  }
+
   // ─── Invoices ──────────────────────────────────────────────────────────────
 
   @Get("invoices")

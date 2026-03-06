@@ -2,9 +2,10 @@ import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/
 import { JwtService } from "@nestjs/jwt";
 import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
 import { PrismaService } from "../../prisma.service";
 import { EmailService } from "../email/email.service";
-import { LoginDto, RegisterDto } from "./dto";
+import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from "./dto";
 
 @Injectable()
 export class AuthService {
@@ -95,6 +96,72 @@ export class AuthService {
 
   async logout(userId: string) {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    return { success: true };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user) {
+      // Return success even if user doesn't exist to prevent email enumeration
+      return { success: true };
+    }
+
+    // Generate reset token
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenHash = await bcrypt.hash(resetToken, 10);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Save reset token
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: resetTokenHash,
+        expiresAt
+      }
+    });
+
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://sauroraarecords.be'}/reset-password?token=${resetToken}`;
+    void this.emailService.sendPasswordReset(user.email, user.firstName || user.email.split('@')[0], resetUrl);
+
+    return { success: true };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    // Find valid reset token
+    const resetTokens = await this.prisma.passwordResetToken.findMany({
+      where: {
+        expiresAt: { gt: new Date() }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+
+    let validToken = null;
+    for (const token of resetTokens) {
+      const isValid = await bcrypt.compare(dto.token, token.tokenHash);
+      if (isValid) {
+        validToken = token;
+        break;
+      }
+    }
+
+    if (!validToken) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Update password
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: validToken.userId },
+      data: { passwordHash }
+    });
+
+    // Delete all reset tokens for this user
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId: validToken.userId }
+    });
+
     return { success: true };
   }
 

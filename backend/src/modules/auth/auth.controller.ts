@@ -2,7 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Post, Req, Res, Unauthorized
 import { Request, Response } from "express";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthService } from "./auth.service";
-import { LoginDto, RegisterDto } from "./dto";
+import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from "./dto";
 
 const COOKIE_ACCESS = "access_token";
 const COOKIE_REFRESH = "refresh_token";
@@ -90,5 +90,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@Req() req: Request & { user?: unknown }) {
     return req.user;
+  }
+
+  @Post("forgot-password")
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post("reset-password")
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

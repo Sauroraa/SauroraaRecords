@@ -34,6 +34,7 @@ import { LedgerModule } from "./modules/ledger/ledger.module";
 import { PremiumModule } from "./modules/premium/premium.module";
 import { EcosystemModule } from "./modules/ecosystem/ecosystem.module";
 import { EngagementModule } from "./modules/engagement/engagement.module";
+import { EngageModule } from "./modules/engage/engage.module";
 
 @Module({
   imports: [
@@ -71,7 +72,8 @@ import { EngagementModule } from "./modules/engagement/engagement.module";
     LedgerModule,
     PremiumModule,
     EcosystemModule,
-    EngagementModule
+    EngagementModule,
+    EngageModule
   ],
   controllers: [AdminController],
   providers: [

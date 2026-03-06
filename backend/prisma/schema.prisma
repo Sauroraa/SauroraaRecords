@@ -178,6 +178,23 @@ enum FreeDownloadActionType {
   JOIN_DISCORD
 }
 
+enum EngageActionType {
+  FOLLOW_SOUNDCLOUD
+  LIKE_SOUNDCLOUD
+  REPOST_SOUNDCLOUD
+  FOLLOW_INSTAGRAM
+  JOIN_DISCORD
+  SUBSCRIBE_NEWSLETTER
+  FOLLOW_ARTIST
+  LEAVE_COMMENT
+}
+
+enum EngageCampaignStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
 enum SupportTicketStatus {
   OPEN
   IN_PROGRESS
@@ -226,6 +243,7 @@ model User {
   subscription     Subscription?
   orders           Order[]
   refreshTokens    RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
   comments         Comment[]
   commentLikes     CommentLike[]
   follows          Follow[]
@@ -258,9 +276,20 @@ model User {
   pushDevices             PushDevice[]
   publicApiClientsCreated PublicApiClient[]
   embedWidgets            EmbedWidget[]
+  engageSessions          EngageSession[]
 }
 
 model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
   tokenHash String
@@ -278,6 +307,7 @@ model Artist {
   displayName   String?
   bio           String?   @db.Text
   avatar        String?
+  bannerUrl     String?
   payoutIban    String?
   instagramUrl  String?
   soundcloudUrl String?
@@ -307,6 +337,7 @@ model Artist {
   payoutAccount  PayoutAccount?
   payouts        PayoutTransaction[]
   fanBadgeAssignments UserFanBadge[]
+  engageCampaigns EngageCampaign[]
 }
 
 // ─── Subscription ─────────────────────────────────────────────────────────────
@@ -369,6 +400,7 @@ model Release {
   exclusiveFollowersOnly Boolean     @default(false)
   releaseDate            DateTime?
   bpm                    Int?
+  musicalKey             String?
   tags                   Json?
   mood                   String?
   energy                 Int?
@@ -418,6 +450,7 @@ model Release {
   assetPacks       ReleaseAssetPack[]
   embedWidgets     EmbedWidget[]
   smartTagSuggestion SmartTagSuggestion?
+  engageCampaigns    EngageCampaign[]
 
   @@index([artistId, published, createdAt])
   @@index([published, genre, createdAt])
@@ -1329,4 +1362,99 @@ model LedgerEntry {
   @@index([artistId, eventDate])
   @@index([entryType, eventDate])
   @@index([orderId])
+}
+
+// ─── Sauroraa Engage System ───────────────────────────────────────────────────
+
+model EngageCampaign {
+  id                 String               @id @default(cuid())
+  artistId           String
+  releaseId          String?
+  title              String
+  description        String?              @db.Text
+  status             EngageCampaignStatus @default(ACTIVE)
+  downloadPath       String?
+  soundcloudArtistId String?
+  soundcloudTrackId  String?
+  instagramHandle    String?
+  discordServerId    String?
+  discordInviteUrl   String?
+  newsletterTag      String?
+  releaseCountdown   DateTime?
+  pixelFacebookId    String?
+  pixelGoogleId      String?
+  customCss          String?              @db.Text
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  artist   Artist                 @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  release  Release?               @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  actions  EngageCampaignAction[]
+  sessions EngageSession[]
+  subscribers EngageNewsletterSubscriber[]
+
+  @@index([artistId, status, createdAt])
+  @@index([releaseId])
+}
+
+model EngageCampaignAction {
+  id         String           @id @default(cuid())
+  campaignId String
+  actionType EngageActionType
+  required   Boolean          @default(true)
+  position   Int              @default(0)
+  label      String?
+
+  campaign    EngageCampaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  completions EngageActionCompletion[]
+
+  @@index([campaignId, position])
+}
+
+model EngageSession {
+  id             String    @id @default(cuid())
+  campaignId     String
+  userId         String?
+  email          String?
+  ipAddress      String?
+  userAgent      String?
+  country        String?
+  completed      Boolean   @default(false)
+  downloadToken  String?   @unique
+  tokenExpiresAt DateTime?
+  sharedAfter    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  campaign    EngageCampaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  completions EngageActionCompletion[]
+
+  @@index([campaignId, completed, createdAt])
+  @@index([downloadToken])
+}
+
+model EngageActionCompletion {
+  id          String   @id @default(cuid())
+  sessionId   String
+  actionId    String
+  completedAt DateTime @default(now())
+
+  session EngageSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  action  EngageCampaignAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, actionId])
+}
+
+model EngageNewsletterSubscriber {
+  id         String   @id @default(cuid())
+  campaignId String
+  artistId   String
+  email      String
+  firstName  String?
+  createdAt  DateTime @default(now())
+
+  campaign EngageCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, email])
+  @@index([artistId, createdAt])
 }

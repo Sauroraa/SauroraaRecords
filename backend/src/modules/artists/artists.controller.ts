@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Put, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { IsArray, IsBoolean, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
@@ -11,6 +11,7 @@ class UpdateArtistDto {
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() bio?: string;
   @IsOptional() @IsString() avatar?: string;
+  @IsOptional() @IsString() bannerUrl?: string;
   @IsOptional() @IsString() payoutIban?: string;
   @IsOptional() @IsString() instagramUrl?: string;
   @IsOptional() @IsString() soundcloudUrl?: string;
@@ -24,7 +25,14 @@ class DownloadConfigDto {
 }
 
 const ARTIST_FULL_INCLUDE = {
-  user: { select: { email: true, firstName: true, lastName: true } },
+  user: {
+    select: {
+      email: true,
+      firstName: true,
+      lastName: true,
+      subscription: { select: { plan: true, status: true } }
+    }
+  },
   agencyLinks: { include: { agency: { select: { displayName: true } } }, take: 1 },
   _count: { select: { followers: true, releases: true } }
 };
@@ -185,5 +193,206 @@ export class ArtistsController {
   @Roles(UserRole.ARTIST, UserRole.ADMIN)
   update(@Param("id") id: string, @Body() dto: UpdateArtistDto) {
     return this.prisma.artist.update({ where: { id }, data: dto });
+  }
+
+  // ─── Advanced Analytics ────────────────────────────────────────────────────────
+
+  @Get("me/analytics/advanced")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async advancedAnalytics(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+
+    const [streamsByDay, downloadsByDay, topTracks, commentsByDay, repostsByDay, followerGrowth] = await Promise.all([
+      // Streams by day (last 30 days)
+      this.prisma.streamEvent.groupBy({
+        by: ["createdAt"],
+        where: { release: { artistId: artist.id }, createdAt: { gte: thirtyDaysAgo } },
+        _count: { id: true }
+      }),
+      // Downloads by day
+      this.prisma.freeDownloadSession.groupBy({
+        by: ["createdAt"],
+        where: { release: { artistId: artist.id }, createdAt: { gte: thirtyDaysAgo } },
+        _count: { id: true }
+      }),
+      // Top tracks by stream count
+      this.prisma.release.findMany({
+        where: { artistId: artist.id, published: true },
+        include: { _count: { select: { streamEvents: true, downloadSessions: true, comments: true } } },
+        orderBy: { streamEvents: { _count: "desc" } },
+        take: 10
+      }),
+      // Comments by day
+      this.prisma.comment.groupBy({
+        by: ["createdAt"],
+        where: { release: { artistId: artist.id }, createdAt: { gte: thirtyDaysAgo } },
+        _count: { id: true }
+      }),
+      // Reposts by day
+      this.prisma.repost.groupBy({
+        by: ["createdAt"],
+        where: { release: { artistId: artist.id }, createdAt: { gte: thirtyDaysAgo } },
+        _count: { id: true }
+      }),
+      // Follower growth
+      this.prisma.follow.findMany({
+        where: { artistId: artist.id, createdAt: { gte: thirtyDaysAgo } },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" }
+      })
+    ]);
+
+    const bucketByDay = (events: { createdAt: Date; _count: { id: number } }[]) => {
+      const map = new Map<string, number>();
+      for (const e of events) {
+        const day = e.createdAt.toISOString().slice(0, 10);
+        map.set(day, (map.get(day) ?? 0) + e._count.id);
+      }
+      return Object.fromEntries(map);
+    };
+
+    return {
+      streamsByDay: bucketByDay(streamsByDay as { createdAt: Date; _count: { id: number } }[]),
+      downloadsByDay: bucketByDay(downloadsByDay as { createdAt: Date; _count: { id: number } }[]),
+      commentsByDay: bucketByDay(commentsByDay as { createdAt: Date; _count: { id: number } }[]),
+      repostsByDay: bucketByDay(repostsByDay as { createdAt: Date; _count: { id: number } }[]),
+      followerGrowth: followerGrowth.map((f) => f.createdAt.toISOString().slice(0, 10)),
+      topTracks: topTracks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        coverPath: t.coverPath,
+        streams: t._count.streamEvents,
+        downloads: t._count.downloadSessions,
+        comments: t._count.comments
+      }))
+    };
+  }
+
+  // ─── Fan Broadcasts ───────────────────────────────────────────────────────────
+
+  @Post("me/broadcasts")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async sendBroadcast(
+    @Body() body: { title: string; message: string },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { userId: req.user!.userId },
+      include: { followers: { select: { followerId: true } } }
+    });
+    if (!artist) throw new NotFoundException("Artist not found");
+
+    const broadcast = await this.prisma.artistBroadcast.create({
+      data: {
+        artistId: artist.id,
+        title: body.title,
+        body: body.message,
+        recipients: {
+          create: artist.followers.map((f) => ({ userId: f.followerId }))
+        }
+      }
+    });
+    return { ...broadcast, recipientCount: artist.followers.length };
+  }
+
+  @Get("me/broadcasts")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async listBroadcasts(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return this.prisma.artistBroadcast.findMany({
+      where: { artistId: artist.id },
+      include: { _count: { select: { recipients: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  @Get("me/inbox")
+  @UseGuards(JwtAuthGuard)
+  async inbox(@Req() req: Request & { user?: { userId: string } }) {
+    return this.prisma.artistBroadcastRecipient.findMany({
+      where: { userId: req.user!.userId },
+      include: { broadcast: { include: { artist: { select: { id: true, displayName: true, avatar: true } } } } },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    });
+  }
+
+  // ─── Promotion Campaigns ──────────────────────────────────────────────────────
+
+  @Post("me/promotions")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async createPromotion(
+    @Body() body: { title: string; promotionType: string; releaseId?: string; budgetCents?: number },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return this.prisma.promotionCampaign.create({
+      data: {
+        artistId: artist.id,
+        title: body.title,
+        promotionType: body.promotionType as "HOMEPAGE_FEATURE" | "FOLLOWER_PUSH" | "DISCOVERY_BOOST",
+        releaseId: body.releaseId,
+        budgetCents: body.budgetCents ?? 0,
+        status: "DRAFT"
+      }
+    });
+  }
+
+  @Get("me/promotions")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async listPromotions(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return this.prisma.promotionCampaign.findMany({
+      where: { artistId: artist.id },
+      include: { release: { select: { id: true, title: true, coverPath: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  // ─── API Keys ────────────────────────────────────────────────────────────────
+
+  @Post("me/api-keys")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async createApiKey(
+    @Body() body: { name: string },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const crypto = await import("crypto");
+    const rawKey = `srk_${crypto.randomBytes(24).toString("hex")}`;
+    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    await this.prisma.publicApiClient.create({
+      data: { name: body.name, keyHash, scopes: ["releases:read", "artist:read"], createdBy: req.user!.userId }
+    });
+    return { key: rawKey, note: "Save this key — it will not be shown again" };
+  }
+
+  @Get("me/api-keys")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async listApiKeys(@Req() req: Request & { user?: { userId: string } }) {
+    return this.prisma.publicApiClient.findMany({
+      where: { createdBy: req.user!.userId },
+      select: { id: true, name: true, scopes: true, rateLimit: true, active: true, createdAt: true }
+    });
+  }
+
+  @Patch("me/api-keys/:id/revoke")
+  @UseGuards(JwtAuthGuard)
+  async revokeApiKey(@Param("id") id: string, @Req() req: Request & { user?: { userId: string } }) {
+    const key = await this.prisma.publicApiClient.findUnique({ where: { id } });
+    if (!key || key.createdBy !== req.user!.userId) throw new NotFoundException("Key not found");
+    return this.prisma.publicApiClient.update({ where: { id }, data: { active: false } });
   }
 }

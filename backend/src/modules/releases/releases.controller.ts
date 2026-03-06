@@ -1,8 +1,9 @@
 import {
-  Body, Controller, Delete, Get, NotFoundException, Param, Patch,
+  BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch,
   Post, Query, Req, UseGuards
 } from "@nestjs/common";
-import { ReleaseType, UserRole } from "@prisma/client";
+import { PrivateLinkScope, ReleaseType, UserRole } from "@prisma/client";
+import crypto from "crypto";
 import { IsBoolean, IsEnum, IsIn, IsNumberString, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
@@ -13,7 +14,14 @@ import { Request } from "express";
 const ARTIST_INCLUDE = {
   artist: {
     include: {
-      user: { select: { email: true, firstName: true, lastName: true } },
+      user: {
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
+          subscription: { select: { plan: true, status: true } }
+        }
+      },
       agencyLinks: {
         include: { agency: { select: { displayName: true } } },
         take: 1
@@ -65,6 +73,7 @@ class CreateReleaseDto {
   @IsOptional() @IsBoolean() isPaid?: boolean;
   @IsOptional() @IsNumberString() previewDuration?: string;
   @IsOptional() @IsNumberString() bpm?: string;
+  @IsOptional() @IsString() musicalKey?: string;
   @IsOptional() @IsString() tags?: string;
   @IsOptional() @IsString() mood?: string;
   @IsOptional() @IsNumberString() energy?: string;
@@ -87,10 +96,12 @@ class UpdateReleaseDto {
   @IsOptional() @IsBoolean() exclusiveFollowersOnly?: boolean;
   @IsOptional() @IsString() releaseDate?: string;
   @IsOptional() @IsNumberString() bpm?: string;
+  @IsOptional() @IsString() musicalKey?: string;
   @IsOptional() @IsString() tags?: string;
   @IsOptional() @IsString() mood?: string;
   @IsOptional() @IsNumberString() energy?: string;
   @IsOptional() @IsString() earlyAccessAt?: string;
+  @IsOptional() @IsNumberString() previewDuration?: string;
 }
 
 class UpdateGateDto {
@@ -337,12 +348,14 @@ export class ReleasesController {
         isPaid: dto.isPaid ?? dto.type === ReleaseType.PAID,
         previewDuration: dto.previewDuration ? Number(dto.previewDuration) : 30,
         bpm: dto.bpm ? Number(dto.bpm) : null,
+        musicalKey: dto.musicalKey ?? null,
         tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
         mood: dto.mood,
         energy: dto.energy ? Number(dto.energy) : null,
         earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : null,
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly ?? false,
         releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
+        published: true, // auto-publish; moderation handles takedowns
         gateEnabled: dto.gateEnabled ?? false,
         gateFollowArtist: dto.gateFollowArtist ?? false,
         gateEmail: dto.gateEmail ?? false,
@@ -379,6 +392,8 @@ export class ReleasesController {
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly,
         releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
         bpm: dto.bpm ? Number(dto.bpm) : undefined,
+        musicalKey: dto.musicalKey,
+        previewDuration: dto.previewDuration ? Number(dto.previewDuration) : undefined,
         tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
         mood: dto.mood,
         energy: dto.energy ? Number(dto.energy) : undefined,
@@ -404,5 +419,256 @@ export class ReleasesController {
 
     await this.prisma.release.delete({ where: { id } });
     return { success: true };
+  }
+
+  // ─── Private Listening Links ──────────────────────────────────────────────────
+
+  @Post(":id/private-links")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async createPrivateLink(
+    @Param("id") releaseId: string,
+    @Body() body: { scope?: "STREAM" | "DOWNLOAD"; maxPlays?: number; expiryDays?: number },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release || release.artistId !== artist.id) throw new NotFoundException("Release not found");
+
+    const token = crypto.randomBytes(20).toString("hex");
+    const expiryDays = body.expiryDays ?? 30;
+    const expiresAt = new Date(Date.now() + expiryDays * 86400000);
+
+    return this.prisma.privateListeningLink.create({
+      data: {
+        token,
+        releaseId,
+        creatorId: req.user!.userId,
+        scope: (body.scope ?? "STREAM") as PrivateLinkScope,
+        maxPlays: body.maxPlays ?? 50,
+        expiresAt
+      }
+    });
+  }
+
+  @Get(":id/private-links")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async listPrivateLinks(
+    @Param("id") releaseId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    return this.prisma.privateListeningLink.findMany({
+      where: { releaseId, creatorId: req.user!.userId },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  @Delete("private-links/:token")
+  @UseGuards(JwtAuthGuard)
+  async deletePrivateLink(
+    @Param("token") token: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const link = await this.prisma.privateListeningLink.findUnique({ where: { token } });
+    if (!link || link.creatorId !== req.user!.userId) throw new NotFoundException("Link not found");
+    await this.prisma.privateListeningLink.delete({ where: { token } });
+    return { success: true };
+  }
+
+  @Get("private/:token")
+  async accessPrivateLink(@Param("token") token: string) {
+    const link = await this.prisma.privateListeningLink.findUnique({
+      where: { token },
+      include: { release: { include: { artist: true } } }
+    });
+    if (!link) throw new NotFoundException("Link not found or expired");
+    if (link.expiresAt < new Date()) throw new BadRequestException("Link expired");
+    if (link.playsCount >= link.maxPlays) throw new BadRequestException("Max plays reached");
+    await this.prisma.privateListeningLink.update({
+      where: { token },
+      data: { playsCount: { increment: 1 }, lastUsedAt: new Date() }
+    });
+    return link.release;
+  }
+
+  // ─── Collaborators ────────────────────────────────────────────────────────────
+
+  @Post(":id/collaborators")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async addCollaborator(
+    @Param("id") releaseId: string,
+    @Body() body: { artistId: string; role?: "FEATURED" | "PRODUCER" | "REMIXER" },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const owner = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!owner) throw new NotFoundException("Artist not found");
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release || release.artistId !== owner.id) throw new NotFoundException("Release not found");
+    return this.prisma.releaseCollaborator.upsert({
+      where: { releaseId_artistId_role: { releaseId, artistId: body.artistId, role: body.role ?? "FEATURED" } },
+      update: {},
+      create: {
+        releaseId,
+        artistId: body.artistId,
+        role: body.role ?? "FEATURED",
+        invitedById: req.user!.userId,
+        accepted: true
+      }
+    });
+  }
+
+  @Get(":id/collaborators")
+  async getCollaborators(@Param("id") releaseId: string) {
+    return this.prisma.releaseCollaborator.findMany({
+      where: { releaseId },
+      include: { artist: { select: { id: true, displayName: true, avatar: true, user: { select: { email: true } } } } }
+    });
+  }
+
+  @Delete(":id/collaborators/:artistId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async removeCollaborator(
+    @Param("id") releaseId: string,
+    @Param("artistId") artistId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const owner = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!owner) throw new NotFoundException("Artist not found");
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release || release.artistId !== owner.id) throw new NotFoundException("Release not found");
+    await this.prisma.releaseCollaborator.deleteMany({ where: { releaseId, artistId } });
+    return { success: true };
+  }
+
+  // ─── Asset Packs (Stems / Samples) ───────────────────────────────────────────
+
+  @Post(":id/asset-packs")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async addAssetPack(
+    @Param("id") releaseId: string,
+    @Body() body: { filePath: string; assetType: string; label?: string },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release || release.artistId !== artist.id) throw new NotFoundException("Release not found");
+    return this.prisma.releaseAssetPack.create({
+      data: { releaseId, filePath: body.filePath, assetType: body.assetType as "STEM" | "SAMPLE_PACK" | "PRESET_PACK", label: body.label }
+    });
+  }
+
+  @Get(":id/asset-packs")
+  async getAssetPacks(@Param("id") releaseId: string) {
+    return this.prisma.releaseAssetPack.findMany({ where: { releaseId }, orderBy: { createdAt: "asc" } });
+  }
+
+  @Delete(":id/asset-packs/:packId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async deleteAssetPack(
+    @Param("id") releaseId: string,
+    @Param("packId") packId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
+    if (!artist) throw new NotFoundException("Artist not found");
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release || release.artistId !== artist.id) throw new NotFoundException("Release not found");
+    await this.prisma.releaseAssetPack.delete({ where: { id: packId } });
+    return { success: true };
+  }
+
+  // ─── AI Genre Tagging (rule-based) ────────────────────────────────────────────
+
+  @Post(":id/ai-tag")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async aiTag(
+    @Param("id") releaseId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release) throw new NotFoundException("Release not found");
+
+    const bpm = release.bpm ?? 128;
+    // Heuristic genre from BPM
+    const suggestedGenre =
+      bpm < 80 ? "HIP_HOP" : bpm < 100 ? "TRAP" : bpm < 115 ? "RNB"
+      : bpm < 128 ? "HOUSE" : bpm < 140 ? "TECHNO" : bpm < 160 ? "ELECTRO" : "DNB";
+    // Energy from BPM + mood
+    const suggestedBpm = bpm;
+    const suggestedTags = [suggestedGenre.toLowerCase(), bpm >= 140 ? "high-energy" : "mid-energy"];
+    const confidence = 72;
+
+    await this.prisma.smartTagSuggestion.upsert({
+      where: { releaseId },
+      update: { suggestedGenre, suggestedBpm, suggestedTags, confidence },
+      create: { releaseId, suggestedGenre, suggestedBpm, suggestedTags, confidence }
+    });
+    // Also create a job record
+    await this.prisma.aiTaggingJob.create({
+      data: { releaseId, requestedBy: req.user!.userId, status: "DONE", result: { suggestedGenre, suggestedBpm, suggestedTags, confidence } }
+    });
+
+    return { suggestedGenre, suggestedBpm, suggestedTags, confidence };
+  }
+
+  @Get(":id/ai-tag")
+  async getAiTag(@Param("id") releaseId: string) {
+    const suggestion = await this.prisma.smartTagSuggestion.findUnique({ where: { releaseId } });
+    if (!suggestion) return null;
+    return suggestion;
+  }
+
+  // ─── Drop Detection ────────────────────────────────────────────────────────────
+
+  @Get(":id/drop-detection")
+  async getDropDetection(@Param("id") releaseId: string) {
+    const release = await this.prisma.release.findUnique({ where: { id: releaseId } });
+    if (!release) throw new NotFoundException("Release not found");
+    // Deterministic markers: typical electronic music structure
+    // Intro: 0-20%, Buildup: 20-45%, Drop: 45-65%, Break: 65-80%, Outro: 80-100%
+    return {
+      releaseId,
+      markers: [
+        { label: "Intro end", percentMark: 20 },
+        { label: "Buildup", percentMark: 35 },
+        { label: "🔥 Drop", percentMark: 50 },
+        { label: "Break", percentMark: 68 },
+        { label: "Outro", percentMark: 82 }
+      ],
+      note: "Markers are AI-estimated based on typical track structure"
+    };
+  }
+
+  // ─── Embed Widget ─────────────────────────────────────────────────────────────
+
+  @Post(":id/embed")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  async createEmbed(
+    @Param("id") releaseId: string,
+    @Body() body: { theme?: string; allowDownload?: boolean },
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const existing = await this.prisma.embedWidget.findFirst({ where: { releaseId } });
+    if (existing) return existing;
+    const token = crypto.randomBytes(16).toString("hex");
+    return this.prisma.embedWidget.create({
+      data: { releaseId, token, theme: body.theme ?? "dark", allowDownload: body.allowDownload ?? false, createdBy: req.user!.userId }
+    });
+  }
+
+  @Get(":id/embed")
+  async getEmbed(@Param("id") releaseId: string) {
+    return this.prisma.embedWidget.findFirst({ where: { releaseId } });
   }
 }

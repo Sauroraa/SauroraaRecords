@@ -224,4 +224,70 @@ export class EmailService {
 </body>
 </html>`;
   }
+
+  async sendPasswordReset(email: string, name: string, resetUrl: string) {
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: email,
+        subject: "Réinitialisation de votre mot de passe Sauroraa Records",
+        html: this.passwordResetTemplate(name, resetUrl, email)
+      });
+      this.logger.log(`Password reset email sent to ${email}`);
+    } catch (err) {
+      this.logger.error(`Failed to send password reset email to ${email}: ${String(err)}`);
+    }
+  }
+
+  private passwordResetTemplate(name: string, resetUrl: string, email: string) {
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réinitialisation de mot de passe</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0a0a0a;color:#f5f3ef;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:40px;">
+      <h1 style="color:#7c3aed;font-size:28px;font-weight:700;margin:0 0 8px;">Sauroraa Records</h1>
+      <p style="color:rgba(245,243,239,0.6);font-size:16px;margin:0;">Réinitialisation de mot de passe</p>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(168,85,247,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;margin-bottom:32px;">
+      <h2 style="color:#f5f3ef;font-size:20px;font-weight:600;margin:0 0 16px;">Salut ${name},</h2>
+      <p style="color:rgba(245,243,239,0.8);font-size:15px;line-height:1.6;margin:0 0 24px;">
+        Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte Sauroraa Records.
+      </p>
+      <p style="color:rgba(245,243,239,0.6);font-size:14px;line-height:1.6;margin:0 0 28px;">
+        Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe. Ce lien expire dans <strong style="color:#f5f3ef;">1 heure</strong>.
+      </p>
+      <a href="${resetUrl}"
+         style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;
+                padding:14px 32px;border-radius:10px;font-weight:600;font-size:14px;letter-spacing:0.02em;">
+        Réinitialiser mon mot de passe →
+      </a>
+      <p style="color:rgba(245,243,239,0.3);font-size:11px;margin:20px 0 0;">
+        Ou copiez ce lien : <span style="color:#7c3aed;">${resetUrl}</span>
+      </p>
+    </div>
+
+    <div style="text-align:center;">
+      <p style="color:rgba(245,243,239,0.4);font-size:13px;margin:0 0 8px;">
+        Vous n'avez pas demandé cette réinitialisation ?
+      </p>
+      <p style="color:rgba(245,243,239,0.3);font-size:12px;margin:0 0 20px;">
+        Ignorez cet email. Votre mot de passe reste inchangé.
+      </p>
+      <p style="color:rgba(245,243,239,0.2);font-size:11px;margin:0;">
+        Cet email a été envoyé à ${email}. Si vous ne possédez pas de compte Sauroraa Records, ignorez cet email.
+      </p>
+      <p style="color:rgba(245,243,239,0.12);font-size:10px;margin:10px 0 0;">
+        © ${new Date().getFullYear()} SauroraaSNC — BE1031.598.463 — Belgique
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+  }
 }

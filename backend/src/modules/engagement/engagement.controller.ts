@@ -168,6 +168,43 @@ export class EngagementController {
     };
   }
 
+  // ─── Listening Heatmap ────────────────────────────────────────────────────────
+
+  @Post("heatmap/:releaseId")
+  async recordHeatmap(
+    @Param("releaseId") releaseId: string,
+    @Body() body: { secondMark: number }
+  ) {
+    if (typeof body.secondMark !== "number" || body.secondMark < 0) return { skip: true };
+    await this.prisma.listeningHeatmap.upsert({
+      where: { releaseId_secondMark: { releaseId, secondMark: Math.floor(body.secondMark) } },
+      update: { listeners: { increment: 1 } },
+      create: { releaseId, secondMark: Math.floor(body.secondMark), listeners: 1 }
+    });
+    return { success: true };
+  }
+
+  @Get("heatmap/:releaseId")
+  async getHeatmap(@Param("releaseId") releaseId: string) {
+    const data = await this.prisma.listeningHeatmap.findMany({
+      where: { releaseId },
+      orderBy: { secondMark: "asc" }
+    });
+    return data;
+  }
+
+  // ─── Fan Leaderboard ──────────────────────────────────────────────────────────
+
+  @Get("fans/:artistId/leaderboard")
+  async fanLeaderboard(@Param("artistId") artistId: string) {
+    return this.prisma.fanScore.findMany({
+      where: { artistId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      orderBy: { score: "desc" },
+      take: 20
+    });
+  }
+
   private extractUserId(req: Request): string | null {
     const auth = req.headers.authorization;
     const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;

@@ -6,6 +6,7 @@ import {
   Get,
   Post,
   Req,
+  ServiceUnavailableException,
   UseGuards
 } from "@nestjs/common";
 import { IsEnum, IsOptional, IsString } from "class-validator";
@@ -30,7 +31,7 @@ class CheckoutSubscriptionDto {
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new BadRequestException("Stripe not configured");
+  if (!key) throw new ServiceUnavailableException("Stripe not configured");
   return new Stripe(key, { apiVersion: "2025-02-24.acacia" });
 }
 
@@ -89,7 +90,7 @@ export class SubscriptionsController {
     }
 
     const priceId = getPriceId(dto.plan);
-    if (!priceId) throw new BadRequestException("Price not configured for plan");
+    if (!priceId) throw new ServiceUnavailableException("Price not configured for plan — set STRIPE_PRICE_* env vars");
 
     const stripe = getStripe();
 
