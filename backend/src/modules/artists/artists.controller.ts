@@ -141,11 +141,11 @@ export class ArtistsController {
         title: true,
         coverPath: true,
         createdAt: true,
-        _count: { select: { downloadSessions: true, comments: true } }
+        _count: { select: { streamEvents: true, downloadSessions: true, comments: true } }
       }
     });
 
-    const totalViews = tracks.reduce((sum, track) => sum + track._count.downloadSessions, 0);
+    const totalViews = tracks.reduce((sum, track) => sum + track._count.streamEvents, 0);
 
     return {
       artistId: id,
@@ -157,7 +157,8 @@ export class ArtistsController {
         title: track.title,
         coverPath: track.coverPath,
         createdAt: track.createdAt,
-        views: track._count.downloadSessions,
+        views: track._count.streamEvents,
+        downloads: track._count.downloadSessions,
         comments: track._count.comments
       }))
     };

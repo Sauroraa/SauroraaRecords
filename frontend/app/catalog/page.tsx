@@ -55,16 +55,32 @@ export default function CatalogPage() {
           ))}
         </div>
 
-        <select
-          value={genreFilter}
-          onChange={(e) => setGenreFilter(e.target.value)}
-          className="rounded-sm border border-[rgba(255,255,255,0.08)] bg-surface px-3 py-2 text-sm text-cream/70 outline-none focus:border-violet/40"
-        >
-          <option value="ALL">All genres</option>
+        {/* Genre pills */}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setGenreFilter("ALL")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              genreFilter === "ALL"
+                ? "bg-violet text-white"
+                : "border border-[rgba(255,255,255,0.1)] text-cream/50 hover:text-cream"
+            }`}
+          >
+            All
+          </button>
           {genres.map((genre) => (
-            <option key={genre} value={genre}>{genre.replace(/_/g, " ")}</option>
+            <button
+              key={genre}
+              onClick={() => setGenreFilter(genre)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                genreFilter === genre
+                  ? "bg-violet text-white"
+                  : "border border-[rgba(255,255,255,0.1)] text-cream/50 hover:text-cream"
+              }`}
+            >
+              {genre.replace(/_/g, " ")}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       {isLoading ? (

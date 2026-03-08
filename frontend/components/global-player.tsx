@@ -1,6 +1,9 @@
 "use client";
 
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import {
+  Pause, Play, Volume2, VolumeX, SkipBack, SkipForward,
+  Shuffle, Repeat, Repeat1, ListMusic, Maximize2
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePlayerStore } from "@/store/player-store";
@@ -10,22 +13,19 @@ const VIEW_THRESHOLD_SECONDS = 15;
 
 export function GlobalPlayer() {
   const {
-    title,
-    artist,
-    coverPath,
-    src,
-    releaseId,
-    playing,
-    setPlaying,
-    setPlayback,
-    pendingSeekPercent,
-    clearPendingSeek
+    title, artist, coverPath, src, releaseId, releaseSlug,
+    playing, setPlaying, setPlayback, pendingSeekPercent, clearPendingSeek,
+    shuffle, repeat, toggleShuffle, cycleRepeat, next, prev,
+    openDetailPanel, queue,
   } = usePlayerStore();
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
+
+  // View / heatmap tracking
   const viewTrackedRef = useRef<string | null>(null);
   const playSecondsRef = useRef(0);
   const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -35,7 +35,7 @@ export function GlobalPlayer() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ releaseId: rId, scope: "PREVIEW", playlistPath: `/release/${rId}` })
+      body: JSON.stringify({ releaseId: rId, scope: "FULL", playlistPath: `/release/${rId}` }),
     }).catch(() => {});
   };
 
@@ -43,26 +43,27 @@ export function GlobalPlayer() {
     void fetch(`${API}/engagement/heatmap/${rId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secondMark })
+      credentials: "include",
+      body: JSON.stringify({ secondMark }),
     }).catch(() => {});
   };
 
+  // Init audio element once
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.volume = volume;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset view tracking when track changes
+  // Reset view tracking when release changes
   useEffect(() => {
     playSecondsRef.current = 0;
-    if (viewTrackedRef.current !== src) {
-      viewTrackedRef.current = null;
-    }
-  }, [src]);
+    viewTrackedRef.current = null;
+  }, [releaseId]);
 
-  // Start/stop the play-time counter for view tracking
+  // Play/pause timer for view + heatmap
   useEffect(() => {
     if (playTimerRef.current) {
       clearInterval(playTimerRef.current);
@@ -72,13 +73,21 @@ export function GlobalPlayer() {
     if (playing && releaseId) {
       playTimerRef.current = setInterval(() => {
         playSecondsRef.current += 1;
-        // Fire view event after threshold
-        if (playSecondsRef.current >= VIEW_THRESHOLD_SECONDS && releaseId && !viewTrackedRef.current) {
+
+        if (
+          playSecondsRef.current >= VIEW_THRESHOLD_SECONDS &&
+          releaseId &&
+          viewTrackedRef.current !== releaseId
+        ) {
           viewTrackedRef.current = releaseId;
           fireViewEvent(releaseId);
         }
-        // Fire heatmap every 5 seconds
-        if (playSecondsRef.current % 5 === 0 && releaseId && audioRef.current?.currentTime) {
+
+        if (
+          playSecondsRef.current % 5 === 0 &&
+          releaseId &&
+          audioRef.current?.currentTime
+        ) {
           fireHeatmapEvent(releaseId, Math.floor(audioRef.current.currentTime));
         }
       }, 1000);
@@ -87,8 +96,10 @@ export function GlobalPlayer() {
     return () => {
       if (playTimerRef.current) clearInterval(playTimerRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, releaseId]);
 
+  // Sync audio src + play/pause
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !src) return;
@@ -106,9 +117,11 @@ export function GlobalPlayer() {
     }
   }, [src, playing, setPlaying, setPlayback]);
 
+  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
     const onTime = () => {
       if (audio.duration) {
         const pct = (audio.currentTime / audio.duration) * 100;
@@ -120,7 +133,11 @@ export function GlobalPlayer() {
       setDuration(audio.duration);
       setPlayback({ currentTime: audio.currentTime, duration: audio.duration });
     };
-    const onEnded = () => setPlaying(false);
+    const onEnded = () => {
+      // Auto-advance to next in queue
+      usePlayerStore.getState().next();
+    };
+
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onLoaded);
     audio.addEventListener("ended", onEnded);
@@ -131,6 +148,7 @@ export function GlobalPlayer() {
     };
   }, [setPlaying, setPlayback]);
 
+  // Handle pending seek from store
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio?.duration || pendingSeekPercent == null) return;
@@ -171,35 +189,90 @@ export function GlobalPlayer() {
 
   const currentTime = duration ? (progress / 100) * duration : 0;
 
+  const RepeatIcon = repeat === "one" ? Repeat1 : Repeat;
+
+  if (!src) return null;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[rgba(255,255,255,0.08)] bg-bg/95 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-3">
-        {/* Info */}
-        <div className="flex items-center gap-3 min-w-0 w-48 shrink-0">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
+
+        {/* Track info */}
+        <div className="flex items-center gap-3 min-w-0 w-52 shrink-0">
           <div className="relative h-10 w-10 rounded-sm shrink-0 overflow-hidden bg-gradient-to-br from-violet/30 to-violet/5">
-            {coverPath ? (
+            {coverPath && (
               <Image src={coverPath} alt={title} fill className="object-cover" />
-            ) : null}
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-cream truncate">{title}</p>
             <p className="text-xs text-cream/50 truncate">{artist}</p>
           </div>
+          {releaseSlug && (
+            <button
+              onClick={() => openDetailPanel(releaseSlug)}
+              title="Track details"
+              className="shrink-0 text-cream/30 hover:text-violet-light transition-colors"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-1 flex-col items-center gap-1.5">
-          <button
-            disabled={!src}
-            onClick={() => setPlaying(!playing)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-violet/80 text-white hover:bg-violet transition-colors disabled:opacity-30"
-          >
-            {playing ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4 translate-x-px" />
-            )}
-          </button>
+        {/* Controls + seek bar */}
+        <div className="flex flex-1 flex-col items-center gap-1">
+          <div className="flex items-center gap-3">
+            {/* Shuffle */}
+            <button
+              onClick={toggleShuffle}
+              title="Shuffle"
+              className={`transition-colors ${shuffle ? "text-violet-light" : "text-cream/30 hover:text-cream/60"}`}
+            >
+              <Shuffle className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Prev */}
+            <button
+              onClick={prev}
+              disabled={!src}
+              className="text-cream/50 hover:text-cream transition-colors disabled:opacity-30"
+            >
+              <SkipBack className="h-4 w-4 fill-current" />
+            </button>
+
+            {/* Play/Pause */}
+            <button
+              disabled={!src}
+              onClick={() => setPlaying(!playing)}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-violet/80 text-white hover:bg-violet transition-colors disabled:opacity-30"
+            >
+              {playing ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4 translate-x-px" />
+              )}
+            </button>
+
+            {/* Next */}
+            <button
+              onClick={next}
+              disabled={!src}
+              className="text-cream/50 hover:text-cream transition-colors disabled:opacity-30"
+            >
+              <SkipForward className="h-4 w-4 fill-current" />
+            </button>
+
+            {/* Repeat */}
+            <button
+              onClick={cycleRepeat}
+              title={`Repeat: ${repeat}`}
+              className={`transition-colors ${repeat !== "none" ? "text-violet-light" : "text-cream/30 hover:text-cream/60"}`}
+            >
+              <RepeatIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Seek bar */}
           <div className="flex w-full items-center gap-2">
             <span className="w-8 text-right text-[10px] tabular-nums text-cream/40">
               {fmt(currentTime)}
@@ -217,8 +290,8 @@ export function GlobalPlayer() {
           </div>
         </div>
 
-        {/* Volume */}
-        <div className="flex w-32 shrink-0 items-center gap-2">
+        {/* Volume + queue */}
+        <div className="flex w-36 shrink-0 items-center gap-2">
           <button
             onClick={toggleMute}
             className="text-cream/40 transition-colors hover:text-cream/70"
@@ -234,6 +307,12 @@ export function GlobalPlayer() {
             onChange={handleVolume}
             className="h-1 w-full cursor-pointer accent-violet"
           />
+          {queue.length > 1 && (
+            <div className="flex items-center gap-1 text-cream/30">
+              <ListMusic className="h-3.5 w-3.5" />
+              <span className="text-[10px]">{queue.length}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

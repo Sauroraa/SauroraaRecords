@@ -10,6 +10,7 @@ import { useCartStore } from "@/store/cart-store";
 import { useNotificationsStore } from "@/store/notifications-store";
 import { useLanguage, type Locale } from "@/context/language-context";
 import { GlobalPlayer } from "./global-player";
+import { TrackDetailPanel } from "./track-detail-panel";
 import { CartDrawer } from "./cart-drawer";
 import { SupportWidget } from "./support-widget";
 
@@ -206,6 +207,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
         {children}
       </motion.main>
 
+      <TrackDetailPanel />
       <CartDrawer />
       <SupportWidget />
       <GlobalPlayer />

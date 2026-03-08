@@ -88,13 +88,13 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
       setPlaying(!playing);
       return;
     }
-    setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id });
+    setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id, releaseSlug: release.slug });
     setPlaying(true);
   };
 
   const handleSeek = (percent: number) => {
     if (!isActiveTrack) {
-      setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id });
+      setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id, releaseSlug: release.slug });
       setPlaying(true);
     }
     requestSeekPercent(percent);
