@@ -21,7 +21,12 @@ export class RankingsController {
     const { start, end } = this.monthBounds(month);
 
     const [artists, downloads, shares, streamEvents, comments, reposts] = await Promise.all([
+      // Only real artists: must have a displayName and at least 1 published release
       this.prisma.artist.findMany({
+        where: {
+          displayName: { not: null },
+          releases: { some: { published: true } }
+        },
         include: { user: { select: { email: true } } }
       }),
       // Free download sessions (counts as download)
@@ -135,15 +140,17 @@ export class RankingsController {
       })
       .filter((row): row is NonNullable<typeof row> => row != null && row.score > 0)
       .sort((a, b) => b.score - a.score)
+      .slice(0, 100)
       .map((row, index) => ({
         id: `${row.artistId}-${month}`,
         artistId: row.artistId,
         month,
-        totalViews: row.totalStreams + row.totalDownloads,
+        totalViews: row.totalStreams,
         totalDownloads: row.totalDownloads,
         totalShares: row.totalShares,
         totalComments: row.totalComments,
         totalReposts: row.totalReposts,
+        score: row.score,
         rank: index + 1,
         artist: row.artist
       }));

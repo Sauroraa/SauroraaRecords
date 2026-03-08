@@ -9,6 +9,26 @@ export class SearchService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async searchAll(q: string, limit = 10) {
+    if (!q.trim()) return { releases: [], artists: [] };
+    const [releases, artists] = await Promise.all([
+      this.searchReleases(q, limit),
+      this.searchArtists(q, 5)
+    ]);
+    return { releases, artists };
+  }
+
+  private async searchArtists(q: string, limit: number) {
+    return this.prisma.artist.findMany({
+      where: {
+        displayName: { not: null, contains: q },
+        releases: { some: { published: true } }
+      },
+      select: { id: true, displayName: true, avatar: true },
+      take: Math.min(limit, 8)
+    });
+  }
+
   async searchReleases(q: string, limit = 20) {
     if (!q.trim()) return [];
 
@@ -28,10 +48,7 @@ export class SearchService {
           "content-type": "application/json",
           ...(this.meiliKey ? { authorization: `Bearer ${this.meiliKey}` } : {})
         },
-        body: JSON.stringify({
-          q,
-          limit
-        })
+        body: JSON.stringify({ q, limit })
       });
 
       if (!response.ok) return null;
@@ -56,10 +73,7 @@ export class SearchService {
       },
       include: {
         artist: {
-          select: {
-            id: true,
-            displayName: true
-          }
+          select: { id: true, displayName: true, avatar: true, slug: true } as never
         }
       },
       take: Math.min(Math.max(limit, 1), 50),

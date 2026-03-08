@@ -121,6 +121,9 @@ export type RankingItem = {
   totalViews?: number;
   totalDownloads: number;
   totalShares?: number;
+  totalComments?: number;
+  totalReposts?: number;
+  score?: number;
   totalRevenue?: number | string;
   artist: ArtistProfile;
 };

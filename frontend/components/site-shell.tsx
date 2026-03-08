@@ -13,6 +13,7 @@ import { GlobalPlayer } from "./global-player";
 import { TrackDetailPanel } from "./track-detail-panel";
 import { CartDrawer } from "./cart-drawer";
 import { SupportWidget } from "./support-widget";
+import { SearchBar } from "./search-bar";
 
 const LOCALES: Locale[] = ["fr", "en", "nl"];
 
@@ -99,6 +100,8 @@ export function SiteShell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
+
+          <SearchBar />
 
           {/* Right section */}
           <div className="flex items-center gap-2">

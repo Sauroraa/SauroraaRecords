@@ -21,11 +21,13 @@ export class SearchController {
 
   @Get()
   async search(@Query() query: SearchQueryDto) {
-    const items = await this.searchService.searchReleases(query.q, query.limit ?? 20);
+    const result = await this.searchService.searchAll(query.q, query.limit ?? 10);
     return {
       query: query.q,
-      count: items.length,
-      items
+      releases: result.releases,
+      artists: result.artists,
+      count: result.releases.length,
+      items: result.releases
     };
   }
 }
