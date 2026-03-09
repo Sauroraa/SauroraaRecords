@@ -13,6 +13,7 @@ import { usePlayerStore } from "@/store/player-store";
 import { ArtistBadges } from "@/components/artist-badges";
 import { FollowButton } from "@/components/follow-button";
 import { FreeDownloadModal } from "@/components/free-download-modal";
+import { RealWaveform } from "@/components/release-waveform-real";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 
@@ -380,111 +381,91 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 <p className="text-sm text-cream/35">Aucun titre publié pour le moment.</p>
               )}
 
-              {visibleReleases.map((release, index) => {
+              {visibleReleases.map((release) => {
                 const isActive = activeReleaseId === release.id;
                 const isPlayingNow = isActive && playing;
                 const progress = isActive && duration > 0 ? (currentTime / duration) * 100 : 0;
-                const waves = waveForTrack(`${release.id}:${release.title}`);
-                const activeBars = Math.round((Math.max(0, Math.min(100, progress)) / 100) * waves.length);
+
+                const handlePlay = () => {
+                  if (isActive) { setPlaying(!playing); return; }
+                  setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id, releaseSlug: release.slug });
+                  setPlaying(true);
+                };
 
                 return (
-                  <article
-                    key={release.id}
-                    className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-3 md:p-4"
-                  >
-                    <div className="flex items-start gap-3">
+                  <article key={release.id} className="group overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface">
+                    {/* SoundCloud-style: full-width cover banner */}
+                    <div className="relative h-44 w-full bg-surface2">
+                      {release.coverPath ? (
+                        <Image src={release.coverPath} alt={release.title} fill className="object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-violet/20 to-surface2">
+                          <Disc3 className="h-16 w-16 text-violet/20" />
+                        </div>
+                      )}
+                      {/* Gradient overlay — stronger at bottom for waveform readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+
+                      {/* Title + date overlay (top-left) */}
+                      <div className="absolute left-4 right-16 top-3">
+                        <Link href={`/release/${release.slug}`} className="text-sm font-bold text-white hover:text-violet-light transition-colors line-clamp-1">
+                          {release.title}
+                        </Link>
+                        <p className="text-[11px] text-white/50 mt-0.5">{formatDate(release.createdAt)}</p>
+                      </div>
+
+                      {/* Price badge (top-right) */}
+                      <div className="absolute right-3 top-3">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          release.type === "FREE"
+                            ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                            : "bg-violet/20 text-violet-light border border-violet/30"
+                        }`}>
+                          {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
+                        </span>
+                      </div>
+
+                      {/* Play button (center-left) */}
                       <button
-                        onClick={() => {
-                          if (isActive) {
-                            setPlaying(!playing);
-                          } else {
-                            setTrack({
-                              title: release.title,
-                              artist: artistName,
-                              src: release.audioPath,
-                              coverPath: release.coverPath ?? null,
-                              releaseId: release.id,
-                              releaseSlug: release.slug,
-                            });
-                            setPlaying(true);
-                          }
-                        }}
-                        className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet text-white hover:bg-violet-hover transition-colors"
+                        onClick={handlePlay}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-violet shadow-[0_0_20px_rgba(123,76,255,0.5)] text-white hover:scale-105 transition-transform"
                       >
-                        {isPlayingNow ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-px" />}
+                        {isPlayingNow ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 translate-x-px" />}
                       </button>
 
-                      <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          {/* Cover thumbnail */}
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {release.coverPath && (
-                              <Image src={release.coverPath} alt={release.title} width={40} height={40} className="rounded-md object-cover shrink-0" />
-                            )}
-                            <div className="min-w-0">
-                              <Link href={`/release/${release.slug}`} className="block truncate text-sm font-semibold text-cream hover:text-violet-light transition-colors">
-                                {release.title}
-                              </Link>
-                              <p className="text-xs text-cream/45">{formatDate(release.createdAt)}</p>
-                            </div>
-                          </div>
-                          <div className="text-xs text-cream/45 shrink-0">
-                            {release.type === "FREE" ? "Free download" : `EUR ${Number(release.price).toFixed(2)}`}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            const pct = ((event.clientX - rect.left) / rect.width) * 100;
+                      {/* Waveform overlaid at bottom of cover */}
+                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-1">
+                        <RealWaveform
+                          releaseId={release.id}
+                          fallbackSeed={`${release.id}:${release.title}`}
+                          progressPercent={progress}
+                          height="h-14"
+                          bars={150}
+                          onSeekPercent={(pct) => {
                             if (!isActive) {
-                              setTrack({
-                                title: release.title,
-                                artist: artistName,
-                                src: release.audioPath,
-                                coverPath: release.coverPath ?? null,
-                                releaseId: release.id,
-                                releaseSlug: release.slug,
-                              });
+                              setTrack({ title: release.title, artist: artistName, src: release.audioPath, coverPath: release.coverPath ?? null, releaseId: release.id, releaseSlug: release.slug });
                               setPlaying(true);
                             }
                             requestSeekPercent(pct);
                           }}
-                          className="flex h-16 w-full items-end gap-[2px] rounded-[8px] bg-black/20 px-2 py-2"
-                        >
-                          {waves.map((height, waveIndex) => (
-                            <span
-                              key={`${release.id}-wave-${waveIndex}`}
-                              className={`w-full rounded-[2px] ${
-                                waveIndex <= activeBars ? "bg-violet-light" : "bg-cream/25"
-                              }`}
-                              style={{ height: `${Math.round(height * 100)}%` }}
-                            />
-                          ))}
-                        </button>
-
-                        <div className="flex items-center justify-between text-xs text-cream/40">
-                          <span>
-                            {release._count?.comments ?? 0} commentaires · {viewsByTrack.get(release.id) ?? release._count?.downloadSessions ?? 0} vues
-                          </span>
-                          {release.type === "FREE" ? (
-                            <button
-                              onClick={() => setFreeDownload(release)}
-                              className="text-violet-light hover:text-violet-300 transition-colors"
-                            >
-                              Télécharger
-                            </button>
-                          ) : (
-                            <button
-                              className="text-violet-light hover:text-violet-300 transition-colors"
-                              onClick={() => toast("Ajout panier sur page release")}
-                            >
-                              Acheter
-                            </button>
-                          )}
-                        </div>
+                        />
                       </div>
+                    </div>
+
+                    {/* Bottom bar */}
+                    <div className="flex items-center justify-between px-4 py-2.5 text-xs text-cream/40">
+                      <span>
+                        {release._count?.comments ?? 0} commentaires · {viewsByTrack.get(release.id) ?? 0} vues
+                      </span>
+                      {release.type === "FREE" ? (
+                        <button onClick={() => setFreeDownload(release)} className="text-violet-light hover:text-violet hover:underline transition-colors">
+                          Télécharger
+                        </button>
+                      ) : (
+                        <Link href={`/release/${release.slug}`} className="text-violet-light hover:text-violet hover:underline transition-colors">
+                          Acheter
+                        </Link>
+                      )}
                     </div>
                   </article>
                 );

@@ -104,7 +104,7 @@ export default function PricingPage() {
     return map[key];
   };
 
-  const isPromo = tab === "artist";
+  const isPromo = false;
 
   return (
     <div className="space-y-24 py-12">
@@ -242,15 +242,6 @@ export default function PricingPage() {
                 <div className="mb-8">
                   {isFree ? (
                     <span className="text-5xl font-bold text-cream">{t.pricing.free}</span>
-                  ) : plan.key === "ARTIST_PRO" ? (
-                    <div className="space-y-1">
-                      <div className="flex items-end gap-2">
-                        <span className="text-5xl font-bold text-cream">4,99€</span>
-                        <span className="text-cream/40 mb-1.5 text-sm">{t.pricing.per_month}</span>
-                      </div>
-                      <p className="text-sm text-cream/35 line-through">9,99€/mois</p>
-                      <p className="text-xs text-violet-light font-medium">Premier mois · Offre mars</p>
-                    </div>
                   ) : (
                     <div className="flex items-end gap-1">
                       <span className="text-5xl font-bold text-cream">{plan.price}€</span>

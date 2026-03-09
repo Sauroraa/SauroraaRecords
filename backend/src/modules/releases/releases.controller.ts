@@ -228,6 +228,26 @@ export class ReleasesController {
     });
   }
 
+  @Get(":id/waveform-data")
+  async waveformData(@Param("id") id: string) {
+    const release = await this.prisma.release.findUnique({
+      where: { id },
+      select: { id: true }
+    });
+    if (!release) return { peaks: [] };
+
+    const streamsRoot = process.env.WORKER_OUTPUT_ROOT ?? "/data/uploads/streams";
+    const jsonPath = `${streamsRoot}/${id}/waveform.json`;
+
+    try {
+      const { readFileSync } = await import("fs");
+      const data = readFileSync(jsonPath, "utf-8");
+      return { peaks: JSON.parse(data) as number[] };
+    } catch {
+      return { peaks: [] };
+    }
+  }
+
   @Get("all")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

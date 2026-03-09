@@ -1,6 +1,6 @@
 import Redis from "ioredis";
-import { execFile } from "node:child_process";
-import { mkdir, stat } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
@@ -95,6 +95,51 @@ async function buildWaveform(masterPath, outputFile) {
   return outputFile;
 }
 
+async function buildWaveformJson(masterPath, outputFile, bars = 200) {
+  await mkdir(dirname(outputFile), { recursive: true });
+
+  return new Promise((resolve) => {
+    const chunks = [];
+    const ff = spawn("ffmpeg", [
+      "-y", "-i", masterPath,
+      "-ac", "1", "-ar", "8000",
+      "-f", "s16le", "pipe:1"
+    ]);
+
+    ff.stdout.on("data", (chunk) => chunks.push(chunk));
+    ff.stderr.on("data", () => {});
+
+    ff.on("close", async () => {
+      try {
+        const buf = Buffer.concat(chunks);
+        const samples = new Int16Array(buf.buffer, buf.byteOffset, Math.floor(buf.length / 2));
+        if (samples.length === 0) { resolve(null); return; }
+
+        const blockSize = Math.max(1, Math.floor(samples.length / bars));
+        const peaks = [];
+        for (let i = 0; i < bars; i++) {
+          let max = 0;
+          const start = i * blockSize;
+          const end = Math.min(start + blockSize, samples.length);
+          for (let j = start; j < end; j++) {
+            const v = Math.abs(samples[j]);
+            if (v > max) max = v;
+          }
+          peaks.push(max);
+        }
+        const maxPeak = Math.max(...peaks, 1);
+        const normalized = peaks.map(p => Math.round((p / maxPeak) * 1000) / 1000);
+        await writeFile(outputFile, JSON.stringify(normalized));
+        resolve(outputFile);
+      } catch {
+        resolve(null);
+      }
+    });
+
+    ff.on("error", () => resolve(null));
+  });
+}
+
 async function processJob(payload) {
   const { releaseId, masterPath, previewDuration = 45, watermarkRef = "" } = payload;
   if (!releaseId || !masterPath) throw new Error("Invalid worker payload");
@@ -105,10 +150,12 @@ async function processJob(payload) {
   const fullDir = join(releaseRoot, "full");
   const previewDir = join(releaseRoot, "preview");
   const waveformFile = join(releaseRoot, "waveform.png");
+  const waveformJsonFile = join(releaseRoot, "waveform.json");
 
   await buildFullHls(masterPath, fullDir, watermarkRef);
   await buildPreviewHls(masterPath, previewDir, Math.min(Math.max(previewDuration, 30), 90), watermarkRef);
   await buildWaveform(masterPath, waveformFile);
+  await buildWaveformJson(masterPath, waveformJsonFile);
 
   console.log(
     JSON.stringify({
