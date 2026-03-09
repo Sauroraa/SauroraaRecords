@@ -13,7 +13,7 @@ export default function RgpdPage() {
         <p>Le responsable du traitement des données personnelles est :</p>
         <div className="mt-2 space-y-1">
           <p><strong className="text-cream">Sauroraa Records</strong> — BE1031.598.463</p>
-          <p>Email DPO / contact RGPD : <strong className="text-cream">privacy@sauroraa.be</strong></p>
+          <p>Email DPO / contact RGPD : <strong className="text-cream">privacy@sauroraarecords.be</strong></p>
         </div>
       </Article>
 
@@ -90,7 +90,7 @@ export default function RgpdPage() {
           <li><strong className="text-cream">Droit d'opposition</strong> : vous opposer au traitement à des fins de marketing.</li>
           <li><strong className="text-cream">Droit de limitation</strong> : restreindre le traitement dans certains cas.</li>
         </ul>
-        <p className="mt-2">Pour exercer ces droits : <strong className="text-cream">privacy@sauroraa.be</strong>. Réponse sous 30 jours.</p>
+        <p className="mt-2">Pour exercer ces droits : <strong className="text-cream">privacy@sauroraarecords.be</strong>. Réponse sous 30 jours.</p>
         <p className="mt-2">En cas de litige non résolu, vous pouvez vous adresser à l'<strong className="text-cream">Autorité de Protection des Données belge (APD)</strong> : <a href="https://www.autoriteprotectiondonnees.be" target="_blank" rel="noreferrer" className="text-violet-light hover:underline">autoriteprotectiondonnees.be</a></p>
       </Article>
 

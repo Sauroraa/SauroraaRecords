@@ -87,7 +87,7 @@ export default function CookiesPage() {
       </Article>
 
       <Article title="6. Contact">
-        <p>Pour toute question relative à l'utilisation des cookies : <strong className="text-cream">privacy@sauroraa.be</strong></p>
+        <p>Pour toute question relative à l'utilisation des cookies : <strong className="text-cream">privacy@sauroraarecords.be</strong></p>
       </Article>
 
       <div className="border-t border-[rgba(255,255,255,0.06)] pt-6">

@@ -25,15 +25,26 @@ import {
   Globe,
   Save,
   Loader2,
-  Zap,
-  Bell,
   Key,
   Copy,
   Music2,
   Cpu,
   Send,
-  Package
+  Package,
+  Trophy,
+  Users
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
@@ -52,9 +63,7 @@ type Tab =
   | "downloads-config"
   | "revenue"
   | "releases"
-  | "engage-campaigns"
   | "analytics"
-  | "broadcasts"
   | "private-links"
   | "api-keys";
 
@@ -67,9 +76,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "downloads-config", label: "Downloads Config", icon: <Settings2 className="h-4 w-4" /> },
   { id: "revenue", label: "Revenue", icon: <TrendingUp className="h-4 w-4" /> },
   { id: "releases", label: "My Releases", icon: <Disc3 className="h-4 w-4" /> },
-  { id: "engage-campaigns", label: "Engage", icon: <Zap className="h-4 w-4" /> },
   { id: "analytics", label: "Analytics +", icon: <BarChart2 className="h-4 w-4" /> },
-  { id: "broadcasts", label: "Broadcasts", icon: <Bell className="h-4 w-4" /> },
   { id: "private-links", label: "Private Links", icon: <Link2 className="h-4 w-4" /> },
   { id: "api-keys", label: "API Keys", icon: <Key className="h-4 w-4" /> }
 ];
@@ -770,10 +777,12 @@ function UploadReleaseTab() {
             ])}
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-cream/60">Preview duration (s)</label>
-          <Input type="number" min="15" max="90" value={form.previewDuration} onChange={(e) => setForm({ ...form, previewDuration: e.target.value })} />
-        </div>
+        {form.type === "PAID" && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-cream/60">Preview duration (s)</label>
+            <Input type="number" min="15" max="90" value={form.previewDuration} onChange={(e) => setForm({ ...form, previewDuration: e.target.value })} />
+          </div>
+        )}
       </div>
 
       {/* Audio dropzone */}
@@ -1197,7 +1206,7 @@ function ReleasesTab() {
     void (async () => {
       try {
         const [rRes, dRes] = await Promise.all([
-          fetch(`${API}/releases?mine=true`, { credentials: "include" }),
+          fetch(`${API}/releases/mine`, { credentials: "include" }),
           fetch(`${API}/dubpacks?mine=true`, { credentials: "include" })
         ]);
         if (rRes.ok) setReleases((await rRes.json()) as ReleaseItem[]);
@@ -1296,371 +1305,6 @@ function ReleasesTab() {
   );
 }
 
-// ─── Engage Campaigns ─────────────────────────────────────────────────────────
-
-type EngageActionType =
-  | "FOLLOW_SOUNDCLOUD" | "LIKE_SOUNDCLOUD" | "REPOST_SOUNDCLOUD"
-  | "FOLLOW_INSTAGRAM" | "JOIN_DISCORD" | "SUBSCRIBE_NEWSLETTER"
-  | "FOLLOW_ARTIST" | "LEAVE_COMMENT";
-
-interface EngageCampaign {
-  id: string;
-  title: string;
-  description: string | null;
-  status: "ACTIVE" | "PAUSED" | "ENDED";
-  downloadPath: string | null;
-  soundcloudArtistId: string | null;
-  soundcloudTrackId: string | null;
-  instagramHandle: string | null;
-  discordServerId: string | null;
-  discordInviteUrl: string | null;
-  newsletterTag: string | null;
-  releaseCountdown: string | null;
-  createdAt: string;
-  actions: { id: string; actionType: EngageActionType; required: boolean; position: number }[];
-  _count?: { sessions: number; subscribers: number };
-}
-
-const ENGAGE_ACTIONS: { value: EngageActionType; label: string }[] = [
-  { value: "FOLLOW_SOUNDCLOUD", label: "Follow on SoundCloud" },
-  { value: "LIKE_SOUNDCLOUD", label: "Like track on SoundCloud" },
-  { value: "REPOST_SOUNDCLOUD", label: "Repost on SoundCloud" },
-  { value: "FOLLOW_INSTAGRAM", label: "Follow on Instagram" },
-  { value: "JOIN_DISCORD", label: "Join Discord server" },
-  { value: "SUBSCRIBE_NEWSLETTER", label: "Subscribe to newsletter" },
-  { value: "FOLLOW_ARTIST", label: "Follow on Sauroraa" },
-  { value: "LEAVE_COMMENT", label: "Leave a comment" }
-];
-
-function EngageCampaignsTab() {
-  const [campaigns, setCampaigns] = useState<EngageCampaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [analytics, setAnalytics] = useState<Record<string, { totalSessions: number; completedSessions: number; conversionRate: number; subscribers: number }>>({});
-
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    downloadPath: "",
-    soundcloudArtistId: "",
-    soundcloudTrackId: "",
-    instagramHandle: "",
-    discordServerId: "",
-    discordInviteUrl: "",
-    releaseCountdown: ""
-  });
-  const [selectedActions, setSelectedActions] = useState<{ actionType: EngageActionType; required: boolean }[]>([]);
-
-  const load = async () => {
-    try {
-      const res = await fetch(`${API}/engage/me/campaigns`, { credentials: "include" });
-      if (res.ok) {
-        const data = (await res.json()) as EngageCampaign[];
-        setCampaigns(data);
-        // Load analytics for each campaign
-        await Promise.all(data.map(async (c) => {
-          try {
-            const r = await fetch(`${API}/engage/me/campaigns/${c.id}/analytics`, { credentials: "include" });
-            if (r.ok) {
-              const a = await r.json() as { totalSessions: number; completedSessions: number; conversionRate: number; subscribers: number };
-              setAnalytics((prev) => ({ ...prev, [c.id]: a }));
-            }
-          } catch {}
-        }));
-      }
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { void load(); }, []);
-
-  const handleCreate = async () => {
-    if (!form.title.trim()) { toast.error("Titre requis"); return; }
-    if (selectedActions.length === 0) { toast.error("Ajoute au moins une action"); return; }
-    setCreating(true);
-    try {
-      const res = await fetch(`${API}/engage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ...form,
-          releaseCountdown: form.releaseCountdown || undefined,
-          actions: selectedActions.map((a, idx) => ({ ...a, position: idx }))
-        })
-      });
-      if (!res.ok) throw new Error();
-      toast.success("Campagne créée !");
-      setShowForm(false);
-      setForm({ title: "", description: "", downloadPath: "", soundcloudArtistId: "", soundcloudTrackId: "", instagramHandle: "", discordServerId: "", discordInviteUrl: "", releaseCountdown: "" });
-      setSelectedActions([]);
-      void load();
-    } catch {
-      toast.error("Impossible de créer la campagne");
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleStatusToggle = async (campaign: EngageCampaign) => {
-    const newStatus = campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
-    try {
-      await fetch(`${API}/engage/me/campaigns/${campaign.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: newStatus })
-      });
-      void load();
-    } catch {
-      toast.error("Impossible de modifier la campagne");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Supprimer cette campagne ?")) return;
-    try {
-      await fetch(`${API}/engage/me/campaigns/${id}`, { method: "DELETE", credentials: "include" });
-      void load();
-    } catch {
-      toast.error("Impossible de supprimer");
-    }
-  };
-
-  const toggleAction = (actionType: EngageActionType) => {
-    setSelectedActions((prev) => {
-      const exists = prev.find((a) => a.actionType === actionType);
-      if (exists) return prev.filter((a) => a.actionType !== actionType);
-      return [...prev, { actionType, required: true }];
-    });
-  };
-
-  const toggleRequired = (actionType: EngageActionType) => {
-    setSelectedActions((prev) =>
-      prev.map((a) => a.actionType === actionType ? { ...a, required: !a.required } : a)
-    );
-  };
-
-  if (loading) return <LoadingSpinner />;
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-cream">Sauroraa Engage</h2>
-          <p className="text-xs text-cream/50 mt-0.5">Crée des campagnes de fan-gate pour débloquer tes téléchargements</p>
-        </div>
-        <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Nouvelle campagne
-        </Button>
-      </div>
-
-      {/* Create form */}
-      {showForm && (
-        <div className="rounded-[14px] border border-violet/30 bg-surface p-5 space-y-5">
-          <h3 className="text-sm font-semibold text-cream">Nouvelle campagne Engage</h3>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">Titre *</label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex: Free DL — Follow & Download" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">Fichier à débloquer (path)</label>
-              <Input value={form.downloadPath} onChange={(e) => setForm({ ...form, downloadPath: e.target.value })} placeholder="/uploads/audio/track.wav" />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-cream/60">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-                placeholder="Décris le contenu à télécharger..."
-                className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50 resize-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">SoundCloud Artist ID</label>
-              <Input value={form.soundcloudArtistId} onChange={(e) => setForm({ ...form, soundcloudArtistId: e.target.value })} placeholder="ton-username-soundcloud" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">SoundCloud Track ID / slug</label>
-              <Input value={form.soundcloudTrackId} onChange={(e) => setForm({ ...form, soundcloudTrackId: e.target.value })} placeholder="nom-du-track" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">Instagram handle</label>
-              <Input value={form.instagramHandle} onChange={(e) => setForm({ ...form, instagramHandle: e.target.value })} placeholder="@tonhandle" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">Discord invite URL</label>
-              <Input value={form.discordInviteUrl} onChange={(e) => setForm({ ...form, discordInviteUrl: e.target.value })} placeholder="https://discord.gg/..." />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/60">Release countdown</label>
-              <Input type="datetime-local" value={form.releaseCountdown} onChange={(e) => setForm({ ...form, releaseCountdown: e.target.value })} />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-cream/40">Actions requises pour débloquer</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ENGAGE_ACTIONS.map((action) => {
-                const selected = selectedActions.find((a) => a.actionType === action.value);
-                return (
-                  <div key={action.value} className={`flex items-center justify-between rounded-[10px] border p-2.5 cursor-pointer transition-colors ${selected ? "border-violet/40 bg-violet/10" : "border-[rgba(255,255,255,0.08)] bg-surface2"}`}>
-                    <button type="button" onClick={() => toggleAction(action.value)} className="flex items-center gap-2 flex-1 text-left">
-                      <div className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-violet bg-violet" : "border-cream/20"}`}>
-                        {selected && <Check className="h-3 w-3 text-white" />}
-                      </div>
-                      <span className="text-xs text-cream">{action.label}</span>
-                    </button>
-                    {selected && (
-                      <button
-                        type="button"
-                        onClick={() => toggleRequired(action.value)}
-                        className={`ml-2 text-[10px] rounded px-1.5 py-0.5 ${selected.required ? "bg-red-500/20 text-red-400" : "bg-black/20 text-cream/40"}`}
-                      >
-                        {selected.required ? "Requis" : "Optionnel"}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={() => void handleCreate()} disabled={creating} className="gap-2">
-              {creating ? <><Loader2 className="h-4 w-4 animate-spin" /> Création...</> : <><Check className="h-4 w-4" /> Créer la campagne</>}
-            </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-          </div>
-        </div>
-      )}
-
-      {/* Campaign list */}
-      {campaigns.length === 0 && !showForm ? (
-        <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-8 text-center">
-          <Zap className="mx-auto mb-3 h-8 w-8 text-violet/40" />
-          <p className="text-sm text-cream/50">Aucune campagne Engage. Crée ta première campagne de fan-gate !</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {campaigns.map((campaign) => {
-            const stats = analytics[campaign.id];
-            const engageUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/engage/${campaign.id}`;
-
-            return (
-              <div key={campaign.id} className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-cream">{campaign.title}</p>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        campaign.status === "ACTIVE" ? "bg-green-500/20 text-green-400" :
-                        campaign.status === "PAUSED" ? "bg-yellow-500/20 text-yellow-400" :
-                        "bg-cream/10 text-cream/40"
-                      }`}>
-                        {campaign.status}
-                      </span>
-                    </div>
-                    {campaign.description && (
-                      <p className="mt-1 text-xs text-cream/50 line-clamp-1">{campaign.description}</p>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {campaign.actions.map((a) => (
-                        <span key={a.id} className="rounded-[6px] bg-violet/10 px-2 py-0.5 text-[10px] text-violet-light">
-                          {a.actionType.replace(/_/g, " ")}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      onClick={() => {
-                        void navigator.clipboard.writeText(engageUrl);
-                        toast.success("Lien copié !");
-                      }}
-                      title="Copier le lien"
-                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
-                    >
-                      <Link2 className="h-4 w-4" />
-                    </button>
-                    <a
-                      href={`/engage/${campaign.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Voir la page"
-                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                    <button
-                      onClick={() => void handleStatusToggle(campaign)}
-                      title={campaign.status === "ACTIVE" ? "Mettre en pause" : "Activer"}
-                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-cream transition-colors"
-                    >
-                      {campaign.status === "ACTIVE" ? <ToggleRight className="h-4 w-4 text-green-400" /> : <ToggleLeft className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={() => void handleDelete(campaign.id)}
-                      className="rounded-[8px] border border-[rgba(255,255,255,0.1)] p-1.5 text-cream/50 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                {stats && (
-                  <div className="mt-3 grid grid-cols-4 gap-2 border-t border-[rgba(255,255,255,0.06)] pt-3">
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-cream">{stats.totalSessions}</p>
-                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Sessions</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-cream">{stats.completedSessions}</p>
-                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Downloads</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-violet-light">{stats.conversionRate}%</p>
-                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Conversion</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-cream">{stats.subscribers}</p>
-                      <p className="text-[10px] uppercase tracking-wide text-cream/40">Emails</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Export subscribers */}
-                {stats && stats.subscribers > 0 && (
-                  <div className="mt-2 text-right">
-                    <a
-                      href={`${API}/engage/me/campaigns/${campaign.id}/subscribers/export`}
-                      className="text-xs text-violet-light hover:underline"
-                    >
-                      Exporter {stats.subscribers} emails (CSV)
-                    </a>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function LoadingSpinner() {
@@ -1677,6 +1321,8 @@ function AdvancedAnalyticsTab() {
   const [data, setData] = useState<{
     streamsByDay: Record<string, number>;
     downloadsByDay: Record<string, number>;
+    commentsByDay: Record<string, number>;
+    repostsByDay: Record<string, number>;
     topTracks: { id: string; title: string; coverPath?: string | null; streams: number; downloads: number; comments: number }[];
     followerGrowth: string[];
   } | null>(null);
@@ -1695,154 +1341,167 @@ function AdvancedAnalyticsTab() {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-violet" /></div>;
   if (!data) return <div className="text-cream/40 text-center py-12">Aucune donnée disponible.</div>;
 
+  // Build last 30 days array
   const days = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(Date.now() - (29 - i) * 86400000);
     return d.toISOString().slice(0, 10);
   });
-  const maxStreams = Math.max(...days.map((d) => data.streamsByDay[d] ?? 0), 1);
+
+  const streamsData = days.map((day) => ({ date: day.slice(5), value: data.streamsByDay[day] ?? 0 }));
+  const downloadsData = days.map((day) => ({ date: day.slice(5), value: data.downloadsByDay[day] ?? 0 }));
+  const commentsData = days.map((day) => ({ date: day.slice(5), value: (data.commentsByDay ?? {})[day] ?? 0 }));
+
+  const totalStreams = streamsData.reduce((s, d) => s + d.value, 0);
+  const totalDownloads = downloadsData.reduce((s, d) => s + d.value, 0);
+  const totalComments = commentsData.reduce((s, d) => s + d.value, 0);
+  const totalFollowers = data.followerGrowth.length;
+
+  // Follower growth by day
+  const followerByDay: Record<string, number> = {};
+  for (const d of data.followerGrowth) followerByDay[d] = (followerByDay[d] ?? 0) + 1;
+  const followersData = days.map((day) => ({ date: day.slice(5), value: followerByDay[day] ?? 0 }));
 
   return (
     <div className="space-y-6">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Streams (30j)", value: totalStreams, color: "text-violet-light" },
+          { label: "Downloads (30j)", value: totalDownloads, color: "text-green-400" },
+          { label: "Comments (30j)", value: totalComments, color: "text-blue-400" },
+          { label: "Nouveaux followers", value: totalFollowers, color: "text-orange-400" },
+        ].map((kpi) => (
+          <div key={kpi.label} className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
+            <p className="text-xs text-cream/40 mb-1">{kpi.label}</p>
+            <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Streams chart */}
       <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-4 w-4 text-violet" />
-          <p className="text-sm font-semibold text-cream">Streams — 30 derniers jours</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4 text-violet" />
+            <p className="text-sm font-semibold text-cream">Streams — 30 derniers jours</p>
+          </div>
+          <span className="text-xs text-violet-light font-mono">{totalStreams} total</span>
         </div>
-        <div className="flex items-end gap-0.5 h-24">
-          {days.map((day) => {
-            const v = data.streamsByDay[day] ?? 0;
-            const h = Math.max(4, (v / maxStreams) * 100);
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={streamsData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="streamGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#7b4cff" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#7b4cff" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} interval={6} />
+            <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: "#0d0d12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+              itemStyle={{ color: "#a78bfa" }}
+              labelStyle={{ color: "rgba(255,255,255,0.5)" }}
+            />
+            <Area type="monotone" dataKey="value" stroke="#7b4cff" strokeWidth={2} fill="url(#streamGrad)" name="Streams" dot={false} activeDot={{ r: 4, fill: "#7b4cff" }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Downloads chart */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-green-400" />
+            <p className="text-sm font-semibold text-cream">Downloads — 30 derniers jours</p>
+          </div>
+          <span className="text-xs text-green-400 font-mono">{totalDownloads} total</span>
+        </div>
+        <ResponsiveContainer width="100%" height={140}>
+          <AreaChart data={downloadsData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="dlGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#4ade80" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} interval={6} />
+            <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: "#0d0d12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+              itemStyle={{ color: "#4ade80" }}
+              labelStyle={{ color: "rgba(255,255,255,0.5)" }}
+            />
+            <Area type="monotone" dataKey="value" stroke="#4ade80" strokeWidth={2} fill="url(#dlGrad)" name="Downloads" dot={false} activeDot={{ r: 4, fill: "#4ade80" }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Followers growth chart */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-orange-400" />
+            <p className="text-sm font-semibold text-cream">Nouveaux followers — 30 derniers jours</p>
+          </div>
+          <span className="text-xs text-orange-400 font-mono">+{totalFollowers}</span>
+        </div>
+        <ResponsiveContainer width="100%" height={120}>
+          <BarChart data={followersData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} interval={6} />
+            <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: "#0d0d12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+              itemStyle={{ color: "#fb923c" }}
+              labelStyle={{ color: "rgba(255,255,255,0.5)" }}
+            />
+            <Bar dataKey="value" fill="#fb923c" radius={[2, 2, 0, 0]} name="Followers" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Top tracks */}
+      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+        <p className="text-sm font-semibold text-cream flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-yellow-400" /> Top Tracks
+        </p>
+        <div className="space-y-2">
+          {data.topTracks.length === 0 && (
+            <p className="text-sm text-cream/30 py-4 text-center">Aucun stream enregistré pour le moment.</p>
+          )}
+          {data.topTracks.slice(0, 10).map((track, i) => {
+            const maxVal = Math.max(...data.topTracks.map((t) => t.streams), 1);
+            const pct = (track.streams / maxVal) * 100;
             return (
-              <div key={day} className="flex-1 relative group">
-                <div className="w-full rounded-sm bg-violet/60 hover:bg-violet transition-colors" style={{ height: `${h}%` }} />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:flex flex-col items-center z-10">
-                  <div className="rounded-[6px] bg-surface2 border border-[rgba(255,255,255,0.12)] px-2 py-1 text-[10px] text-cream whitespace-nowrap">{day.slice(5)}: {v}</div>
+              <div key={track.id} className="flex items-center gap-3 py-1.5">
+                <span className="text-xs font-bold text-cream/25 w-5 shrink-0">#{i + 1}</span>
+                <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-surface2">
+                  {track.coverPath ? (
+                    <img src={track.coverPath} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Disc3 className="h-4 w-4 text-violet/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-cream truncate">{track.title}</p>
+                  <div className="mt-1 h-1 w-full rounded-full bg-surface2 overflow-hidden">
+                    <div className="h-full rounded-full bg-violet transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+                <div className="flex gap-4 text-xs text-cream/40 shrink-0">
+                  <span className="font-mono">{track.streams} streams</span>
+                  <span className="font-mono">{track.downloads} DL</span>
+                  <span className="font-mono">{track.comments} cmts</span>
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="flex justify-between text-[10px] text-cream/30">
-          <span>{days[0]?.slice(5)}</span><span>Aujourd'hui</span>
-        </div>
       </div>
-
-      {/* Downloads chart */}
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-green-400" />
-          <p className="text-sm font-semibold text-cream">Downloads — 30 derniers jours</p>
-        </div>
-        <div className="flex items-end gap-0.5 h-20">
-          {days.map((day) => {
-            const v = data.downloadsByDay[day] ?? 0;
-            const maxDl = Math.max(...days.map((d) => data.downloadsByDay[d] ?? 0), 1);
-            const h = Math.max(4, (v / maxDl) * 100);
-            return (
-              <div key={day} className="flex-1">
-                <div className="w-full rounded-sm bg-green-400/60 hover:bg-green-400 transition-colors" style={{ height: `${h}%` }} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Top tracks */}
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
-        <p className="text-sm font-semibold text-cream">Top Tracks</p>
-        <div className="space-y-2">
-          {data.topTracks.slice(0, 5).map((track, i) => (
-            <div key={track.id} className="flex items-center gap-3">
-              <span className="text-sm font-bold text-cream/30 w-4">#{i + 1}</span>
-              <p className="flex-1 text-sm text-cream truncate">{track.title}</p>
-              <div className="flex gap-3 text-xs text-cream/50">
-                <span>{track.streams} streams</span>
-                <span>{track.downloads} DL</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Follower growth */}
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5">
-        <p className="text-sm font-semibold text-cream mb-2">Nouveaux followers (30j)</p>
-        <p className="text-3xl font-bold text-violet">{data.followerGrowth.length}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Broadcasts Tab ────────────────────────────────────────────────────────────
-
-function BroadcastsTab() {
-  const [broadcasts, setBroadcasts] = useState<{ id: string; title: string; body: string; createdAt: string; _count: { recipients: number } }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ title: "", message: "" });
-  const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch(`${API}/artists/me/broadcasts`, { credentials: "include" });
-        if (res.ok) setBroadcasts(await res.json() as typeof broadcasts);
-      } catch {}
-      setLoading(false);
-    })();
-  }, []);
-
-  const send = async () => {
-    if (!form.title.trim() || !form.message.trim()) { toast.error("Titre et message requis"); return; }
-    setSending(true);
-    try {
-      const res = await fetch(`${API}/artists/me/broadcasts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ title: form.title, message: form.message })
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json() as { id: string; title: string; body: string; createdAt: string; recipientCount: number; _count: { recipients: number } };
-      setBroadcasts((prev) => [{ ...data, _count: { recipients: data.recipientCount ?? 0 } }, ...prev]);
-      setForm({ title: "", message: "" });
-      toast.success(`Broadcast envoyé à ${(data.recipientCount ?? 0)} abonné(s) !`);
-    } catch { toast.error("Erreur lors de l'envoi"); }
-    setSending(false);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-4">
-        <p className="text-sm font-semibold text-cream flex items-center gap-2"><Bell className="h-4 w-4 text-violet" /> Nouvelle annonce</p>
-        <Input placeholder="Titre de l'annonce" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <textarea
-          rows={4}
-          placeholder="Message pour vos fans…"
-          value={form.message}
-          onChange={(e) => setForm({ ...form, message: e.target.value })}
-          className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream placeholder-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50 resize-none"
-        />
-        <Button onClick={() => void send()} disabled={sending} className="gap-2">
-          <Send className="h-3.5 w-3.5" />{sending ? "Envoi…" : "Envoyer à tous les abonnés"}
-        </Button>
-      </div>
-
-      {loading ? <Loader2 className="h-5 w-5 animate-spin text-violet mx-auto" /> : (
-        <div className="space-y-2">
-          {broadcasts.map((b) => (
-            <div key={b.id} className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="text-sm font-medium text-cream">{b.title}</p>
-                <span className="text-xs text-cream/40">{b._count.recipients} destinataires</span>
-              </div>
-              <p className="text-xs text-cream/60 line-clamp-2">{b.body}</p>
-              <p className="text-[10px] text-cream/30 mt-1">{new Date(b.createdAt).toLocaleDateString("fr-BE")}</p>
-            </div>
-          ))}
-          {broadcasts.length === 0 && <p className="text-sm text-cream/30 text-center py-8">Aucun broadcast envoyé.</p>}
-        </div>
-      )}
     </div>
   );
 }
@@ -1857,7 +1516,7 @@ function PrivateLinksTab() {
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch(`${API}/releases`, { credentials: "include" });
+      const res = await fetch(`${API}/releases/mine`, { credentials: "include" });
       if (res.ok) setReleases(await res.json() as typeof releases);
     })();
   }, []);
@@ -1996,7 +1655,7 @@ function ApiKeysTab() {
         </div>
         {newKey && (
           <div className="rounded-[10px] bg-violet/10 border border-violet/30 p-3 space-y-2">
-            <p className="text-xs text-cream/70 font-medium">⚠️ Copie cette clé maintenant — elle ne sera plus visible.</p>
+            <p className="text-xs text-cream/70 font-medium">Copie cette clé maintenant — elle ne sera plus visible.</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs font-mono text-cream bg-black/40 rounded px-2 py-1 truncate">{newKey}</code>
               <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(newKey); toast.success("Copié !"); }} className="gap-1 shrink-0"><Copy className="h-3 w-3" /></Button>
@@ -2057,10 +1716,8 @@ export default function ArtistDashboard() {
     revenue: <RevenueTab />,
     releases: <ReleasesTab />,
     analytics: <AdvancedAnalyticsTab />,
-    broadcasts: <BroadcastsTab />,
     "private-links": <PrivateLinksTab />,
-    "api-keys": <ApiKeysTab />,
-    "engage-campaigns": <EngageCampaignsTab />
+    "api-keys": <ApiKeysTab />
   };
 
   return (

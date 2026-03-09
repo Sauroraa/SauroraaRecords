@@ -175,6 +175,26 @@ export class ReleasesController {
       .slice(0, 8);
   }
 
+  // ─── My releases (authenticated artist only) ─────────────────────────────────
+
+  @Get("mine")
+  @UseGuards(JwtAuthGuard)
+  async mine(@Req() req: Request & { user?: { userId: string } }) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { userId: req.user!.userId }
+    });
+    if (!artist) return [];
+
+    return this.prisma.release.findMany({
+      where: { artistId: artist.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        ...ARTIST_INCLUDE,
+        _count: { select: { downloadSessions: true, comments: true, streamEvents: true } }
+      }
+    });
+  }
+
   // ─── List ────────────────────────────────────────────────────────────────────
 
   @Get()

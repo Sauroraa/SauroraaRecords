@@ -66,14 +66,14 @@ export default function CgvPage() {
         <p>L'utilisateur peut résilier son abonnement à tout moment :</p>
         <ul className="list-disc pl-5 mt-2 space-y-1">
           <li>Via son tableau de bord → onglet "Abonnement" → bouton "Résilier".</li>
-          <li>Par email à <strong className="text-cream">contact@sauroraa.be</strong>.</li>
+          <li>Par email à <strong className="text-cream">contact@sauroraarecords.be</strong>.</li>
         </ul>
         <p className="mt-2">Aucun remboursement proratisé n'est accordé pour la période en cours. L'accès aux fonctionnalités premium reste actif jusqu'à la fin de la période facturée.</p>
       </Article>
 
       <Article title="Article 6 — Remboursements">
         <p>Les contenus numériques (releases, dubpacks) téléchargés ou accessibles ne sont pas remboursables, conformément à l'article VI.53 du Code de droit économique belge relatif aux exceptions au droit de rétractation pour les contenus numériques.</p>
-        <p className="mt-2">En cas d'erreur technique avérée ou de contenu non conforme, le client peut contacter <strong className="text-cream">contact@sauroraa.be</strong> dans un délai de 14 jours.</p>
+        <p className="mt-2">En cas d'erreur technique avérée ou de contenu non conforme, le client peut contacter <strong className="text-cream">contact@sauroraarecords.be</strong> dans un délai de 14 jours.</p>
       </Article>
 
       <Article title="Article 7 — Facturation">
