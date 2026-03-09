@@ -36,17 +36,20 @@ function getStripe() {
 }
 
 function getPriceId(plan: SubscriptionPlan): string | null {
+  const isValid = (v: string | undefined) =>
+    !!v && v.startsWith("price_") && v !== "price_xxx";
+
   switch (plan) {
     case SubscriptionPlan.ARTIST_FREE:
       return null;
     case SubscriptionPlan.ARTIST_BASIC:
-      return process.env.STRIPE_PRICE_ARTIST_BASIC || "";
+      return isValid(process.env.STRIPE_PRICE_ARTIST_BASIC) ? process.env.STRIPE_PRICE_ARTIST_BASIC! : null;
     case SubscriptionPlan.ARTIST_PRO:
-      return process.env.STRIPE_PRICE_ARTIST_PRO || "";
+      return isValid(process.env.STRIPE_PRICE_ARTIST_PRO) ? process.env.STRIPE_PRICE_ARTIST_PRO! : null;
     case SubscriptionPlan.AGENCY_START:
-      return process.env.STRIPE_PRICE_AGENCY_START || "";
+      return isValid(process.env.STRIPE_PRICE_AGENCY_START) ? process.env.STRIPE_PRICE_AGENCY_START! : null;
     case SubscriptionPlan.AGENCY_PRO:
-      return process.env.STRIPE_PRICE_AGENCY_PRO || "";
+      return isValid(process.env.STRIPE_PRICE_AGENCY_PRO) ? process.env.STRIPE_PRICE_AGENCY_PRO! : null;
   }
 }
 

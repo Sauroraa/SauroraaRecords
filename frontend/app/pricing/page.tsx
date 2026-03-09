@@ -51,6 +51,9 @@ export default function PricingPage() {
         body: JSON.stringify({ plan: key })
       });
       if (!res.ok) {
+        if (res.status === 503) {
+          throw new Error("Les paiements ne sont pas encore activés. Contactez l'administrateur.");
+        }
         const body = await res.json().catch(() => ({})) as { message?: string };
         throw new Error(body.message ?? "Une erreur est survenue.");
       }
