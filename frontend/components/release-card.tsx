@@ -150,6 +150,9 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
               {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
             </Badge>
             {genreLabel && <Badge variant="gray">{genreLabel}</Badge>}
+            {release.artist?.agencyLinks && release.artist.agencyLinks.length > 0 && (
+              <Badge variant="gray" className="!bg-amber-500/20 !text-amber-300 !border-amber-500/30">Agency</Badge>
+            )}
             {release.exclusiveFollowersOnly && <Badge variant="exclusive">Exclusive</Badge>}
           </div>
         </div>

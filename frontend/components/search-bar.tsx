@@ -29,7 +29,7 @@ type SearchResults = {
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function SearchBar() {
+export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" }: { className?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -93,7 +93,7 @@ export function SearchBar() {
   const showDropdown = open && query.trim().length > 0;
 
   return (
-    <div ref={containerRef} className="relative hidden md:block w-56 lg:w-72">
+    <div ref={containerRef} className={className}>
       {/* Input */}
       <div className="relative flex items-center">
         <Search className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-cream/35" />

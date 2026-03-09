@@ -7,6 +7,16 @@ import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
 
+function slugifyArtist(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40) || "artist";
+}
+
 class UpdateArtistDto {
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() bio?: string;
@@ -49,6 +59,29 @@ export class ArtistsController {
         _count: { select: { followers: true } }
       }
     });
+  }
+
+  // ─── Admin: backfill slugs for existing artists ──────────────────────────────
+  @Post("admin/backfill-slugs")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async backfillSlugs() {
+    const artists = await this.prisma.artist.findMany({ where: { slug: null } });
+    let updated = 0;
+    for (const artist of artists) {
+      if (!artist.displayName) continue;
+      const base = slugifyArtist(artist.displayName);
+      let slug = base;
+      let attempt = 0;
+      while (true) {
+        const existing = await this.prisma.artist.findUnique({ where: { slug } });
+        if (!existing || existing.id === artist.id) break;
+        slug = `${base}-${++attempt}`;
+      }
+      await this.prisma.artist.update({ where: { id: artist.id }, data: { slug } });
+      updated++;
+    }
+    return { updated };
   }
 
   @Get("me")
@@ -164,10 +197,11 @@ export class ArtistsController {
     };
   }
 
-  @Get(":id")
-  async one(@Param("id") id: string) {
-    const artist = await this.prisma.artist.findUnique({
-      where: { id },
+  @Get(":idOrSlug")
+  async one(@Param("idOrSlug") idOrSlug: string) {
+    // Accept both UUID id and slug
+    const artist = await this.prisma.artist.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
       include: ARTIST_FULL_INCLUDE
     });
     if (!artist) throw new NotFoundException("Artist not found");
@@ -181,10 +215,24 @@ export class ArtistsController {
     @Req() req: Request & { user?: { userId: string } },
     @Body() dto: UpdateArtistDto
   ) {
+    // Auto-generate unique slug from displayName if provided
+    let slugData: { slug?: string } = {};
+    if (dto.displayName) {
+      const base = slugifyArtist(dto.displayName);
+      let slug = base;
+      let attempt = 0;
+      while (true) {
+        const existing = await this.prisma.artist.findUnique({ where: { slug } });
+        if (!existing || existing.userId === req.user!.userId) break;
+        slug = `${base}-${++attempt}`;
+      }
+      slugData = { slug };
+    }
+
     return this.prisma.artist.upsert({
       where: { userId: req.user!.userId },
-      create: { userId: req.user!.userId, ...dto },
-      update: dto,
+      create: { userId: req.user!.userId, ...dto, ...slugData },
+      update: { ...dto, ...slugData },
       include: ARTIST_FULL_INCLUDE
     });
   }

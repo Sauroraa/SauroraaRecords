@@ -310,6 +310,7 @@ model PasswordResetToken {
 model Artist {
   id            String    @id @default(cuid())
   userId        String    @unique
+  slug          String?   @unique
   displayName   String?
   bio           String?   @db.Text
   avatar        String?

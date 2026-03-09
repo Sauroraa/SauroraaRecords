@@ -22,16 +22,14 @@ export const metadata: Metadata = {
   description:
     "Sauroraa Records est le label musical indépendant belge qui propulse les artistes émergents. Découvrez les releases exclusives, dubpacks et classements d'artistes.",
   keywords: [
-    "Sauroraa Records",
-    "label musical",
-    "musique indépendante",
-    "artistes émergents",
-    "dubpack",
-    "releases musicales",
-    "téléchargement gratuit",
-    "Belgique",
-    "EDM",
-    "electronic music"
+    "Sauroraa Records", "Sauroraa", "sauroraarecords", "sauroraa music",
+    "sauroraa records belgique", "sauroraa records be",
+    "label musical belge", "label musical indépendant",
+    "musique indépendante belgique", "artistes émergents",
+    "dubpack", "releases musicales", "téléchargement gratuit musique",
+    "free music download belgium", "EDM Belgium", "Drum and Bass Belgium",
+    "DNB Belgium", "trap music belgium", "electronic music label belgium",
+    "independent music label", "music platform", "NXW", "LØWEX"
   ],
   authors: [{ name: "Sauroraa Records", url: BASE_URL }],
   creator: "Sauroraa Records",

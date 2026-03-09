@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Star, Building2 } from "lucide-react";
+import { BadgeCheck, Star, Building2, Shield } from "lucide-react";
 import type { ArtistProfile } from "@/lib/types";
 
 interface ArtistBadgesProps {
@@ -54,7 +54,9 @@ export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
     });
   }
 
-  if (badges.length === 0) return null;
+  const isStaff = (artist as any).isStaff || (artist as any).user?.role === "STAFF";
+
+  if (badges.length === 0 && !isStaff) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -67,6 +69,11 @@ export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
           {b.label}
         </span>
       ))}
+      {isStaff && (
+        <span className={`inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 font-medium ${textSize} ${px} text-red-300`}>
+          <Shield size={iconSize} /> Staff
+        </span>
+      )}
     </div>
   );
 }

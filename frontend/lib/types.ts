@@ -1,5 +1,6 @@
 export type ArtistProfile = {
   id: string;
+  slug?: string | null;
   displayName: string | null;
   bio: string | null;
   avatar: string | null;

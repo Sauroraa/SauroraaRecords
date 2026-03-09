@@ -1,3 +1,7 @@
+export function artistUrl(artist: { id: string; slug?: string | null }): string {
+  return `/artist/${artist.slug ?? artist.id}`;
+}
+
 import type {
   ReleaseItem,
   DubpackItem,

@@ -21,11 +21,17 @@ export default function CatalogPage() {
     queryFn: fetchReleases
   });
 
+  const sorted = [...releases].sort((a, b) => {
+    const aAgency = (a.artist?.agencyLinks?.length ?? 0) > 0 ? 1 : 0;
+    const bAgency = (b.artist?.agencyLinks?.length ?? 0) > 0 ? 1 : 0;
+    return bAgency - aAgency; // agency first
+  });
+
   const genres = Array.from(
-    new Set(releases.map((r) => r.genre).filter((genre): genre is string => Boolean(genre)))
+    new Set(sorted.map((r) => r.genre).filter((genre): genre is string => Boolean(genre)))
   );
 
-  const filtered = releases.filter((r) => {
+  const filtered = sorted.filter((r) => {
     if (filter === "FREE" && r.type !== "FREE") return false;
     if (filter === "PAID" && r.type !== "PAID") return false;
     if (genreFilter !== "ALL" && r.genre !== genreFilter) return false;

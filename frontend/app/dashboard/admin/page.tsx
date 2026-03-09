@@ -293,6 +293,17 @@ function UsersTab() {
               >
                 {u.role}
               </Badge>
+              <button
+                onClick={() => void changeRole(u.id, u.role === "STAFF" ? "CLIENT" : "STAFF")}
+                title={u.role === "STAFF" ? "Révoquer Staff" : "Accorder Staff"}
+                className={`rounded-[6px] border px-2 py-1 text-xs font-medium transition-colors ${
+                  u.role === "STAFF"
+                    ? "border-red-500/40 bg-red-500/15 text-red-300 hover:bg-red-500/25"
+                    : "border-[rgba(255,255,255,0.12)] bg-surface2 text-cream/50 hover:text-cream hover:border-red-500/30"
+                }`}
+              >
+                {u.role === "STAFF" ? "- Staff" : "+ Staff"}
+              </button>
               <select
                 value={u.role}
                 onChange={(e) => void changeRole(u.id, e.target.value)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, ShoppingBag, LogOut, LayoutDashboard, User, Settings, ChevronDown, Music, Trophy, CreditCard } from "lucide-react";
+import { Bell, ShoppingBag, LogOut, LayoutDashboard, User, Settings, ChevronDown, Music, Trophy, CreditCard, Menu, X as XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -163,6 +163,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const { unreadCount, fetchUnread } = useNotificationsStore();
   const { locale, setLocale, t } = useLanguage();
   const [meLoaded, setMeLoaded] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -239,7 +240,8 @@ export function SiteShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <SearchBar />
+          {/* Desktop search only */}
+          <div className="hidden md:block"><SearchBar className="relative w-full" /></div>
 
           {/* Right section */}
           <div className="flex items-center gap-2">
@@ -288,24 +290,95 @@ export function SiteShell({ children }: { children: ReactNode }) {
                 onLogout={() => void handleLogout()}
               />
             ) : (
-              <div className="flex items-center gap-2 pl-2 border-l border-[rgba(255,255,255,0.08)]">
-                <Link
-                  href="/login"
-                  className="px-3 py-2 text-sm text-cream/55 hover:text-cream/85 transition-colors"
-                >
+              <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-[rgba(255,255,255,0.08)]">
+                <Link href="/login" className="px-3 py-2 text-sm text-cream/55 hover:text-cream/85 transition-colors">
                   {t.nav.login}
                 </Link>
-                <Link
-                  href="/register"
-                  className="rounded-sm bg-violet px-4 py-2 text-sm font-medium text-white hover:bg-violet-hover transition-colors"
-                >
+                <Link href="/register" className="rounded-sm bg-violet px-4 py-2 text-sm font-medium text-white hover:bg-violet-hover transition-colors">
                   {t.nav.register}
                 </Link>
               </div>
             )}
+
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(v => !v)}
+              className="md:hidden p-2 text-cream/60 hover:text-cream transition-colors"
+              aria-label="Menu"
+            >
+              {mobileOpen ? <XIcon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Mobile slide-down menu */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              key="mobile-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-20 bg-black/60 md:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.div
+              key="mobile-menu"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="fixed left-0 right-0 top-[61px] z-20 border-b border-[rgba(255,255,255,0.08)] bg-bg/98 backdrop-blur-xl md:hidden"
+            >
+              {/* Search on mobile */}
+              <div className="px-4 pt-3 pb-2">
+                <SearchBar className="relative w-full" />
+              </div>
+
+              {/* Nav items */}
+              <nav className="px-4 pb-3 space-y-0.5">
+                {navItems.map(item => {
+                  const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive ? "bg-violet/15 text-cream" : "text-cream/60 hover:bg-white/5 hover:text-cream"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Language + auth on mobile */}
+              <div className="border-t border-[rgba(255,255,255,0.07)] px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-0.5 rounded-full border border-[rgba(255,255,255,0.1)] bg-surface px-1 py-0.5">
+                  {LOCALES.map(l => (
+                    <button key={l} onClick={() => setLocale(l)}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider transition-all ${
+                        locale === l ? "bg-violet text-white" : "text-cream/40 hover:text-cream/70"
+                      }`}>{l}</button>
+                  ))}
+                </div>
+                {!user && (
+                  <div className="flex gap-2">
+                    <Link href="/login" onClick={() => setMobileOpen(false)}
+                      className="px-3 py-1.5 text-sm text-cream/60 hover:text-cream transition-colors">{t.nav.login}</Link>
+                    <Link href="/register" onClick={() => setMobileOpen(false)}
+                      className="rounded-lg bg-violet px-4 py-1.5 text-sm font-medium text-white">{t.nav.register}</Link>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main — full width on home, padded elsewhere */}
       <motion.main

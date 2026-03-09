@@ -327,9 +327,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     <h1 className="text-3xl font-bold text-white md:text-4xl">{artistName}</h1>
                     <ArtistBadges artist={artist} />
                   </div>
-                  <p className="text-sm text-white/70">
-                    {agencies.length > 0 ? `Agence: ${agencies.join(" · ")}` : "Sauroraa Artist Profile"}
-                  </p>
+                  <p className="text-sm text-white/50">Sauroraa Records</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
