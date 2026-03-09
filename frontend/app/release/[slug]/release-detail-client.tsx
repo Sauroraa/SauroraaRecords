@@ -31,7 +31,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
     setTrack,
     setPlaying,
     requestSeekPercent,
-    src,
+    releaseId: activeReleaseId,
     playing,
     currentTime,
     duration
@@ -79,7 +79,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
     }
   };
 
-  const isActiveTrack = src === release.audioPath;
+  const isActiveTrack = activeReleaseId === release.id;
   const isCurrentlyPlaying = isActiveTrack && playing;
   const localProgress = isActiveTrack && duration > 0 ? (currentTime / duration) * 100 : 0;
 

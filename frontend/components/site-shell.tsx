@@ -1,10 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, ShoppingBag, LogOut, LayoutDashboard } from "lucide-react";
+import { Bell, ShoppingBag, LogOut, LayoutDashboard, User, Settings, ChevronDown, Music, Trophy, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useNotificationsStore } from "@/store/notifications-store";
@@ -16,6 +16,118 @@ import { SupportWidget } from "./support-widget";
 import { SearchBar } from "./search-bar";
 
 const LOCALES: Locale[] = ["fr", "en", "nl"];
+
+// ─── User Dropdown ────────────────────────────────────────────────────────────
+
+function UserDropdown({
+  user,
+  dashboardHref,
+  unreadCount,
+  onLogout,
+}: {
+  user: { email: string; role?: string };
+  dashboardHref: string;
+  unreadCount: number;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const username = user.email.split("@")[0];
+  const isArtist = user.role === "ARTIST";
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const menuItems = [
+    ...(isArtist ? [{ href: `/dashboard/artist`, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
+    { href: dashboardHref, label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+    { href: "/catalog", label: "Releases", icon: <Music className="h-4 w-4" /> },
+    { href: "/rankings", label: "Charts", icon: <Trophy className="h-4 w-4" /> },
+    { href: "/pricing", label: "Abonnement", icon: <CreditCard className="h-4 w-4" /> },
+    { href: `${dashboardHref}?tab=profil`, label: "Paramètres", icon: <Settings className="h-4 w-4" /> },
+  ];
+
+  return (
+    <div ref={ref} className="relative pl-2 border-l border-[rgba(255,255,255,0.08)]">
+      {/* Bell */}
+      <div className="flex items-center gap-1">
+        <Link
+          href="/dashboard"
+          className="relative p-2 text-cream/50 hover:text-cream/80 transition-colors"
+        >
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Avatar / name button */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-cream/70 hover:bg-white/5 hover:text-cream transition-colors"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-violet/30 text-[10px] font-bold text-violet-light">
+            {username.slice(0, 1).toUpperCase()}
+          </div>
+          <span className="hidden sm:inline text-xs font-medium">{username}</span>
+          <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0d0d12] shadow-2xl"
+          >
+            {/* Header */}
+            <div className="border-b border-[rgba(255,255,255,0.07)] px-4 py-3">
+              <p className="text-sm font-semibold text-cream">{username}</p>
+              <p className="text-xs text-cream/35 truncate">{user.email}</p>
+            </div>
+
+            {/* Links */}
+            <div className="py-1">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-cream/65 hover:bg-white/5 hover:text-cream transition-colors"
+                >
+                  <span className="text-cream/35">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Logout */}
+            <div className="border-t border-[rgba(255,255,255,0.07)] py-1">
+              <button
+                onClick={() => { setOpen(false); onLogout(); }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -143,42 +255,12 @@ export function SiteShell({ children }: { children: ReactNode }) {
             </button>
 
             {user ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="relative p-2 text-cream/50 hover:text-cream/80 transition-colors"
-                >
-                  <Bell className="h-5 w-5" />
-                  <AnimatePresence>
-                    {unreadCount > 0 && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white"
-                      >
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </Link>
-
-                <div className="flex items-center gap-1 pl-2 border-l border-[rgba(255,255,255,0.08)]">
-                  <Link
-                    href={dashboardHref}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-cream/60 hover:text-cream transition-colors"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span className="hidden sm:inline text-xs">{user.email.split("@")[0]}</span>
-                  </Link>
-                  <button
-                    onClick={() => void handleLogout()}
-                    className="p-2 text-cream/40 hover:text-cream/70 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </div>
-              </>
+              <UserDropdown
+                user={user}
+                dashboardHref={dashboardHref}
+                unreadCount={unreadCount}
+                onLogout={() => void handleLogout()}
+              />
             ) : (
               <div className="flex items-center gap-2 pl-2 border-l border-[rgba(255,255,255,0.08)]">
                 <Link

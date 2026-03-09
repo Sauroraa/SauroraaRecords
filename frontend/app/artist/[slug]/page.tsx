@@ -121,7 +121,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const { user } = useAuthStore();
-  const { setTrack, setPlaying, src, playing, currentTime, duration, requestSeekPercent } = usePlayerStore();
+  const { setTrack, setPlaying, releaseId: activeReleaseId, playing, currentTime, duration, requestSeekPercent } = usePlayerStore();
 
   const { data: artist, isLoading: artistLoading } = useQuery({
     queryKey: ["artist", artistId],
@@ -326,7 +326,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               )}
 
               {visibleReleases.map((release, index) => {
-                const isActive = src === release.audioPath;
+                const isActive = activeReleaseId === release.id;
                 const isPlayingNow = isActive && playing;
                 const progress = isActive && duration > 0 ? (currentTime / duration) * 100 : 0;
                 const waves = waveForTrack(`${release.id}:${release.title}`);
@@ -348,7 +348,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                               artist: artistName,
                               src: release.audioPath,
                               coverPath: release.coverPath ?? null,
-                              releaseId: release.id
+                              releaseId: release.id,
+                              releaseSlug: release.slug,
                             });
                             setPlaying(true);
                           }
@@ -360,13 +361,19 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <Link href={`/release/${release.slug}`} className="block truncate text-sm font-semibold text-cream hover:text-violet-light transition-colors">
-                              {release.title}
-                            </Link>
-                            <p className="text-xs text-cream/45">{formatDate(release.createdAt)}</p>
+                          {/* Cover thumbnail */}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {release.coverPath && (
+                              <Image src={release.coverPath} alt={release.title} width={40} height={40} className="rounded-md object-cover shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <Link href={`/release/${release.slug}`} className="block truncate text-sm font-semibold text-cream hover:text-violet-light transition-colors">
+                                {release.title}
+                              </Link>
+                              <p className="text-xs text-cream/45">{formatDate(release.createdAt)}</p>
+                            </div>
                           </div>
-                          <div className="text-xs text-cream/45">
+                          <div className="text-xs text-cream/45 shrink-0">
                             {release.type === "FREE" ? "Free download" : `EUR ${Number(release.price).toFixed(2)}`}
                           </div>
                         </div>
@@ -381,7 +388,9 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                                 title: release.title,
                                 artist: artistName,
                                 src: release.audioPath,
-                                coverPath: release.coverPath ?? null
+                                coverPath: release.coverPath ?? null,
+                                releaseId: release.id,
+                                releaseSlug: release.slug,
                               });
                               setPlaying(true);
                             }

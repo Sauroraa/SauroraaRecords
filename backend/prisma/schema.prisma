@@ -30,6 +30,12 @@ enum ReleaseType {
   PAID
 }
 
+enum ReleaseVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
 enum ReleaseFileType {
   MASTER
   HLS_FULL_PLAYLIST
@@ -397,6 +403,7 @@ model Release {
   previewClip            String?
   coverPath              String?
   published              Boolean     @default(false)
+  visibility             ReleaseVisibility @default(PUBLIC)
   exclusiveFollowersOnly Boolean     @default(false)
   releaseDate            DateTime?
   bpm                    Int?

@@ -71,9 +71,17 @@ export class SearchService {
           { mood: { contains: q } }
         ]
       },
-      include: {
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        coverPath: true,
+        genre: true,
+        type: true,
+        price: true,
+        bpm: true,
         artist: {
-          select: { id: true, displayName: true, avatar: true, slug: true } as never
+          select: { id: true, displayName: true, avatar: true }
         }
       },
       take: Math.min(Math.max(limit, 1), 50),

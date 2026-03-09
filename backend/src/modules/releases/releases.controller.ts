@@ -3,6 +3,8 @@ import {
   Post, Query, Req, UseGuards
 } from "@nestjs/common";
 import { PrivateLinkScope, ReleaseType, UserRole } from "@prisma/client";
+
+type ReleaseVisibility = "PUBLIC" | "UNLISTED" | "PRIVATE";
 import crypto from "crypto";
 import { IsBoolean, IsEnum, IsIn, IsNumberString, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
@@ -86,6 +88,7 @@ class CreateReleaseDto {
   @IsOptional() @IsBoolean() gateInstagram?: boolean;
   @IsOptional() @IsBoolean() gateSoundcloud?: boolean;
   @IsOptional() @IsBoolean() gateDiscord?: boolean;
+  @IsOptional() @IsIn(["PUBLIC", "UNLISTED", "PRIVATE"]) visibility?: ReleaseVisibility;
 }
 
 class UpdateReleaseDto {
@@ -102,6 +105,8 @@ class UpdateReleaseDto {
   @IsOptional() @IsNumberString() energy?: string;
   @IsOptional() @IsString() earlyAccessAt?: string;
   @IsOptional() @IsNumberString() previewDuration?: string;
+  @IsOptional() @IsIn(["PUBLIC", "UNLISTED", "PRIVATE"]) visibility?: ReleaseVisibility;
+  @IsOptional() @IsString() coverPath?: string;
 }
 
 class UpdateGateDto {
@@ -207,8 +212,14 @@ export class ReleasesController {
     if (admin === "true" && isAdmin) return this.listAll();
     const normalizedGenre = normalizeGenre(genre);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {
+      published: true,
+      visibility: { not: "PRIVATE" },
+      ...(normalizedGenre ? { genre: normalizedGenre } : {})
+    };
     return this.prisma.release.findMany({
-      where: { published: true, ...(normalizedGenre ? { genre: normalizedGenre } : {}) },
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         ...ARTIST_INCLUDE,
@@ -375,7 +386,8 @@ export class ReleasesController {
         earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : null,
         exclusiveFollowersOnly: dto.exclusiveFollowersOnly ?? false,
         releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : undefined,
-        published: true, // auto-publish; moderation handles takedowns
+        published: true,
+        visibility: dto.visibility ?? "PUBLIC",
         gateEnabled: dto.gateEnabled ?? false,
         gateFollowArtist: dto.gateFollowArtist ?? false,
         gateEmail: dto.gateEmail ?? false,
@@ -417,7 +429,9 @@ export class ReleasesController {
         tags: dto.tags ? dto.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined,
         mood: dto.mood,
         energy: dto.energy ? Number(dto.energy) : undefined,
-        earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : undefined
+        earlyAccessAt: dto.earlyAccessAt ? new Date(dto.earlyAccessAt) : undefined,
+        ...(dto.visibility ? { visibility: dto.visibility } : {}),
+        ...(dto.coverPath ? { coverPath: dto.coverPath } : {})
       }
     });
   }

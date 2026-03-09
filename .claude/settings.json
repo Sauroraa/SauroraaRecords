@@ -14,7 +14,8 @@
       "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/.env\")",
       "Bash(test -f \"f:/Sauroraa 2k26/Sites/SauroraaRecords/backend/.env\")",
       "Bash(python3 -c \":*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(grep -n \"isActiveTrack\\\\|isActive\\\\b\\\\|src === release\" frontend/app/release/[slug]/release-detail-client.tsx frontend/app/artist/[slug]/page.tsx)"
     ],
     "additionalDirectories": [
       "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite"

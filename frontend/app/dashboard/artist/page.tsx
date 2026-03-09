@@ -32,7 +32,8 @@ import {
   Send,
   Package,
   Trophy,
-  Users
+  Users,
+  Pencil
 } from "lucide-react";
 import {
   AreaChart,
@@ -587,7 +588,8 @@ function UploadReleaseTab() {
     previewClip: "",
     bpm: "",
     musicalKey: "",
-    previewDuration: "30"
+    previewDuration: "30",
+    visibility: "PUBLIC"
   });
   const [gate, setGate] = useState({
     gateEnabled: false,
@@ -698,12 +700,13 @@ function UploadReleaseTab() {
           bpm: form.bpm || undefined,
           musicalKey: form.musicalKey || undefined,
           previewDuration: form.previewDuration || "30",
+          visibility: form.visibility,
           ...(form.type === "FREE" && gate.gateEnabled ? gate : {})
         })
       });
       if (!res.ok) throw new Error("Failed to create release");
       toast.success("Release publiée automatiquement !");
-      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "", bpm: "", musicalKey: "", previewDuration: "30" });
+      setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "", bpm: "", musicalKey: "", previewDuration: "30", visibility: "PUBLIC" });
       setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
       setAudioFile(null);
       setCoverFile(null);
@@ -775,6 +778,14 @@ function UploadReleaseTab() {
               <option key={`${note}m`} value={`${note}m`}>{note} minor</option>,
               <option key={note} value={note}>{note} major</option>
             ])}
+          </Select>
+        </div>
+        <div className="space-y-1.5 col-span-2">
+          <label className="text-xs font-medium text-cream/60">Visibilité</label>
+          <Select value={form.visibility} onChange={(e) => setForm({ ...form, visibility: e.target.value })}>
+            <option value="PUBLIC">🌍 Public — visible dans le catalogue</option>
+            <option value="UNLISTED">🔗 Non répertorié — accessible via lien uniquement</option>
+            <option value="PRIVATE">🔒 Privé — toi seul peux le voir</option>
           </Select>
         </div>
         {form.type === "PAID" && (
@@ -1201,6 +1212,8 @@ function ReleasesTab() {
   const [dubpacks, setDubpacks] = useState<DubpackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"releases" | "dubpacks">("releases");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", genre: "ELECTRO", bpm: "", musicalKey: "", visibility: "PUBLIC" });
 
   useEffect(() => {
     void (async () => {
@@ -1240,6 +1253,25 @@ function ReleasesTab() {
     toast.success("Deleted");
   };
 
+  const saveEdit = async (id: string) => {
+    await fetch(`${API}/releases/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        title: editForm.title || undefined,
+        description: editForm.description || undefined,
+        genre: editForm.genre || undefined,
+        bpm: editForm.bpm || undefined,
+        musicalKey: editForm.musicalKey || undefined,
+        visibility: editForm.visibility || undefined,
+      })
+    });
+    setReleases(prev => prev.map(r => r.id === id ? { ...r, title: editForm.title || r.title } : r));
+    setEditingId(null);
+    toast.success("Release mise à jour !");
+  };
+
   if (loading) return <LoadingSpinner />;
 
   const items = view === "releases" ? releases : dubpacks;
@@ -1268,35 +1300,104 @@ function ReleasesTab() {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5 gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-cream truncate">{item.title}</p>
-                <div className="flex gap-2 mt-0.5">
-                  <span className={`text-xs ${item.published ? "text-violet-light" : "text-cream/30"}`}>
-                    {item.published ? "Published" : "Draft"}
-                  </span>
-                  <span className="text-xs text-cream/30">·</span>
-                  <span className="text-xs text-cream/40">{item.type}</span>
+            <div key={item.id}>
+              <div className="flex items-center justify-between rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-3.5 gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-cream truncate">{item.title}</p>
+                  <div className="flex gap-2 mt-0.5">
+                    <span className={`text-xs ${item.published ? "text-violet-light" : "text-cream/30"}`}>
+                      {item.published ? "Published" : "Draft"}
+                    </span>
+                    <span className="text-xs text-cream/30">·</span>
+                    <span className="text-xs text-cream/40">{item.type}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {view === "releases" && (
+                    <button
+                      onClick={() => {
+                        if (editingId === item.id) { setEditingId(null); return; }
+                        const r = item as ReleaseItem & { bpm?: number | null; musicalKey?: string | null; description?: string | null; visibility?: string };
+                        setEditForm({
+                          title: r.title,
+                          description: r.description ?? "",
+                          genre: r.genre ?? "ELECTRO",
+                          bpm: r.bpm ? String(r.bpm) : "",
+                          musicalKey: r.musicalKey ?? "",
+                          visibility: r.visibility ?? "PUBLIC",
+                        });
+                        setEditingId(item.id);
+                      }}
+                      className={`p-1.5 rounded transition-colors ${editingId === item.id ? "text-violet-light" : "text-cream/30 hover:text-cream/60"}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void togglePublish(item.id, view === "releases" ? "release" : "dubpack", item.published ?? false)}
+                    className="h-8 px-2"
+                  >
+                    {item.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void deleteItem(item.id, view === "releases" ? "release" : "dubpack")}
+                    className="h-8 px-2 text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void togglePublish(item.id, view === "releases" ? "release" : "dubpack", item.published ?? false)}
-                  className="h-8 px-2"
-                >
-                  {item.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void deleteItem(item.id, view === "releases" ? "release" : "dubpack")}
-                  className="h-8 px-2 text-red-400 hover:text-red-300"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {editingId === item.id && (
+                <div className="mt-3 rounded-[12px] border border-violet/20 bg-black/20 p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-xs text-cream/50">Titre</label>
+                      <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-xs text-cream/50">Description</label>
+                      <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2}
+                        className="w-full rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-surface px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50 resize-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-cream/50">Genre</label>
+                      <Select value={editForm.genre} onChange={(e) => setEditForm({ ...editForm, genre: e.target.value })}>
+                        {GENRE_OPTIONS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-cream/50">Visibilité</label>
+                      <Select value={editForm.visibility} onChange={(e) => setEditForm({ ...editForm, visibility: e.target.value })}>
+                        <option value="PUBLIC">🌍 Public</option>
+                        <option value="UNLISTED">🔗 Non répertorié</option>
+                        <option value="PRIVATE">🔒 Privé</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-cream/50">BPM</label>
+                      <Input type="number" value={editForm.bpm} onChange={(e) => setEditForm({ ...editForm, bpm: e.target.value })} placeholder="128" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-cream/50">Key</label>
+                      <Select value={editForm.musicalKey} onChange={(e) => setEditForm({ ...editForm, musicalKey: e.target.value })}>
+                        <option value="">-- Aucune --</option>
+                        {["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"].flatMap(note => [
+                          <option key={`${note}m`} value={`${note}m`}>{note} minor</option>,
+                          <option key={note} value={note}>{note} major</option>
+                        ])}
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs text-cream/50 hover:text-cream rounded-lg border border-[rgba(255,255,255,0.1)]">Annuler</button>
+                    <button onClick={() => void saveEdit(item.id)} className="px-3 py-1.5 text-xs bg-violet text-white rounded-lg hover:bg-violet-hover transition-colors">Sauvegarder</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1513,6 +1614,18 @@ function PrivateLinksTab() {
   const [links, setLinks] = useState<{ token: string; scope: string; maxPlays: number; playsCount: number; expiresAt: string; createdAt: string }[]>([]);
   const [selectedRelease, setSelectedRelease] = useState("");
   const [creating, setCreating] = useState(false);
+  const [expiryDays, setExpiryDays] = useState<number | null>(7);
+
+  const EXPIRY_OPTIONS = [
+    { label: "1j", value: 1 },
+    { label: "2j", value: 2 },
+    { label: "3j", value: 3 },
+    { label: "5j", value: 5 },
+    { label: "7j", value: 7 },
+    { label: "2 sem", value: 14 },
+    { label: "1 mois", value: 30 },
+    { label: "Perma", value: null },
+  ];
 
   useEffect(() => {
     void (async () => {
@@ -1540,7 +1653,7 @@ function PrivateLinksTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ scope: "STREAM", maxPlays: 50, expiryDays: 30 })
+        body: JSON.stringify({ scope: "STREAM", maxPlays: 50, expiryDays: expiryDays ?? 3650 })
       });
       if (!res.ok) throw new Error();
       await loadLinks(selectedRelease);
@@ -1569,9 +1682,29 @@ function PrivateLinksTab() {
           {releases.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
         </Select>
         {selectedRelease && (
-          <Button onClick={() => void createLink()} disabled={creating} className="gap-2">
-            <Plus className="h-3.5 w-3.5" />{creating ? "Création…" : "Générer un lien"}
-          </Button>
+          <>
+            <div className="space-y-2">
+              <p className="text-xs text-cream/50">Durée de validité</p>
+              <div className="flex flex-wrap gap-1.5">
+                {EXPIRY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.label}
+                    onClick={() => setExpiryDays(opt.value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      expiryDays === opt.value
+                        ? "bg-violet text-white"
+                        : "border border-[rgba(255,255,255,0.1)] text-cream/50 hover:text-cream"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={() => void createLink()} disabled={creating} className="gap-2">
+              <Plus className="h-3.5 w-3.5" />{creating ? "Création…" : "Générer un lien"}
+            </Button>
+          </>
         )}
       </div>
 
