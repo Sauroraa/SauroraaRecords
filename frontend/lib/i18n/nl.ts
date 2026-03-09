@@ -99,5 +99,61 @@ export const nl: Dict = {
     follow: "Volgen",
     unfollow: "Ontvolgen",
     followers: "volgers"
+  },
+  catalog: {
+    title: "Releases",
+    sub: "Alle releases van Sauroraa-artiesten",
+    all: "Alles",
+    free: "Gratis",
+    paid: "Betaald",
+    all_genres: "Alle genres",
+    no_results: "Geen releases gevonden.",
+    loading: "Releases laden...",
+    download: "Downloaden",
+    buy: "Kopen"
+  },
+  release: {
+    back: "Terug naar Releases",
+    download_free: "Downloaden",
+    buy: "Kopen",
+    preorder: "Vooraf bestellen",
+    favorite: "Favoriet",
+    released_on: "Uitgebracht op",
+    heatmap_title: "Luisterheatmap",
+    comments_title: "Reacties",
+    exclusive_title: "Exclusief voor volgers",
+    exclusive_sub: "Volg de artiest om deze release te ontgrendelen.",
+    view_artist: "Artiest bekijken",
+    view_profile: "Profiel bekijken",
+    preorder_msg: "Verschijnt op"
+  },
+  artist: {
+    all: "Alles",
+    tracks: "Nummers",
+    dubpacks: "Dubpacks",
+    stats_title: "Statistieken",
+    bio_title: "Bio & Contact",
+    top_tracks: "Topnummers",
+    discover: "Ontdek andere Sauroraa-artiesten",
+    explore_catalog: "Catalogus verkennen →",
+    no_tracks: "Nog geen nummers gepubliceerd.",
+    no_dubpacks: "Nog geen dubpacks gepubliceerd.",
+    loading: "Artiestprofiel laden...",
+    not_found: "Artiest niet gevonden.",
+    followers: "volgers",
+    releases_count: "releases",
+    dubpacks_count: "dubpacks",
+    free_download: "Gratis download",
+    tip: "Tip"
+  },
+  patchnotes: {
+    title: "Patch Notes",
+    sub: "Alle wijzigingen aan het platform, in chronologische volgorde.",
+    back: "← Terug naar home",
+    tag_feat: "Functie",
+    tag_fix: "Fix",
+    tag_perf: "Prestaties",
+    tag_security: "Beveiliging",
+    tag_design: "Design"
   }
 };

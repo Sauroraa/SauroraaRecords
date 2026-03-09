@@ -5,11 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchReleases } from "@/lib/api";
 import { ReleaseCard } from "@/components/release-card";
 import { FreeDownloadModal } from "@/components/free-download-modal";
+import { useLanguage } from "@/context/language-context";
 import type { ReleaseItem } from "@/lib/types";
 
 type Filter = "ALL" | "FREE" | "PAID";
 
 export default function CatalogPage() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<Filter>("ALL");
   const [genreFilter, setGenreFilter] = useState<string>("ALL");
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
@@ -33,8 +35,8 @@ export default function CatalogPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-cream">Releases</h1>
-        <p className="mt-1 text-sm text-cream/50">All releases from Sauroraa artists</p>
+        <h1 className="text-3xl font-bold text-cream">{t.catalog.title}</h1>
+        <p className="mt-1 text-sm text-cream/50">{t.catalog.sub}</p>
       </div>
 
       {/* Filter bar */}
@@ -45,12 +47,10 @@ export default function CatalogPage() {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded-sm px-4 py-1.5 text-sm transition-colors ${
-                filter === f
-                  ? "bg-violet text-white"
-                  : "text-cream/50 hover:text-cream"
+                filter === f ? "bg-violet text-white" : "text-cream/50 hover:text-cream"
               }`}
             >
-              {f === "ALL" ? "All" : f === "FREE" ? "Free" : "Paid"}
+              {f === "ALL" ? t.catalog.all : f === "FREE" ? t.catalog.free : t.catalog.paid}
             </button>
           ))}
         </div>
@@ -65,7 +65,7 @@ export default function CatalogPage() {
                 : "border border-[rgba(255,255,255,0.1)] text-cream/50 hover:text-cream"
             }`}
           >
-            All
+            {t.catalog.all_genres}
           </button>
           {genres.map((genre) => (
             <button
@@ -101,7 +101,7 @@ export default function CatalogPage() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-cream/40">No releases found.</p>
+        <p className="text-sm text-cream/40">{t.catalog.no_results}</p>
       )}
 
       <FreeDownloadModal

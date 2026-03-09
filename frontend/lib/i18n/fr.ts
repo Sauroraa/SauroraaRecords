@@ -97,6 +97,62 @@ export const fr = {
     follow: "Suivre",
     unfollow: "Ne plus suivre",
     followers: "abonnés"
+  },
+  catalog: {
+    title: "Releases",
+    sub: "Toutes les releases des artistes Sauroraa",
+    all: "Tout",
+    free: "Gratuit",
+    paid: "Payant",
+    all_genres: "Tous les genres",
+    no_results: "Aucune release trouvée.",
+    loading: "Chargement des releases...",
+    download: "Télécharger",
+    buy: "Acheter"
+  },
+  release: {
+    back: "Retour aux Releases",
+    download_free: "Télécharger",
+    buy: "Acheter",
+    preorder: "Pré-commander",
+    favorite: "Favori",
+    released_on: "Sorti le",
+    heatmap_title: "Heatmap d'écoute",
+    comments_title: "Commentaires",
+    exclusive_title: "Exclusif abonnés",
+    exclusive_sub: "Suis l'artiste pour débloquer cette release.",
+    view_artist: "Voir l'artiste",
+    view_profile: "Voir le profil",
+    preorder_msg: "Sorti le"
+  },
+  artist: {
+    all: "Tout",
+    tracks: "Titres",
+    dubpacks: "Dubpacks",
+    stats_title: "Stats",
+    bio_title: "Bio & Contact",
+    top_tracks: "Top tracks",
+    discover: "Découvre les autres artistes Sauroraa",
+    explore_catalog: "Explorer le catalogue →",
+    no_tracks: "Aucun titre publié pour le moment.",
+    no_dubpacks: "Aucun dubpack publié pour le moment.",
+    loading: "Chargement du profil artiste...",
+    not_found: "Artiste introuvable.",
+    followers: "followers",
+    releases_count: "releases",
+    dubpacks_count: "dubpacks",
+    free_download: "Free download",
+    tip: "Tip"
+  },
+  patchnotes: {
+    title: "Patch Notes",
+    sub: "Tous les changements apportés à la plateforme, dans l'ordre chronologique.",
+    back: "← Retour à l'accueil",
+    tag_feat: "Fonctionnalité",
+    tag_fix: "Correction",
+    tag_perf: "Performance",
+    tag_security: "Sécurité",
+    tag_design: "Design"
   }
 };
 

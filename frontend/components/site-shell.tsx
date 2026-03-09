@@ -311,6 +311,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               { href: "/legal/rgpd", label: "Confidentialité" },
               { href: "/legal/cookies", label: "Cookies" },
               { href: "/pricing", label: t.nav.pricing },
+              { href: "/patchnotes", label: "Patch Notes" },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="text-xs text-cream/30 hover:text-cream/60 transition-colors">
                 {l.label}

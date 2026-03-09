@@ -99,5 +99,61 @@ export const en: Dict = {
     follow: "Follow",
     unfollow: "Unfollow",
     followers: "followers"
+  },
+  catalog: {
+    title: "Releases",
+    sub: "All releases from Sauroraa artists",
+    all: "All",
+    free: "Free",
+    paid: "Paid",
+    all_genres: "All genres",
+    no_results: "No releases found.",
+    loading: "Loading releases...",
+    download: "Download",
+    buy: "Buy"
+  },
+  release: {
+    back: "Back to Releases",
+    download_free: "Download",
+    buy: "Buy",
+    preorder: "Pre-order",
+    favorite: "Favorite",
+    released_on: "Released on",
+    heatmap_title: "Listening Heatmap",
+    comments_title: "Comments",
+    exclusive_title: "Followers exclusive",
+    exclusive_sub: "Follow the artist to unlock this release.",
+    view_artist: "View artist",
+    view_profile: "View profile",
+    preorder_msg: "Releases on"
+  },
+  artist: {
+    all: "All",
+    tracks: "Tracks",
+    dubpacks: "Dubpacks",
+    stats_title: "Stats",
+    bio_title: "Bio & Contact",
+    top_tracks: "Top tracks",
+    discover: "Discover other Sauroraa artists",
+    explore_catalog: "Explore catalog →",
+    no_tracks: "No tracks published yet.",
+    no_dubpacks: "No dubpacks published yet.",
+    loading: "Loading artist profile...",
+    not_found: "Artist not found.",
+    followers: "followers",
+    releases_count: "releases",
+    dubpacks_count: "dubpacks",
+    free_download: "Free download",
+    tip: "Tip"
+  },
+  patchnotes: {
+    title: "Patch Notes",
+    sub: "All changes made to the platform, in chronological order.",
+    back: "← Back to home",
+    tag_feat: "Feature",
+    tag_fix: "Fix",
+    tag_perf: "Performance",
+    tag_security: "Security",
+    tag_design: "Design"
   }
 };
