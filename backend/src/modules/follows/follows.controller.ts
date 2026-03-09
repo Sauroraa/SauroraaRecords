@@ -50,6 +50,35 @@ export class FollowsController {
     return { count, isFollowing };
   }
 
+  @Get("artist/:artistId/followers")
+  async getFollowers(@Param("artistId") artistId: string) {
+    const follows = await this.prisma.follow.findMany({
+      where: { artistId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        follower: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            artist: { select: { id: true, displayName: true, avatar: true } }
+          }
+        }
+      }
+    });
+    return follows.map(f => ({
+      userId: f.follower.id,
+      email: f.follower.email,
+      displayName: f.follower.artist?.displayName ?? f.follower.firstName ?? f.follower.email.split("@")[0],
+      avatar: f.follower.artist?.avatar ?? f.follower.avatarUrl ?? null,
+      artistId: f.follower.artist?.id ?? null,
+      followedAt: f.createdAt
+    }));
+  }
+
   @Post("artist/:artistId")
   @UseGuards(JwtAuthGuard)
   async follow(

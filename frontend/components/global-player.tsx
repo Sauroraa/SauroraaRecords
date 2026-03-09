@@ -103,7 +103,8 @@ export function GlobalPlayer() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !src) return;
-    if (audio.src !== src) {
+    // Use getAttribute("src") — audio.src returns absolute URL, src is relative → always mismatch → reload on every pause/play
+    if (audio.getAttribute("src") !== src) {
       audio.src = src;
       audio.load();
       setProgress(0);

@@ -19,6 +19,8 @@ const LOCALES: Locale[] = ["fr", "en", "nl"];
 
 // ─── User Dropdown ────────────────────────────────────────────────────────────
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+
 function UserDropdown({
   user,
   dashboardHref,
@@ -31,9 +33,19 @@ function UserDropdown({
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [artistProfile, setArtistProfile] = useState<{ id: string; displayName: string | null; avatar: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const username = user.email.split("@")[0];
   const isArtist = user.role === "ARTIST";
+
+  // Fetch artist profile for avatar + profile link
+  useEffect(() => {
+    if (!isArtist) return;
+    void fetch(`${API_BASE}/artists/me`, { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setArtistProfile(data as typeof artistProfile); })
+      .catch(() => {});
+  }, [isArtist]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -43,40 +55,43 @@ function UserDropdown({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const displayName = artistProfile?.displayName ?? username;
+  const profileHref = artistProfile ? `/artist/${artistProfile.id}` : dashboardHref;
+
   const menuItems = [
-    ...(isArtist ? [{ href: `/dashboard/artist`, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
+    ...(isArtist ? [{ href: profileHref, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
     { href: dashboardHref, label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
     { href: "/catalog", label: "Releases", icon: <Music className="h-4 w-4" /> },
     { href: "/rankings", label: "Charts", icon: <Trophy className="h-4 w-4" /> },
     { href: "/pricing", label: "Abonnement", icon: <CreditCard className="h-4 w-4" /> },
-    { href: `${dashboardHref}?tab=profil`, label: "Paramètres", icon: <Settings className="h-4 w-4" /> },
+    { href: "/settings", label: "Paramètres", icon: <Settings className="h-4 w-4" /> },
+    { href: "/notifications", label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: <Bell className="h-4 w-4" /> },
   ];
 
   return (
     <div ref={ref} className="relative pl-2 border-l border-[rgba(255,255,255,0.08)]">
-      {/* Bell */}
       <div className="flex items-center gap-1">
-        <Link
-          href="/dashboard"
-          className="relative p-2 text-cream/50 hover:text-cream/80 transition-colors"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet text-[10px] font-bold text-white">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Link>
-
         {/* Avatar / name button */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-cream/70 hover:bg-white/5 hover:text-cream transition-colors"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-cream/70 hover:bg-white/5 hover:text-cream transition-colors"
         >
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-violet/30 text-[10px] font-bold text-violet-light">
-            {username.slice(0, 1).toUpperCase()}
+          {/* Avatar */}
+          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-violet/30">
+            {artistProfile?.avatar ? (
+              <img src={artistProfile.avatar} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-violet-light">
+                {displayName.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-violet text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </div>
-          <span className="hidden sm:inline text-xs font-medium">{username}</span>
+          <span className="hidden sm:inline text-xs font-medium">{displayName}</span>
           <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -89,12 +104,23 @@ function UserDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0d0d12] shadow-2xl"
+            className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0d0d12] shadow-2xl"
           >
             {/* Header */}
-            <div className="border-b border-[rgba(255,255,255,0.07)] px-4 py-3">
-              <p className="text-sm font-semibold text-cream">{username}</p>
-              <p className="text-xs text-cream/35 truncate">{user.email}</p>
+            <div className="flex items-center gap-3 border-b border-[rgba(255,255,255,0.07)] px-4 py-3">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-violet/20">
+                {artistProfile?.avatar ? (
+                  <img src={artistProfile.avatar} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-base font-bold text-violet-light">
+                    {displayName.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-cream truncate">{displayName}</p>
+                <p className="text-xs text-cream/35 truncate">{user.email}</p>
+              </div>
             </div>
 
             {/* Links */}

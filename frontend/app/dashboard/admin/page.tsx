@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Disc3, Users, TrendingUp, FileText, Tag, Trophy,
   Check, X, Search, Plus, Trash2, Edit3, Crown,
-  Building2, Mail, CreditCard, BadgeCheck, Music2
+  Building2, Mail, CreditCard, BadgeCheck, Music2, Headphones, MessageCircle, Clock, AlertCircle, CheckCircle2, ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth-store";
@@ -17,7 +17,7 @@ import type { ReleaseItem, DubpackItem, RankingItem } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-type Tab = "releases" | "artists" | "users" | "agencies" | "subscriptions" | "revenue" | "invoices" | "promo-codes" | "rankings";
+type Tab = "releases" | "artists" | "users" | "agencies" | "subscriptions" | "revenue" | "invoices" | "promo-codes" | "rankings" | "support";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "releases", label: "Releases", icon: <Disc3 className="h-4 w-4" /> },
@@ -28,7 +28,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "revenue", label: "Revenue", icon: <TrendingUp className="h-4 w-4" /> },
   { id: "invoices", label: "Invoices", icon: <FileText className="h-4 w-4" /> },
   { id: "promo-codes", label: "Promo Codes", icon: <Tag className="h-4 w-4" /> },
-  { id: "rankings", label: "Rankings", icon: <Trophy className="h-4 w-4" /> }
+  { id: "rankings", label: "Rankings", icon: <Trophy className="h-4 w-4" /> },
+  { id: "support", label: "Support", icon: <Headphones className="h-4 w-4" /> }
 ];
 
 // ─── Releases ─────────────────────────────────────────────────────────────────
@@ -942,6 +943,234 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+// ─── Support Admin Tab ─────────────────────────────────────────────────────────
+
+type SupportTicket = {
+  id: string;
+  subject: string;
+  category?: string | null;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; email: string; role: string };
+  assignedTo?: { id: string; email: string } | null;
+  _count?: { messages: number };
+};
+
+type SupportMessage = {
+  id: string;
+  authorType: string;
+  body: string;
+  createdAt: string;
+  author?: { id: string; email: string; role: string } | null;
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: "text-green-400 bg-green-400/10 border-green-400/30",
+  IN_PROGRESS: "text-blue-400 bg-blue-400/10 border-blue-400/30",
+  WAITING_USER: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+  RESOLVED: "text-cream/40 bg-surface2 border-[rgba(255,255,255,0.08)]",
+  CLOSED: "text-cream/25 bg-surface2 border-[rgba(255,255,255,0.06)]"
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: "text-cream/40",
+  NORMAL: "text-cream/60",
+  HIGH: "text-orange-400",
+  URGENT: "text-red-400"
+};
+
+function SupportAdminTab() {
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("OPEN");
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch(`${API}/support/tickets/queue?status=${statusFilter}`, { credentials: "include" });
+      if (res.ok) setTickets(await res.json() as SupportTicket[]);
+      setLoading(false);
+    })();
+  }, [statusFilter]);
+
+  const openTicket = async (id: string) => {
+    setSelectedId(id);
+    const res = await fetch(`${API}/support/tickets/${id}`, { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json() as { messages: SupportMessage[] };
+      setMessages(data.messages ?? []);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!reply.trim() || !selectedId) return;
+    setSending(true);
+    try {
+      const res = await fetch(`${API}/support/tickets/${selectedId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ body: reply })
+      });
+      if (res.ok) {
+        const data = await res.json() as { messages: SupportMessage[] };
+        setMessages(data.messages ?? []);
+        setReply("");
+        toast.success("Réponse envoyée !");
+      }
+    } catch { toast.error("Erreur"); }
+    setSending(false);
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    await fetch(`${API}/support/tickets/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ status })
+    });
+    setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    if (selectedId === id && status === "CLOSED") setSelectedId(null);
+    toast.success(`Ticket ${status.toLowerCase()}`);
+  };
+
+  const selected = tickets.find(t => t.id === selectedId);
+
+  return (
+    <div className="space-y-4">
+      {/* Header + filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-surface p-1">
+          {["OPEN", "IN_PROGRESS", "WAITING_USER", "RESOLVED", "CLOSED"].map(s => (
+            <button key={s} onClick={() => { setStatusFilter(s); setSelectedId(null); setLoading(true); }}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                statusFilter === s ? "bg-violet text-white" : "text-cream/50 hover:text-cream"
+              }`}>
+              {s.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-cream/40">{tickets.length} ticket(s)</p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+        {/* Ticket list */}
+        <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+          {loading ? (
+            [...Array(4)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-surface animate-pulse" />)
+          ) : tickets.length === 0 ? (
+            <div className="flex h-32 items-center justify-center rounded-xl border border-[rgba(255,255,255,0.06)] bg-surface">
+              <p className="text-sm text-cream/30">Aucun ticket</p>
+            </div>
+          ) : tickets.map(ticket => (
+            <button key={ticket.id} onClick={() => void openTicket(ticket.id)}
+              className={`w-full text-left rounded-xl border p-3 transition-all ${
+                selectedId === ticket.id
+                  ? "border-violet/40 bg-violet/10"
+                  : "border-[rgba(255,255,255,0.06)] bg-surface hover:border-violet/20"
+              }`}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium text-cream line-clamp-1">{ticket.subject}</p>
+                <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[ticket.status] ?? ""}`}>
+                  {ticket.status}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-cream/40">{ticket.user.email}</p>
+              <div className="mt-1 flex items-center gap-2 text-[10px] text-cream/30">
+                <span className={PRIORITY_COLORS[ticket.priority]}>{ticket.priority}</span>
+                <span>·</span>
+                <Clock className="h-3 w-3" />
+                <span>{new Date(ticket.createdAt).toLocaleDateString("fr-BE")}</span>
+                {(ticket._count?.messages ?? 0) > 0 && (
+                  <><span>·</span><MessageCircle className="h-3 w-3" /><span>{ticket._count!.messages}</span></>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Ticket detail */}
+        {selected ? (
+          <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface flex flex-col" style={{ maxHeight: 600 }}>
+            {/* Header */}
+            <div className="border-b border-[rgba(255,255,255,0.08)] p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-cream">{selected.subject}</p>
+                  <p className="text-xs text-cream/40 mt-0.5">{selected.user.email} · {selected.category ?? "Général"}</p>
+                </div>
+                <select
+                  value={selected.status}
+                  onChange={e => void updateStatus(selected.id, e.target.value)}
+                  className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-surface2 px-2 py-1 text-xs text-cream outline-none"
+                >
+                  {["OPEN","IN_PROGRESS","WAITING_USER","RESOLVED","CLOSED"].map(s => (
+                    <option key={s} value={s}>{s.replace("_"," ")}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[10px] text-cream/30">
+                Délai de réponse cible : 24–48h · Ouvert le {new Date(selected.createdAt).toLocaleDateString("fr-BE")}
+              </p>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex gap-2.5 ${msg.authorType === "AGENT" ? "flex-row-reverse" : ""}`}>
+                  <div className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                    msg.authorType === "AGENT" ? "bg-violet/30 text-violet-light" : "bg-surface2 text-cream/40"
+                  }`}>
+                    {msg.authorType === "AGENT" ? "A" : "U"}
+                  </div>
+                  <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
+                    msg.authorType === "AGENT"
+                      ? "bg-violet/15 text-cream/90"
+                      : "bg-black/30 text-cream/75"
+                  }`}>
+                    <p className="leading-relaxed">{msg.body}</p>
+                    <p className="mt-1 text-[10px] text-cream/30">{new Date(msg.createdAt).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                </div>
+              ))}
+              {messages.length === 0 && <p className="text-sm text-cream/30 text-center py-4">Aucun message encore.</p>}
+            </div>
+
+            {/* Reply */}
+            {!["RESOLVED","CLOSED"].includes(selected.status) && (
+              <div className="border-t border-[rgba(255,255,255,0.08)] p-3 flex gap-2">
+                <textarea
+                  value={reply}
+                  onChange={e => setReply(e.target.value)}
+                  placeholder="Répondre au ticket... (24-48h garanti)"
+                  rows={2}
+                  className="flex-1 resize-none rounded-xl border border-[rgba(255,255,255,0.1)] bg-surface2 px-3 py-2 text-sm text-cream placeholder-cream/25 outline-none focus:border-violet/40"
+                />
+                <button onClick={() => void sendReply()} disabled={sending || !reply.trim()}
+                  className="self-end rounded-xl bg-violet px-3 py-2 text-sm font-medium text-white hover:bg-violet-hover transition-colors disabled:opacity-40">
+                  {sending ? "..." : "Envoyer"}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex h-64 items-center justify-center rounded-xl border border-[rgba(255,255,255,0.06)] bg-surface">
+            <div className="text-center">
+              <Headphones className="mx-auto mb-2 h-8 w-8 text-cream/15" />
+              <p className="text-sm text-cream/30">Sélectionne un ticket pour répondre</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -964,7 +1193,8 @@ export default function AdminDashboard() {
     revenue: <AdminRevenueTab />,
     invoices: <InvoicesTab />,
     "promo-codes": <PromoCodesTab />,
-    rankings: <RankingsAdminTab />
+    rankings: <RankingsAdminTab />,
+    support: <SupportAdminTab />
   };
 
   return (
