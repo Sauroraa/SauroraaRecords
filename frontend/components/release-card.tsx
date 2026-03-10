@@ -33,7 +33,7 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const artistName =
-    release.artist?.displayName ?? release.artist?.user?.email?.split("@")[0] ?? "Sauroraa Artist";
+    release.artist?.displayName ?? release.artist?.user?.email?.split("@")[0] ?? t.common.artist;
 
   const trackPayload = {
     title: release.title,
@@ -138,14 +138,14 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
           >
             <button
               onClick={handleOpenDetail}
-              title="Track details"
+              title={t.common.details}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-cream/80 hover:text-violet-light transition-colors"
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={handleAddToQueue}
-              title="Add to queue"
+              title={t.common.add_to_queue}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-cream/80 hover:text-violet-light transition-colors"
             >
               <ListPlus className="h-3.5 w-3.5" />
@@ -160,10 +160,10 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
             {genreLabel && <Badge variant="gray">{genreLabel}</Badge>}
             {release.artist?.agencyLinks && release.artist.agencyLinks.length > 0 && (
               <Badge variant="gray" className="!bg-amber-500/20 !text-amber-300 !border-amber-500/30">
-                {release.artist.agencyLinks.some((link) => isSauroraaAgency(link.agency?.displayName)) ? "SauroraaAgency" : "Agency"}
+                {release.artist.agencyLinks.some((link) => isSauroraaAgency(link.agency?.displayName)) ? "SauroraaAgency" : t.artist_badges.agency}
               </Badge>
             )}
-            {release.exclusiveFollowersOnly && <Badge variant="exclusive">Exclusive</Badge>}
+            {release.exclusiveFollowersOnly && <Badge variant="exclusive">{t.common.exclusive}</Badge>}
           </div>
         </div>
       </Link>

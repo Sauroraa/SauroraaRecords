@@ -63,7 +63,7 @@ function ResetPasswordForm() {
     return (
       <section className="mx-auto w-full max-w-sm pt-8">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-cream">Lien invalide</h1>
+          <h1 className="text-2xl font-semibold text-cream">{t.reset_password.invalid_title}</h1>
           <p className="mt-1.5 text-sm text-muted">{t.reset_password.invalid_sub}</p>
         </div>
         <Card className="p-6">

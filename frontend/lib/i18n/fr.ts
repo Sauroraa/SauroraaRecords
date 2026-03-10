@@ -111,13 +111,17 @@ export const fr = {
     podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "Aucune donnée de classement pour ce mois.",
-    rank: "Rang"
+    rank: "Rang",
+    show_more: "Afficher plus",
+    top_100: "Top 100",
+    top_count: "Top {count}"
   },
   common: {
     loading: "Chargement...",
     error: "Une erreur est survenue.",
     free: "Gratuit",
     paid: "Payant",
+    artist: "Artiste",
     follow: "Suivre",
     unfollow: "Ne plus suivre",
     followers: "abonnés",
@@ -126,6 +130,11 @@ export const fr = {
     search: "Recherche...",
     download: "Télécharger",
     buy: "Acheter",
+    preview: "Préécouter",
+    details: "Détails",
+    add_to_queue: "Ajouter à la file",
+    exclusive: "Exclusif",
+    show_more: "Afficher plus",
     apply: "Appliquer",
     total: "Total"
   },
@@ -269,7 +278,16 @@ export const fr = {
     no_results: "Aucune release trouvée.",
     loading: "Chargement des releases...",
     download: "Télécharger",
-    buy: "Acheter"
+    buy: "Acheter",
+    no_description: "Aucune description.",
+    get_release: "Obtenir la release",
+    buy_release: "Acheter la release"
+  },
+  dubpacks: {
+    title: "Dubpacks",
+    sub: "Packs de samples et sound kits exclusifs des artistes Sauroraa",
+    badge: "DUBPACK",
+    empty: "Aucun dubpack disponible pour le moment"
   },
   release: {
     back: "Retour aux Releases",

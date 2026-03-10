@@ -21,7 +21,7 @@ export const nl: Dict = {
     stats_releases: "Releases",
     stats_commission: "Max commissie",
     agency_overline: "Sauroraa Agency",
-    agency_title: "Chez SauroraaAgency",
+    agency_title: "Bij SauroraaAgency",
     agency_sub: "SauroraaAgency-artiesten en al hun releases worden hier eerst uitgelicht.",
     agency_cta: "Bekijk alle releases",
     latest_releases: "Laatste releases",
@@ -113,13 +113,17 @@ export const nl: Dict = {
     podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "Geen rankingdata beschikbaar voor deze maand.",
-    rank: "Rang"
+    rank: "Rang",
+    show_more: "Meer tonen",
+    top_100: "Top 100",
+    top_count: "Top {count}"
   },
   common: {
     loading: "Laden...",
     error: "Er is een fout opgetreden.",
     free: "Gratis",
     paid: "Betaald",
+    artist: "Artiest",
     follow: "Volgen",
     unfollow: "Ontvolgen",
     followers: "volgers",
@@ -128,6 +132,11 @@ export const nl: Dict = {
     search: "Zoeken...",
     download: "Downloaden",
     buy: "Kopen",
+    preview: "Preview",
+    details: "Details",
+    add_to_queue: "Aan wachtrij toevoegen",
+    exclusive: "Exclusief",
+    show_more: "Meer tonen",
     apply: "Toepassen",
     total: "Totaal"
   },
@@ -271,7 +280,16 @@ export const nl: Dict = {
     no_results: "Geen releases gevonden.",
     loading: "Releases laden...",
     download: "Downloaden",
-    buy: "Kopen"
+    buy: "Kopen",
+    no_description: "Geen beschrijving.",
+    get_release: "Release ophalen",
+    buy_release: "Release kopen"
+  },
+  dubpacks: {
+    title: "Dubpacks",
+    sub: "Exclusieve sample packs en sound kits van Sauroraa-artiesten",
+    badge: "DUBPACK",
+    empty: "Nog geen dubpacks beschikbaar"
   },
   release: {
     back: "Terug naar Releases",

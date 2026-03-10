@@ -11,9 +11,11 @@ import { useCartStore } from "@/store/cart-store";
 import { FreeDownloadModal } from "@/components/free-download-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/language-context";
 import type { DubpackItem } from "@/lib/types";
 
 export default function DubpacksPage() {
+  const { t } = useLanguage();
   const [freeDownloadDubpack, setFreeDownloadDubpack] = useState<DubpackItem | null>(null);
   const { addItem, openCart } = useCartStore();
 
@@ -27,7 +29,7 @@ export default function DubpacksPage() {
       id: dp.id,
       type: "dubpack",
       title: dp.title,
-      artist: dp.artist?.displayName ?? dp.artist?.user?.email?.split("@")[0] ?? "Artist",
+      artist: dp.artist?.displayName ?? dp.artist?.user?.email?.split("@")[0] ?? t.common.artist,
       price: Number(dp.price),
       coverPath: dp.coverPath ?? null
     });
@@ -39,9 +41,9 @@ export default function DubpacksPage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Package className="h-6 w-6 text-violet-light" />
-          <h1 className="text-3xl font-bold text-cream">Dubpacks</h1>
+          <h1 className="text-3xl font-bold text-cream">{t.dubpacks.title}</h1>
         </div>
-        <p className="text-sm text-cream/50">Exclusive sample packs and sound kits from Sauroraa artists</p>
+        <p className="text-sm text-cream/50">{t.dubpacks.sub}</p>
       </div>
 
       {isLoading ? (
@@ -53,7 +55,7 @@ export default function DubpacksPage() {
       ) : dubpacks.length > 0 ? (
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
           {dubpacks.map((dp, i) => {
-            const artistName = dp.artist?.displayName ?? dp.artist?.user?.email?.split("@")[0] ?? "Artist";
+            const artistName = dp.artist?.displayName ?? dp.artist?.user?.email?.split("@")[0] ?? t.common.artist;
             return (
               <motion.div
                 key={dp.id}
@@ -77,9 +79,9 @@ export default function DubpacksPage() {
                       </div>
                     )}
                     <div className="absolute left-3 top-3 flex gap-1.5">
-                      <Badge variant="violet">DUBPACK</Badge>
+                      <Badge variant="violet">{t.dubpacks.badge}</Badge>
                       {dp.genre && <Badge variant="gray">{dp.genre.replace(/_/g, " ")}</Badge>}
-                      {dp.isExclusive && <Badge variant="exclusive">Exclusive</Badge>}
+                      {dp.isExclusive && <Badge variant="exclusive">{t.common.exclusive}</Badge>}
                     </div>
                   </div>
                 </Link>
@@ -101,7 +103,7 @@ export default function DubpacksPage() {
                         className="w-full gap-1.5"
                       >
                         <Download className="h-3.5 w-3.5" />
-                        Download
+                        {t.common.download}
                       </Button>
                     ) : (
                       <Button
@@ -123,7 +125,7 @@ export default function DubpacksPage() {
         <div className="flex h-48 items-center justify-center rounded-[16px] border border-[rgba(255,255,255,0.06)] bg-surface">
           <div className="text-center">
             <Package className="mx-auto mb-2 h-10 w-10 text-cream/20" />
-            <p className="text-sm text-cream/30">No dubpacks available yet</p>
+            <p className="text-sm text-cream/30">{t.dubpacks.empty}</p>
           </div>
         </div>
       )}

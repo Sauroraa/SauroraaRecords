@@ -174,7 +174,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4">
                     <p className="text-xs font-semibold text-cream/90 truncate">{r.title}</p>
-                    <p className="text-[10px] text-cream/50 truncate">{r.artist?.displayName ?? "Sauroraa Artist"}</p>
+                    <p className="text-[10px] text-cream/50 truncate">{r.artist?.displayName ?? t.common.artist}</p>
                   </div>
                 </motion.div>
               );
@@ -229,7 +229,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             {/* Agency artists avatars */}
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6">
               {spotlightArtists.map((artist, i) => {
-                const name = artist.displayName ?? t.home.stats_artists;
+              const name = artist.displayName ?? t.common.artist;
                 const href = `/artist/${artist.slug ?? artist.id}`;
                 return (
                   <motion.div key={artist.id} {...fadeIn(i * 0.07)} className="shrink-0 flex flex-col items-center gap-2 w-16">
@@ -388,7 +388,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                       <Image src={artist.avatar} alt={artist.displayName ?? ""} fill className="object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-surface2 text-2xl font-bold text-violet/40">
-                        {(artist.displayName ?? "A").slice(0, 1).toUpperCase()}
+                        {(artist.displayName ?? t.common.artist).slice(0, 1).toUpperCase()}
                       </div>
                     )}
                     {artist.isVerified && (
@@ -399,7 +399,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                   </div>
                   <div className="text-center space-y-1">
                     <p className="text-xs font-semibold text-cream truncate w-full group-hover:text-violet-light transition-colors">
-                      {artist.displayName ?? t.home.stats_artists}
+                      {artist.displayName ?? t.common.artist}
                     </p>
                     <p className="text-[10px] text-cream/35">
                       {artist._count?.followers ?? 0} {t.common.followers}

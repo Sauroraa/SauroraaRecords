@@ -263,7 +263,7 @@ export default function RankingsPage() {
                           <TrendingUp className="h-3 w-3 text-violet-light" />
                           <span className="text-sm font-bold text-cream">{score.toLocaleString()}</span>
                         </div>
-                        <div className="text-[10px] text-violet-light mt-0.5">Score</div>
+                        <div className="text-[10px] text-violet-light mt-0.5">{t.rankings.podium_revenue}</div>
                       </div>
                     </div>
                   </Link>
@@ -282,20 +282,20 @@ export default function RankingsPage() {
                     className="flex items-center gap-1.5 rounded-xl border border-[rgba(255,255,255,0.1)] px-5 py-2.5 text-sm text-cream/60 hover:text-cream hover:border-violet/40 transition-colors"
                   >
                     <ChevronDown className="h-4 w-4" />
-                    Show more
+                    {t.rankings.show_more}
                   </button>
                   {validRankings.length > visibleCount + 15 && (
                     <button
                       onClick={() => setVisibleCount(100)}
                       className="rounded-xl border border-violet/30 px-5 py-2.5 text-sm text-violet-light hover:bg-violet/10 transition-colors"
                     >
-                      Top 100
+                      {t.rankings.top_100}
                     </button>
                   )}
                 </>
               ) : (
                 <p className="text-xs text-cream/25">
-                  Top {validRankings.length} — {monthLabel}
+                  {t.rankings.top_count.replace("{count}", String(validRankings.length))} — {monthLabel}
                 </p>
               )}
             </div>

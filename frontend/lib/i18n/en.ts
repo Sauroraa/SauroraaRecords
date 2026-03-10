@@ -21,7 +21,7 @@ export const en: Dict = {
     stats_releases: "Releases",
     stats_commission: "Max commission",
     agency_overline: "Sauroraa Agency",
-    agency_title: "Chez SauroraaAgency",
+    agency_title: "Inside SauroraaAgency",
     agency_sub: "SauroraaAgency artists and all their releases are highlighted here first.",
     agency_cta: "View all releases",
     latest_releases: "Latest releases",
@@ -113,13 +113,17 @@ export const en: Dict = {
     podium_revenue: "Score",
     podium_downloads: "Downloads",
     empty: "No ranking data available for this month.",
-    rank: "Rank"
+    rank: "Rank",
+    show_more: "Show more",
+    top_100: "Top 100",
+    top_count: "Top {count}"
   },
   common: {
     loading: "Loading...",
     error: "An error occurred.",
     free: "Free",
     paid: "Paid",
+    artist: "Artist",
     follow: "Follow",
     unfollow: "Unfollow",
     followers: "followers",
@@ -128,6 +132,11 @@ export const en: Dict = {
     search: "Search...",
     download: "Download",
     buy: "Buy",
+    preview: "Preview",
+    details: "Details",
+    add_to_queue: "Add to queue",
+    exclusive: "Exclusive",
+    show_more: "Show more",
     apply: "Apply",
     total: "Total"
   },
@@ -271,7 +280,16 @@ export const en: Dict = {
     no_results: "No releases found.",
     loading: "Loading releases...",
     download: "Download",
-    buy: "Buy"
+    buy: "Buy",
+    no_description: "No description.",
+    get_release: "Get release",
+    buy_release: "Buy release"
+  },
+  dubpacks: {
+    title: "Dubpacks",
+    sub: "Exclusive sample packs and sound kits from Sauroraa artists",
+    badge: "DUBPACK",
+    empty: "No dubpacks available yet"
   },
   release: {
     back: "Back to Releases",
