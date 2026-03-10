@@ -388,8 +388,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         </div>
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-        <div className="flex items-center gap-1">
+      <section className="flex flex-col gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
           {[
             { key: "all", label: t.artist.all },
             { key: "tracks", label: `${t.artist.tracks} (${releasesCount})` },
@@ -410,7 +410,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-5 text-xs text-cream/45">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-cream/45 sm:gap-5">
           <span>{formatCompact(followersCount)} {t.artist.followers}</span>
           <span>{releasesCount} {t.artist.releases_count}</span>
           <span>{dubpacksCount} {t.artist.dubpacks_count}</span>
@@ -498,7 +498,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     </div>
 
                     {/* Bottom bar */}
-                    <div className="flex items-center justify-between px-4 py-2.5 text-xs text-cream/40">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-xs text-cream/40">
                       <span>
                         {release._count?.comments ?? 0} {t.comments.title.toLowerCase()} · {viewsByTrack.get(release.id) ?? 0} {t.artist.views.toLowerCase()}
                       </span>
@@ -553,7 +553,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         <aside className="space-y-4">
           <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
             <h3 className="text-sm font-semibold text-cream">{t.artist.stats_title}</h3>
-            <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-[10px] bg-black/20 py-2">
                 <p className="text-lg font-bold text-cream">{formatCompact(followersCount)}</p>
                 <p className="text-[10px] uppercase tracking-wide text-cream/40">{t.artist.followers_label}</p>

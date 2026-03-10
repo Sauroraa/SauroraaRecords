@@ -132,7 +132,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             </motion.div>
 
             {/* Stats row */}
-            <motion.div {...fade(0.4)} className="flex gap-8 justify-center lg:justify-start pt-2">
+            <motion.div {...fade(0.4)} className="grid grid-cols-3 gap-4 pt-2 sm:flex sm:gap-8 sm:justify-center lg:justify-start">
               {[
                 { value: artistCount, label: "Artistes" },
                 { value: releaseCount, label: "Releases" },
@@ -209,20 +209,20 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
         if (spotlightArtists.length === 0 && agencyReleases.length === 0) return null;
         return (
           <section className="mx-auto max-w-7xl px-6 py-12 space-y-8">
-            <div className="flex items-end justify-between">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-2xl">
                 <p className="text-xs font-medium uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" />
                   SAURORAA AGENCY
                 </p>
-                <h2 className="text-3xl font-bold text-cream">Chez SauroraaAgency</h2>
+                <h2 className="text-2xl font-bold text-cream sm:text-3xl">Chez SauroraaAgency</h2>
                 <p className="text-sm text-cream/40 mt-1">
                   Les artistes SauroraaAgency et toutes leurs sorties sont mises en avant ici en premier.
                 </p>
               </div>
               <Link
                 href="/catalog"
-                className="text-sm text-amber-300/70 hover:text-amber-200 transition-colors flex items-center gap-1.5"
+                className="text-sm text-amber-300/70 hover:text-amber-200 transition-colors inline-flex items-center gap-1.5"
               >
                 Voir toutes les sorties <ArrowRight className="h-4 w-4" />
               </Link>
@@ -271,7 +271,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
       {/* ── TRENDING NOW ── */}
       {trending.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-16 space-y-6">
-          <div className="flex items-end justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
                 <Flame className="h-3.5 w-3.5" />
@@ -282,7 +282,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             </div>
             <Link
               href="/catalog"
-              className="text-sm text-cream/40 hover:text-cream/70 transition-colors flex items-center gap-1.5"
+              className="text-sm text-cream/40 hover:text-cream/70 transition-colors inline-flex items-center gap-1.5"
             >
               Voir tout <ArrowRight className="h-4 w-4" />
             </Link>
@@ -334,7 +334,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
 
       {/* ── LATEST RELEASES ── */}
       <section className="mx-auto max-w-7xl px-6 py-16 space-y-8">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">
               {t.home.latest_releases}
@@ -343,7 +343,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
           </div>
           <Link
             href="/catalog"
-            className="text-sm text-cream/40 hover:text-cream/70 transition-colors flex items-center gap-1.5"
+            className="text-sm text-cream/40 hover:text-cream/70 transition-colors inline-flex items-center gap-1.5"
           >
             {t.home.view_all} <ArrowRight className="h-4 w-4" />
           </Link>
@@ -368,7 +368,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
       {/* ── FEATURED ARTISTS ── */}
       {artists.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-16 space-y-8">
-          <div className="flex items-end justify-between">
+          <div className="flex flex-col gap-4 px-6 pt-8 pb-4 sm:px-8 sm:flex-row sm:items-end sm:justify-between md:pt-10">
             <div>
               <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">Artistes</p>
               <h2 className="text-3xl font-bold text-cream">{t.home.featured_artists}</h2>
@@ -427,7 +427,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                 </p>
                 <h2 className="text-2xl font-bold text-cream">Classement</h2>
               </div>
-              <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 flex items-center gap-1.5 transition-colors mb-1">
+              <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 inline-flex items-center gap-1.5 transition-colors">
                 Classement complet <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -595,7 +595,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             <Users className="mx-auto mb-6 h-12 w-12 text-violet/60" />
             <h2 className="text-4xl font-bold text-cream md:text-5xl">{t.home.join_title}</h2>
             <p className="mt-4 text-lg text-cream/50">{t.home.join_sub}</p>
-            <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
               <Button asChild size="lg" className="gap-2 shadow-violet-lg px-8">
                 <Link href="/register">
                   {t.home.join_cta}

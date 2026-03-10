@@ -19,6 +19,17 @@ type PatchVersion = {
 
 const CHANGELOG: PatchVersion[] = [
   {
+    version: "1.9.0",
+    date: "2026-03-10",
+    entries: [
+      { tag: "feat", text: { fr: "Homepage: nouvelle section 'Chez SauroraaAgency' au-dessus du trending avec artistes et sorties de l'agence mises en avant", en: "Homepage: new 'Chez SauroraaAgency' section above trending with agency artists and releases highlighted first", nl: "Homepage: nieuwe sectie 'Chez SauroraaAgency' boven trending met artiesten en releases van het bureau eerst uitgelicht" } },
+      { tag: "feat", text: { fr: "Internationalisation publique renforcée: FR / EN / NL sur header, footer, recherche, auth, commentaires, panier, profils artistes, releases et dubpacks", en: "Expanded public internationalization: FR / EN / NL across header, footer, search, auth, comments, cart, artist profiles, releases and dubpacks", nl: "Uitgebreide publieke internationalisering: FR / EN / NL in header, footer, zoeken, auth, reacties, winkelwagen, artiestprofielen, releases en dubpacks" } },
+      { tag: "feat", text: { fr: "Popup de choix de langue au premier accès sur la home avec mémorisation locale et switch desktop/mobile", en: "Language chooser popup on first home visit with local persistence and desktop/mobile switcher", nl: "Taalkeuze-popup bij eerste bezoek aan de home met lokale opslag en desktop/mobile schakelaar" } },
+      { tag: "fix", text: { fr: "FollowButton: état d'abonnement fiable via JWT optionnel sur l'endpoint public", en: "FollowButton: reliable follow state via optional JWT on the public endpoint", nl: "FollowButton: betrouwbare volgstatus via optionele JWT op het publieke endpoint" } },
+      { tag: "design", text: { fr: "Responsive pass mobile: section agency, hero, pages release/dubpack, profil artiste et modale langue rendus plus propres sur téléphone", en: "Responsive mobile pass: agency section, hero, release/dubpack pages, artist profile and language modal cleaned up for phones", nl: "Responsieve mobiele update: agency-sectie, hero, release/dubpack-pagina's, artiestprofiel en taalmodal opgeschoond voor telefoons" } },
+    ]
+  },
+  {
     version: "1.8.0",
     date: "2026-03-09",
     entries: [

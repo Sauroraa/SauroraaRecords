@@ -39,26 +39,26 @@ export function LanguageChooserModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-3 sm:p-4 backdrop-blur-sm"
         >
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="w-full max-w-md rounded-[24px] border border-[rgba(255,255,255,0.12)] bg-[#0d0d12] p-6 shadow-2xl"
+            className="w-full max-w-md rounded-[24px] border border-[rgba(255,255,255,0.12)] bg-[#0d0d12] p-4 sm:p-6 shadow-2xl"
           >
-            <div className="mb-5 flex items-center gap-3">
+            <div className="mb-4 flex items-start gap-3 sm:mb-5 sm:items-center">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet/15 text-violet-light">
                 <Languages className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-cream/35">{t.language.overline}</p>
-                <h2 className="text-xl font-semibold text-cream">{t.language.title}</h2>
+                <h2 className="text-lg font-semibold text-cream sm:text-xl">{t.language.title}</h2>
               </div>
             </div>
 
-            <p className="mb-5 text-sm leading-relaxed text-cream/60">{t.language.description}</p>
+            <p className="mb-4 text-sm leading-relaxed text-cream/60 sm:mb-5">{t.language.description}</p>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {OPTIONS.map((option) => (

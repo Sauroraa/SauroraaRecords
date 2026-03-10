@@ -298,7 +298,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
         {t.release.back}
       </Link>
 
-      <div className="grid gap-10 lg:grid-cols-[2fr_3fr]">
+      <div className="grid gap-8 lg:grid-cols-[2fr_3fr] lg:gap-10">
         {/* Cover */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -364,7 +364,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
                 <Badge variant="gray">{release.previewDuration}s preview</Badge>
               )}
             </div>
-            <h1 className="text-4xl font-bold text-cream">{release.title}</h1>
+            <h1 className="text-3xl font-bold text-cream sm:text-4xl">{release.title}</h1>
             {release.artist && (
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/artist/${release.artist.id}`}>
@@ -404,7 +404,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {isPreorder ? (
               <>
                 <Button onClick={() => void handlePreorder()} disabled={preordering} className="gap-2">
@@ -442,7 +442,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           {/* Artist profile card */}
           {release.artist && (
             <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="relative h-12 w-12 overflow-hidden rounded-full bg-surface2 shrink-0">
                   {release.artist.avatar ? (
                     <Image src={release.artist.avatar} alt={artistName} fill className="object-cover" />
@@ -458,7 +458,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
                     <FollowButton artistId={release.artist.id} />
                   </div>
                 </div>
-                <Link href={`/artist/${release.artist.id}`} className="ml-auto">
+                <Link href={`/artist/${release.artist.id}`} className="sm:ml-auto">
                   <Button size="sm" variant="outline">{t.release.view_profile}</Button>
                 </Link>
               </div>

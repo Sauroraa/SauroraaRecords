@@ -83,7 +83,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
         {t.nav.dubpacks}
       </Link>
 
-      <div className="grid gap-10 lg:grid-cols-[2fr_3fr]">
+      <div className="grid gap-8 lg:grid-cols-[2fr_3fr] lg:gap-10">
         {/* Cover */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -119,7 +119,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
                 <Badge variant="exclusive">Exclusive Drop</Badge>
               )}
             </div>
-            <h1 className="text-4xl font-bold text-cream">{dubpack.title}</h1>
+            <h1 className="text-3xl font-bold text-cream sm:text-4xl">{dubpack.title}</h1>
             {dubpack.artist && (
               <Link href={`/artist/${dubpack.artist.id}`}>
                 <p className="text-lg text-cream/60 hover:text-cream transition-colors">{artistName}</p>
@@ -143,7 +143,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {dubpack.type === "FREE" ? (
               <Button onClick={handleDirectDownload} disabled={downloading} className="gap-2">
                 <Download className="h-4 w-4" />
