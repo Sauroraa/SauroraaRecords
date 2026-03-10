@@ -83,6 +83,37 @@ export class FollowsController {
     }));
   }
 
+  @Get("artist/:artistId/following")
+  async getFollowing(@Param("artistId") artistId: string) {
+    // Get artists that this artist follows
+    const artist = await this.prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true } });
+    if (!artist) return [];
+    const follows = await this.prisma.follow.findMany({
+      where: { followerId: artist.userId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        artist: {
+          select: {
+            id: true,
+            slug: true,
+            displayName: true,
+            avatar: true,
+            _count: { select: { followers: true } }
+          }
+        }
+      }
+    });
+    return follows.map(f => ({
+      artistId: f.artist.id,
+      slug: f.artist.slug,
+      displayName: f.artist.displayName,
+      avatar: f.artist.avatar,
+      followersCount: f.artist._count.followers,
+      followedAt: f.createdAt
+    }));
+  }
+
   @Post("artist/:artistId")
   @UseGuards(JwtAuthGuard)
   async follow(

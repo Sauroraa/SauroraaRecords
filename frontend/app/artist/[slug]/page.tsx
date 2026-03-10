@@ -101,6 +101,60 @@ function FollowersTab({ artistId }: { artistId: string }) {
   );
 }
 
+type FollowingEntry = {
+  artistId: string;
+  slug?: string | null;
+  displayName: string | null;
+  avatar: string | null;
+  followersCount: number;
+  followedAt: string;
+};
+
+function FollowingTab({ artistId }: { artistId: string }) {
+  const [following, setFollowing] = useState<FollowingEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void fetch(`${API}/follows/artist/${artistId}/following`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: FollowingEntry[]) => { setFollowing(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [artistId]);
+
+  if (loading) return (
+    <div className="space-y-2">
+      {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-xl bg-surface animate-pulse" />)}
+    </div>
+  );
+
+  if (following.length === 0) return (
+    <div className="flex h-40 items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-surface">
+      <p className="text-sm text-cream/30">Ne suit personne pour le moment.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      {following.map((f) => (
+        <div key={f.artistId} className="flex items-center gap-3 rounded-[12px] border border-[rgba(255,255,255,0.06)] bg-surface px-4 py-3">
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-surface2">
+            {f.avatar
+              ? <Image src={f.avatar} alt={f.displayName ?? ""} fill className="object-cover" />
+              : <div className="flex h-full w-full items-center justify-center text-sm font-bold text-violet/40">{(f.displayName ?? "?").slice(0,1).toUpperCase()}</div>
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <Link href={`/artist/${f.slug ?? f.artistId}`} className="text-sm font-medium text-cream hover:text-violet-light transition-colors">
+              {f.displayName ?? f.artistId}
+            </Link>
+            <p className="text-xs text-cream/30">{f.followersCount} follower{f.followersCount !== 1 ? "s" : ""}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TipModal({
   artistId,
   artistName,
@@ -169,7 +223,7 @@ function TipModal({
 
 export default function ArtistPage({ params }: { params: { slug: string } }) {
   const artistId = params.slug;
-  const [tab, setTab] = useState<"all" | "tracks" | "dubpacks" | "followers">("all");
+  const [tab, setTab] = useState<"all" | "tracks" | "dubpacks" | "followers" | "following">("all");
   const [tipOpen, setTipOpen] = useState(false);
   const [freeDownload, setFreeDownload] = useState<ReleaseItem | null>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -349,10 +403,11 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
             { key: "tracks", label: `Titres (${releasesCount})` },
             { key: "dubpacks", label: `Dubpacks (${dubpacksCount})` },
             { key: "followers", label: `Followers (${followersCount})` },
+            { key: "following", label: "Suivis" },
           ].map((item) => (
             <button
               key={item.key}
-              onClick={() => setTab(item.key as "all" | "tracks" | "dubpacks" | "followers")}
+              onClick={() => setTab(item.key as "all" | "tracks" | "dubpacks" | "followers" | "following")}
               className={`rounded-[10px] px-3 py-1.5 text-sm transition-colors ${
                 tab === item.key
                   ? "bg-violet text-white"
@@ -495,6 +550,11 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           {/* Followers tab */}
           {tab === "followers" && (
             <FollowersTab artistId={artistId} />
+          )}
+
+          {/* Following tab */}
+          {tab === "following" && (
+            <FollowingTab artistId={artistId} />
           )}
         </div>
 

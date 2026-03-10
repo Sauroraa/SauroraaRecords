@@ -25,7 +25,9 @@
       "Bash(do)",
       "Bash(sed -i 's/@Roles\\(UserRole\\\\.ARTIST, UserRole\\\\.ADMIN\\)/@Roles\\(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF\\)/g' \"$f\")",
       "Bash(echo \"patched: $f\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(grep -n \"followers.*tab\\\\|Followers.*tab\\\\|FollowersTab\\\\|tab.*followers\" frontend/app/artist/[slug]/page.tsx)",
+      "Bash(grep -n \"key.*followers.*label\\\\|Followers.*followersCount\" frontend/app/artist/[slug]/page.tsx)"
     ],
     "additionalDirectories": [
       "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite",

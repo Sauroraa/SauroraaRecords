@@ -596,6 +596,22 @@ function UploadReleaseTab() {
     previewDuration: "30",
     visibility: "PUBLIC"
   });
+  const [collaborators, setCollaborators] = useState<{ artistId: string; displayName: string; role: "FEATURED" | "PRODUCER" | "REMIXER" }[]>([]);
+  const [collabSearch, setCollabSearch] = useState("");
+  const [collabResults, setCollabResults] = useState<{ id: string; displayName: string | null }[]>([]);
+
+  const searchCollabs = async (q: string) => {
+    if (!q.trim()) { setCollabResults([]); return; }
+    const r = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=5`);
+    if (r.ok) { const d = await r.json() as { artists?: typeof collabResults }; setCollabResults(d.artists ?? []); }
+  };
+
+  const addCollab = (artist: { id: string; displayName: string | null }) => {
+    if (collaborators.find(c => c.artistId === artist.id)) return;
+    setCollaborators(prev => [...prev, { artistId: artist.id, displayName: artist.displayName ?? artist.id, role: "FEATURED" }]);
+    setCollabSearch(""); setCollabResults([]);
+  };
+
   const [gate, setGate] = useState({
     gateEnabled: false,
     gateFollowArtist: false,
@@ -710,9 +726,20 @@ function UploadReleaseTab() {
         })
       });
       if (!res.ok) throw new Error("Failed to create release");
-      toast.success("Release publiée automatiquement !");
+      const newRelease = await res.json() as { id: string };
+      // Add collaborators
+      await Promise.all(collaborators.map(c =>
+        fetch(`${API}/releases/${newRelease.id}/collaborators`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ artistId: c.artistId, role: c.role })
+        }).catch(() => {})
+      ));
+      toast.success("Release publiée !" + (collaborators.length > 0 ? ` (${collaborators.length} collabo(s) ajouté(s))` : ""));
       setForm({ title: "", description: "", genre: "ELECTRO", price: "0", type: "FREE", previewClip: "", bpm: "", musicalKey: "", previewDuration: "30", visibility: "PUBLIC" });
       setGate({ gateEnabled: false, gateFollowArtist: false, gateEmail: false, gateInstagram: false, gateSoundcloud: false, gateDiscord: false });
+      setCollaborators([]);
       setAudioFile(null);
       setCoverFile(null);
       setAudioProgress(0);
@@ -912,6 +939,53 @@ function UploadReleaseTab() {
           )}
         </div>
       )}
+
+      {/* Collaborateurs */}
+      <div className="rounded-[12px] border border-[rgba(255,255,255,0.1)] bg-surface p-5 space-y-3">
+        <p className="text-sm font-semibold text-cream flex items-center gap-2">
+          <Users className="h-4 w-4 text-violet-light" />
+          Collaborateurs <span className="text-cream/40 font-normal text-xs">(optionnel)</span>
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={collabSearch}
+            onChange={e => { setCollabSearch(e.target.value); void searchCollabs(e.target.value); }}
+            placeholder="Recherche artiste par nom..."
+            className="flex-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50"
+          />
+        </div>
+        {collabResults.length > 0 && (
+          <div className="space-y-1">
+            {collabResults.map(a => (
+              <button key={a.id} onClick={() => addCollab(a)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-cream/70 hover:bg-white/5 transition-colors">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet/20 text-[10px] font-bold text-violet-light">
+                  {(a.displayName ?? "?").slice(0,1).toUpperCase()}
+                </span>
+                {a.displayName ?? a.id}
+                <span className="ml-auto text-xs text-violet-light">+ Ajouter</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {collaborators.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {collaborators.map(c => (
+              <div key={c.artistId} className="flex items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.12)] bg-surface2 px-2 py-1">
+                <span className="text-xs text-cream/70">{c.displayName}</span>
+                <select value={c.role} onChange={e => setCollaborators(prev => prev.map(x => x.artistId === c.artistId ? { ...x, role: e.target.value as typeof c.role } : x))}
+                  className="rounded bg-transparent text-[10px] text-violet-light outline-none">
+                  <option value="FEATURED">feat.</option>
+                  <option value="PRODUCER">prod.</option>
+                  <option value="REMIXER">remix</option>
+                </select>
+                <button onClick={() => setCollaborators(prev => prev.filter(x => x.artistId !== c.artistId))}
+                  className="text-cream/30 hover:text-red-400 transition-colors text-xs">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Button onClick={() => void handleSubmit()} disabled={uploading} className="w-full">
         {uploading ? `Uploading... ${audioProgress}%` : "Submit Release"}
@@ -2013,19 +2087,22 @@ export default function ArtistDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
 
-  const canModerate = user?.role === "STAFF" || user?.role === "ADMIN";
+  const canModerate = user?.role === "STAFF";
 
   useEffect(() => {
     if (!user) {
       router.replace("/login?redirect=/dashboard/artist");
       return;
     }
-    if (user.role !== "ARTIST" && user.role !== "ADMIN" && user.role !== "STAFF") {
+    // ADMIN → leur propre dashboard admin, AGENCY → dashboard agency
+    if (user.role === "ADMIN") { router.replace("/dashboard/admin"); return; }
+    if (user.role === "AGENCY") { router.replace("/dashboard/agency"); return; }
+    if (user.role !== "ARTIST" && user.role !== "STAFF") {
       router.replace("/dashboard");
     }
   }, [user, router]);
 
-  if (!user || (user.role !== "ARTIST" && user.role !== "ADMIN" && user.role !== "STAFF")) {
+  if (!user || (user.role !== "ARTIST" && user.role !== "STAFF")) {
     return <LoadingSpinner />;
   }
 
