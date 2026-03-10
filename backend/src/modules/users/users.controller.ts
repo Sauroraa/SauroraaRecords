@@ -31,6 +31,7 @@ import { Request } from "express";
 
 class ArtistProfileDto {
   @IsOptional() @IsString() displayName?: string;
+  @IsOptional() @IsString() slug?: string;
   @IsOptional() @IsString() bio?: string;
   @IsOptional() @IsString() instagramUrl?: string;
   @IsOptional() @IsString() soundcloudUrl?: string;
@@ -190,6 +191,7 @@ export class UsersController {
         where: { userId },
         data: {
           displayName: dto.artist.displayName,
+          slug: dto.artist.slug,
           bio: dto.artist.bio,
           instagramUrl: dto.artist.instagramUrl,
           soundcloudUrl: dto.artist.soundcloudUrl,

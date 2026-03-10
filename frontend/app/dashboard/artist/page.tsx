@@ -55,9 +55,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { ImageCropModal } from "@/components/image-crop-modal";
 import type { ReleaseItem, DubpackItem, RevenueSeries } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sauroraarecords.be").replace(/\/$/, "");
 
 type Tab =
   | "overview"
@@ -125,6 +127,13 @@ function slugifyTitle(value: string): string {
     .slice(0, 60);
 }
 
+type CropState = {
+  open: boolean;
+  file: File | null;
+  title: string;
+  aspect: "square" | "banner";
+};
+
 // ─── Mon Profil ───────────────────────────────────────────────────────────────
 
 function ProfilTab() {
@@ -132,6 +141,7 @@ function ProfilTab() {
   const bannerRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     displayName: "",
+    slug: "",
     bio: "",
     instagramUrl: "",
     soundcloudUrl: "",
@@ -143,6 +153,8 @@ function ProfilTab() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [cropState, setCropState] = useState<CropState>({ open: false, file: null, title: "", aspect: "square" });
+  const [cropTarget, setCropTarget] = useState<"avatar" | "banner" | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -153,6 +165,7 @@ function ProfilTab() {
         if (res.ok) {
           const data = (await res.json()) as {
             displayName?: string | null;
+            slug?: string | null;
             bio?: string | null;
             avatar?: string | null;
             bannerUrl?: string | null;
@@ -165,6 +178,7 @@ function ProfilTab() {
           if (data) {
             setForm({
               displayName: data.displayName ?? "",
+              slug: data.slug ?? "",
               bio: data.bio ?? "",
               instagramUrl: data.instagramUrl ?? "",
               soundcloudUrl: data.soundcloudUrl ?? "",
@@ -209,7 +223,12 @@ function ProfilTab() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...form, avatar: avatarPath ?? undefined, bannerUrl: bannerPath ?? undefined })
+        body: JSON.stringify({
+          ...form,
+          slug: form.slug || undefined,
+          avatar: avatarPath ?? undefined,
+          bannerUrl: bannerPath ?? undefined
+        })
       });
       if (!res.ok) throw new Error();
       toast.success("Profil mis à jour !");
@@ -222,6 +241,28 @@ function ProfilTab() {
 
   if (loading) return <LoadingSpinner />;
 
+  const openCropper = (file: File, target: "avatar" | "banner") => {
+    setCropTarget(target);
+    setCropState({
+      open: true,
+      file,
+      title: target === "avatar" ? "Recadrer la photo de profil" : "Recadrer la bannière",
+      aspect: target === "avatar" ? "square" : "banner"
+    });
+  };
+
+  const handleCropConfirm = (file: File) => {
+    if (cropTarget === "avatar") {
+      setAvatarFile(file);
+    } else if (cropTarget === "banner") {
+      setBannerFile(file);
+    }
+    setCropState({ open: false, file: null, title: "", aspect: "square" });
+    setCropTarget(null);
+  };
+
+  const publicSlug = slugifyTitle(form.slug || form.displayName || "artist");
+
   const bannerPreview = bannerFile
     ? URL.createObjectURL(bannerFile)
     : banner
@@ -230,6 +271,18 @@ function ProfilTab() {
 
   return (
     <div className="max-w-xl space-y-6">
+      <ImageCropModal
+        open={cropState.open}
+        file={cropState.file}
+        aspect={cropState.aspect}
+        title={cropState.title}
+        onClose={() => {
+          setCropState({ open: false, file: null, title: "", aspect: "square" });
+          setCropTarget(null);
+        }}
+        onConfirm={handleCropConfirm}
+      />
+
       {/* Banner */}
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-cream/40">Bannière de profil</p>
@@ -251,7 +304,11 @@ function ProfilTab() {
           type="file"
           accept=".jpg,.jpeg,.png,.webp"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && setBannerFile(e.target.files[0])}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) openCropper(file, "banner");
+            e.currentTarget.value = "";
+          }}
         />
         {bannerPreview && (
           <button
@@ -287,7 +344,11 @@ function ProfilTab() {
           type="file"
           accept=".jpg,.jpeg,.png,.webp"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && setAvatarFile(e.target.files[0])}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) openCropper(file, "avatar");
+            e.currentTarget.value = "";
+          }}
         />
         <div>
           <p className="text-sm font-medium text-cream">Photo de profil</p>
@@ -311,6 +372,17 @@ function ProfilTab() {
             onChange={(e) => setForm({ ...form, displayName: e.target.value })}
             placeholder="Ton nom sur la plateforme"
           />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-cream/60">Lien de profil public</label>
+          <Input
+            value={form.slug}
+            onChange={(e) => setForm({ ...form, slug: slugifyTitle(e.target.value) })}
+            placeholder="nxw"
+          />
+          <p className="text-xs text-cream/40">
+            URL publique: <span className="text-violet-light">{`${SITE_URL}/artist/${publicSlug}`}</span>
+          </p>
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-cream/60">Bio</label>
@@ -627,6 +699,7 @@ function UploadReleaseTab() {
   const [dragCover, setDragCover] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [coverProgress, setCoverProgress] = useState(0);
+  const [cropState, setCropState] = useState<CropState>({ open: false, file: null, title: "", aspect: "square" });
 
   const uploadFileResumable = async (
     file: File,
@@ -755,8 +828,29 @@ function UploadReleaseTab() {
     }
   };
 
+  const openCoverCropper = (file: File) => {
+    setCropState({
+      open: true,
+      file,
+      title: "Recadrer la cover de la release",
+      aspect: "square"
+    });
+  };
+
   return (
     <div className="max-w-xl space-y-5">
+      <ImageCropModal
+        open={cropState.open}
+        file={cropState.file}
+        aspect={cropState.aspect}
+        title={cropState.title}
+        onClose={() => setCropState({ open: false, file: null, title: "", aspect: "square" })}
+        onConfirm={(file) => {
+          setCoverFile(file);
+          setCropState({ open: false, file: null, title: "", aspect: "square" });
+        }}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5 col-span-2">
           <label className="text-xs font-medium text-cream/60">Title *</label>
@@ -866,13 +960,28 @@ function UploadReleaseTab() {
         <div
           onDragOver={(e) => { e.preventDefault(); setDragCover(true); }}
           onDragLeave={() => setDragCover(false)}
-          onDrop={(e) => { e.preventDefault(); setDragCover(false); const f = e.dataTransfer.files[0]; if (f) setCoverFile(f); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragCover(false);
+            const file = e.dataTransfer.files[0];
+            if (file) openCoverCropper(file);
+          }}
           onClick={() => coverRef.current?.click()}
           className={`cursor-pointer rounded-[12px] border-2 border-dashed p-5 text-center transition-colors ${
             dragCover ? "border-violet bg-violet/10" : coverFile ? "border-violet/50 bg-violet/5" : "border-[rgba(255,255,255,0.12)] hover:border-violet/30"
           }`}
         >
-          <input ref={coverRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => e.target.files?.[0] && setCoverFile(e.target.files[0])} />
+          <input
+            ref={coverRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) openCoverCropper(file);
+              e.currentTarget.value = "";
+            }}
+          />
           {coverFile ? (
             <p className="text-sm text-violet-light">{coverFile.name}</p>
           ) : (
@@ -1004,6 +1113,7 @@ function UploadDubpackTab() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragZip, setDragZip] = useState(false);
+  const [cropState, setCropState] = useState<CropState>({ open: false, file: null, title: "", aspect: "square" });
 
   const uploadFile = async (file: File, route: string): Promise<string> => {
     const fd = new FormData();
@@ -1051,8 +1161,29 @@ function UploadDubpackTab() {
     }
   };
 
+  const openCoverCropper = (file: File) => {
+    setCropState({
+      open: true,
+      file,
+      title: "Recadrer la cover du dubpack",
+      aspect: "square"
+    });
+  };
+
   return (
     <div className="max-w-xl space-y-5">
+      <ImageCropModal
+        open={cropState.open}
+        file={cropState.file}
+        aspect={cropState.aspect}
+        title={cropState.title}
+        onClose={() => setCropState({ open: false, file: null, title: "", aspect: "square" })}
+        onConfirm={(file) => {
+          setCoverFile(file);
+          setCropState({ open: false, file: null, title: "", aspect: "square" });
+        }}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2 space-y-1.5">
           <label className="text-xs font-medium text-cream/60">Title *</label>
@@ -1119,7 +1250,17 @@ function UploadDubpackTab() {
             coverFile ? "border-violet/50 bg-violet/5" : "border-[rgba(255,255,255,0.12)] hover:border-violet/30"
           }`}
         >
-          <input ref={coverRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => e.target.files?.[0] && setCoverFile(e.target.files[0])} />
+          <input
+            ref={coverRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) openCoverCropper(file);
+              e.currentTarget.value = "";
+            }}
+          />
           {coverFile ? (
             <p className="text-sm text-violet-light">{coverFile.name}</p>
           ) : (

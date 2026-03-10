@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { IsArray, IsBoolean, IsOptional, IsString } from "class-validator";
 import { Roles } from "../../common/roles.decorator";
@@ -17,8 +17,27 @@ function slugifyArtist(name: string): string {
     .slice(0, 40) || "artist";
 }
 
+async function resolveUniqueArtistSlug(
+  prisma: PrismaService,
+  desiredValue: string,
+  currentUserId: string
+): Promise<string> {
+  const base = slugifyArtist(desiredValue);
+  if (!base) throw new BadRequestException("Invalid artist slug");
+
+  let slug = base;
+  let attempt = 0;
+  while (true) {
+    const existing = await prisma.artist.findUnique({ where: { slug } });
+    if (!existing || existing.userId === currentUserId) return slug;
+    attempt += 1;
+    slug = `${base}-${attempt}`;
+  }
+}
+
 class UpdateArtistDto {
   @IsOptional() @IsString() displayName?: string;
+  @IsOptional() @IsString() slug?: string;
   @IsOptional() @IsString() bio?: string;
   @IsOptional() @IsString() avatar?: string;
   @IsOptional() @IsString() bannerUrl?: string;
@@ -216,24 +235,19 @@ export class ArtistsController {
     @Req() req: Request & { user?: { userId: string } },
     @Body() dto: UpdateArtistDto
   ) {
-    // Auto-generate unique slug from displayName if provided
+    const nextDto = { ...dto };
     let slugData: { slug?: string } = {};
-    if (dto.displayName) {
-      const base = slugifyArtist(dto.displayName);
-      let slug = base;
-      let attempt = 0;
-      while (true) {
-        const existing = await this.prisma.artist.findUnique({ where: { slug } });
-        if (!existing || existing.userId === req.user!.userId) break;
-        slug = `${base}-${++attempt}`;
-      }
-      slugData = { slug };
+    if (typeof dto.slug === "string" && dto.slug.trim()) {
+      slugData = { slug: await resolveUniqueArtistSlug(this.prisma, dto.slug, req.user!.userId) };
+      delete nextDto.slug;
+    } else if (dto.displayName) {
+      slugData = { slug: await resolveUniqueArtistSlug(this.prisma, dto.displayName, req.user!.userId) };
     }
 
     return this.prisma.artist.upsert({
       where: { userId: req.user!.userId },
-      create: { userId: req.user!.userId, ...dto, ...slugData },
-      update: { ...dto, ...slugData },
+      create: { userId: req.user!.userId, ...nextDto, ...slugData },
+      update: { ...nextDto, ...slugData },
       include: ARTIST_FULL_INCLUDE
     });
   }
