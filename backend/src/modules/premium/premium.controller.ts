@@ -117,7 +117,7 @@ export class PremiumController {
   }
 
   @Post("private-links")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createPrivateLink(
     @Body() dto: CreatePrivateLinkDto,
     @Req() req: Request & { user?: { userId: string } }
@@ -323,7 +323,7 @@ export class PremiumController {
   }
 
   @Post("collabs")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createCollab(
     @Body() dto: CreateCollabDto,
     @Req() req: Request & { user?: { userId: string } }
@@ -354,7 +354,7 @@ export class PremiumController {
   }
 
   @Post("collabs/:releaseId/accept")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async acceptCollab(
     @Param("releaseId") releaseId: string,
     @Req() req: Request & { user?: { userId: string } }
@@ -518,7 +518,7 @@ export class PremiumController {
   }
 
   @Post("ai-tagging/:releaseId")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async requestAiTagging(
     @Param("releaseId") releaseId: string,
     @Req() req: Request & { user?: { userId: string } }

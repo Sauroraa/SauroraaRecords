@@ -304,7 +304,7 @@ export class ReleasesController {
 
   @Patch(":id/gate")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async updateGate(
     @Param("id") id: string,
     @Body() dto: UpdateGateDto,
@@ -420,7 +420,7 @@ export class ReleasesController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async update(
     @Param("id") id: string,
     @Body() dto: UpdateReleaseDto,
@@ -458,7 +458,7 @@ export class ReleasesController {
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async remove(
     @Param("id") id: string,
     @Req() req: Request & { user?: { userId: string; role: string } }
@@ -479,7 +479,7 @@ export class ReleasesController {
 
   @Post(":id/private-links")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createPrivateLink(
     @Param("id") releaseId: string,
     @Body() body: { scope?: "STREAM" | "DOWNLOAD"; maxPlays?: number; expiryDays?: number },
@@ -508,7 +508,7 @@ export class ReleasesController {
 
   @Get(":id/private-links")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async listPrivateLinks(
     @Param("id") releaseId: string,
     @Req() req: Request & { user?: { userId: string } }
@@ -553,7 +553,7 @@ export class ReleasesController {
 
   @Post(":id/collaborators")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async addCollaborator(
     @Param("id") releaseId: string,
     @Body() body: { artistId: string; role?: "FEATURED" | "PRODUCER" | "REMIXER" },
@@ -586,7 +586,7 @@ export class ReleasesController {
 
   @Delete(":id/collaborators/:artistId")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async removeCollaborator(
     @Param("id") releaseId: string,
     @Param("artistId") artistId: string,
@@ -604,7 +604,7 @@ export class ReleasesController {
 
   @Post(":id/asset-packs")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async addAssetPack(
     @Param("id") releaseId: string,
     @Body() body: { filePath: string; assetType: string; label?: string },
@@ -626,7 +626,7 @@ export class ReleasesController {
 
   @Delete(":id/asset-packs/:packId")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async deleteAssetPack(
     @Param("id") releaseId: string,
     @Param("packId") packId: string,
@@ -644,7 +644,7 @@ export class ReleasesController {
 
   @Post(":id/ai-tag")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async aiTag(
     @Param("id") releaseId: string,
     @Req() req: Request & { user?: { userId: string } }
@@ -707,7 +707,7 @@ export class ReleasesController {
 
   @Post(":id/embed")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createEmbed(
     @Param("id") releaseId: string,
     @Body() body: { theme?: string; allowDownload?: boolean },

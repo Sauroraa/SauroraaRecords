@@ -19,7 +19,7 @@ export class LedgerController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get("me/entries")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async myEntries(
     @Req() req: Request & { user?: { userId: string; role: UserRole } },
     @Query() query: LedgerQueryDto
@@ -51,7 +51,7 @@ export class LedgerController {
   }
 
   @Get("me/summary")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async mySummary(@Req() req: Request & { user?: { userId: string; role: UserRole } }) {
     const artist = await this.prisma.artist.findUnique({
       where: { userId: req.user!.userId },

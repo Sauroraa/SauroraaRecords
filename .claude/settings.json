@@ -20,7 +20,12 @@
       "Bash(cat frontend/app/release/[slug]/page.tsx)",
       "Bash(grep -n \"Agence\\\\|agencies\\\\|Sauroraa Artist Profile\" frontend/app/artist/[slug]/page.tsx)",
       "Bash(sed -n '33,50p' frontend/components/home-hero.tsx)",
-      "Bash(sed -n '190,220p' frontend/components/home-hero.tsx)"
+      "Bash(sed -n '190,220p' frontend/components/home-hero.tsx)",
+      "Bash(for f in backend/src/modules/dubpacks/dubpacks.controller.ts backend/src/modules/ecosystem/ecosystem.controller.ts backend/src/modules/revenue/revenue.controller.ts backend/src/modules/upload/upload.controller.ts backend/src/modules/ledger/ledger.controller.ts backend/src/modules/premium/premium.controller.ts)",
+      "Bash(do)",
+      "Bash(sed -i 's/@Roles\\(UserRole\\\\.ARTIST, UserRole\\\\.ADMIN\\)/@Roles\\(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF\\)/g' \"$f\")",
+      "Bash(echo \"patched: $f\")",
+      "Bash(done)"
     ],
     "additionalDirectories": [
       "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite",

@@ -308,7 +308,7 @@ export class EcosystemController {
   }
 
   @Post("share-cards/:releaseId")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createShareCard(@Param("releaseId") releaseId: string) {
     const cardPath = `/uploads/share-cards/${releaseId}-${Date.now()}.png`;
     return this.prisma.viralShareCard.create({
@@ -320,7 +320,7 @@ export class EcosystemController {
   }
 
   @Post("premieres")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createPremiere(@Body() dto: PremiereDto, @Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) throw new BadRequestException("Artist profile required");
@@ -356,7 +356,7 @@ export class EcosystemController {
   }
 
   @Post("broadcasts")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createBroadcast(@Body() dto: BroadcastDto, @Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) throw new BadRequestException("Artist profile required");
@@ -396,7 +396,7 @@ export class EcosystemController {
   }
 
   @Post("payout/accounts")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createPayoutAccount(
     @Body() dto: PayoutAccountDto,
     @Req() req: Request & { user?: { userId: string } }
@@ -477,7 +477,7 @@ export class EcosystemController {
   }
 
   @Post("asset-packs")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createAssetPack(@Body() dto: PackDto) {
     return this.prisma.releaseAssetPack.create({
       data: {
@@ -490,7 +490,7 @@ export class EcosystemController {
   }
 
   @Post("embed/:releaseId")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createEmbed(
     @Param("releaseId") releaseId: string,
     @Body() body: { theme?: string; allowDownload?: boolean },
@@ -519,7 +519,7 @@ export class EcosystemController {
   }
 
   @Post("versioning/:releaseId")
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async addVersion(@Param("releaseId") releaseId: string, @Body() dto: VersionDto) {
     await this.prisma.trackVersion.updateMany({
       where: { releaseId },

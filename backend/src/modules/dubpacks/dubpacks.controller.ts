@@ -142,7 +142,7 @@ export class DubpacksController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async create(
     @Body() dto: CreateDubpackDto,
     @Req() req: Request & { user?: { userId: string; role: string } }
@@ -171,7 +171,7 @@ export class DubpacksController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async update(
     @Param("id") id: string,
     @Body() dto: UpdateDubpackDto,
@@ -192,7 +192,7 @@ export class DubpacksController {
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async remove(
     @Param("id") id: string,
     @Req() req: Request & { user?: { userId: string; role: string } }

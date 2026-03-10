@@ -86,7 +86,7 @@ export class ArtistsController {
 
   @Get("me")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   me(@Req() req: Request & { user?: { userId: string } }) {
     return this.prisma.artist.findUnique({
       where: { userId: req.user!.userId },
@@ -96,7 +96,7 @@ export class ArtistsController {
 
   @Get("me/stats")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async stats(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) return { totalRevenue: 0, totalDownloads: 0, totalReleases: 0, totalFollowers: 0 };
@@ -118,7 +118,7 @@ export class ArtistsController {
 
   @Get("me/download-config")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async getDownloadConfig(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) return { enabled: false, requiredActions: [] };
@@ -128,7 +128,7 @@ export class ArtistsController {
 
   @Put("me/download-config")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async updateDownloadConfig(
     @Req() req: Request & { user?: { userId: string } },
     @Body() dto: DownloadConfigDto
@@ -144,7 +144,7 @@ export class ArtistsController {
 
   @Get("me/revenue")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async getRevenue(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) return [];
@@ -210,7 +210,7 @@ export class ArtistsController {
 
   @Patch("me")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async updateMe(
     @Req() req: Request & { user?: { userId: string } },
     @Body() dto: UpdateArtistDto
@@ -239,7 +239,7 @@ export class ArtistsController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   update(@Param("id") id: string, @Body() dto: UpdateArtistDto) {
     return this.prisma.artist.update({ where: { id }, data: dto });
   }
@@ -248,7 +248,7 @@ export class ArtistsController {
 
   @Get("me/analytics/advanced")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async advancedAnalytics(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) throw new NotFoundException("Artist not found");
@@ -325,7 +325,7 @@ export class ArtistsController {
 
   @Post("me/broadcasts")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async sendBroadcast(
     @Body() body: { title: string; message: string },
     @Req() req: Request & { user?: { userId: string } }
@@ -351,7 +351,7 @@ export class ArtistsController {
 
   @Get("me/broadcasts")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async listBroadcasts(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) throw new NotFoundException("Artist not found");
@@ -377,7 +377,7 @@ export class ArtistsController {
 
   @Post("me/promotions")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createPromotion(
     @Body() body: { title: string; promotionType: string; releaseId?: string; budgetCents?: number },
     @Req() req: Request & { user?: { userId: string } }
@@ -398,7 +398,7 @@ export class ArtistsController {
 
   @Get("me/promotions")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async listPromotions(@Req() req: Request & { user?: { userId: string } }) {
     const artist = await this.prisma.artist.findUnique({ where: { userId: req.user!.userId } });
     if (!artist) throw new NotFoundException("Artist not found");
@@ -413,7 +413,7 @@ export class ArtistsController {
 
   @Post("me/api-keys")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async createApiKey(
     @Body() body: { name: string },
     @Req() req: Request & { user?: { userId: string } }
@@ -429,7 +429,7 @@ export class ArtistsController {
 
   @Get("me/api-keys")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   async listApiKeys(@Req() req: Request & { user?: { userId: string } }) {
     return this.prisma.publicApiClient.findMany({
       where: { createdBy: req.user!.userId },

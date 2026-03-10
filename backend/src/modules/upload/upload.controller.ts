@@ -64,7 +64,7 @@ export class UploadController {
 
   @Post("audio")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),
@@ -98,7 +98,7 @@ export class UploadController {
 
   @Post("zip")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),

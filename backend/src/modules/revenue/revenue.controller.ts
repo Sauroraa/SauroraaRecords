@@ -11,7 +11,7 @@ export class RevenueController {
 
   @Get("artist/:artistId")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ARTIST, UserRole.ADMIN)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN, UserRole.STAFF)
   byArtist(@Param("artistId") artistId: string) {
     return this.prisma.artistRevenue.findMany({
       where: { artistId },
