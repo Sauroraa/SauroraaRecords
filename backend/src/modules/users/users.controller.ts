@@ -1,9 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
+  ForbiddenException,
   Get,
   NotFoundException,
+  Param,
   Patch,
+  Post,
+  Query,
   Req,
   UseGuards
 } from "@nestjs/common";
@@ -60,6 +65,21 @@ class ChangePasswordDto {
   @IsString() @MinLength(8) newPassword!: string;
 }
 
+class ModerationMessageDto {
+  @IsString()
+  @MinLength(3)
+  message!: string;
+}
+
+class SuspensionDto {
+  @IsBoolean()
+  suspended!: boolean;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
 @Controller("users")
 export class UsersController {
   constructor(
@@ -81,6 +101,36 @@ export class UsersController {
         lastName: true,
         createdAt: true
       }
+    });
+  }
+
+  @Get("search")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async searchUsers(@Query("q") q?: string) {
+    const search = q?.trim();
+    return this.prisma.user.findMany({
+      where: search
+        ? {
+            OR: [
+              { email: { contains: search } },
+              { firstName: { contains: search } },
+              { lastName: { contains: search } }
+            ]
+          }
+        : undefined,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        warningCount: true,
+        strikeCount: true,
+        suspended: true
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20
     });
   }
 
@@ -175,5 +225,113 @@ export class UsersController {
     });
     void this.emailService.sendPasswordChanged(user.email, user.firstName ?? undefined);
     return { success: true };
+  }
+
+  @Post(":id/warn")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async warnUser(
+    @Param("id") id: string,
+    @Body() dto: ModerationMessageDto,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    if (user.role === UserRole.ADMIN) throw new ForbiddenException("Cannot warn admin");
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { warningCount: { increment: 1 } },
+      select: { id: true, email: true, warningCount: true, strikeCount: true, suspended: true }
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        userId: id,
+        type: "WARNING",
+        body: dto.message.trim()
+      }
+    });
+
+    return {
+      ...updated,
+      message: "Warning recorded",
+      moderatorId: req.user!.userId
+    };
+  }
+
+  @Post(":id/strike")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async strikeUser(@Param("id") id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    if (user.role === UserRole.ADMIN) throw new ForbiddenException("Cannot strike admin");
+
+    const nextCount = user.strikeCount + 1;
+    const suspended = nextCount >= 3;
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        strikeCount: { increment: 1 },
+        suspended,
+        suspensionReason: suspended ? "Automatic suspension after 3 strikes" : user.suspensionReason
+      },
+      select: { id: true, email: true, strikeCount: true, warningCount: true, suspended: true, suspensionReason: true }
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        userId: id,
+        type: "STRIKE",
+        body: suspended
+          ? "A strike has been applied and your account has been suspended after reaching 3 strikes."
+          : `A strike has been applied to your account (${updated.strikeCount}/3).`
+      }
+    });
+
+    return updated;
+  }
+
+  @Delete(":id/strike")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async revokeStrike(@Param("id") id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+
+    const nextCount = Math.max(0, user.strikeCount - 1);
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        strikeCount: nextCount,
+        suspended: nextCount >= 3 ? user.suspended : false,
+        suspensionReason: nextCount >= 3 ? user.suspensionReason : null
+      },
+      select: { id: true, email: true, strikeCount: true, warningCount: true, suspended: true, suspensionReason: true }
+    });
+
+    return updated;
+  }
+
+  @Patch(":id/suspension")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async setSuspension(@Param("id") id: string, @Body() dto: SuspensionDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    if (user.role === UserRole.ADMIN) throw new ForbiddenException("Cannot suspend admin");
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        suspended: dto.suspended,
+        suspensionReason: dto.suspended ? dto.reason?.trim() || "Suspended by staff" : null
+      },
+      select: { id: true, email: true, strikeCount: true, warningCount: true, suspended: true, suspensionReason: true }
+    });
+
+    return updated;
   }
 }

@@ -46,8 +46,10 @@ type Comment = {
   id: string;
   body: string;
   createdAt: string;
+  user?: { id: string; email: string; firstName?: string | null; lastName?: string | null } | null;
   author?: { id: string; email: string } | null;
   release?: { id: string; title: string; slug: string } | null;
+  dubpack?: { id: string; title: string; slug: string } | null;
 };
 
 type StrikeUser = {
@@ -343,8 +345,9 @@ function StaffCommentsTab() {
     const q = search.toLowerCase();
     return (
       c.body.toLowerCase().includes(q) ||
-      (c.author?.email ?? "").toLowerCase().includes(q) ||
-      (c.release?.title ?? "").toLowerCase().includes(q)
+      (c.user?.email ?? c.author?.email ?? "").toLowerCase().includes(q) ||
+      (c.release?.title ?? "").toLowerCase().includes(q) ||
+      (c.dubpack?.title ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -376,12 +379,18 @@ function StaffCommentsTab() {
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-medium text-violet-light truncate">
-                    {comment.author?.email ?? "Anonyme"}
+                    {comment.user?.email ?? comment.author?.email ?? "Anonyme"}
                   </p>
                   {comment.release && (
                     <>
                       <span className="text-cream/20">·</span>
                       <p className="text-xs text-cream/40 truncate">sur {comment.release.title}</p>
+                    </>
+                  )}
+                  {comment.dubpack && (
+                    <>
+                      <span className="text-cream/20">·</span>
+                      <p className="text-xs text-cream/40 truncate">sur dubpack {comment.dubpack.title}</p>
                     </>
                   )}
                   <span className="text-cream/20">·</span>
@@ -545,7 +554,15 @@ function StaffWarningsTab() {
 
 // ─── Strikes Tab ───────────────────────────────────────────────────────────────
 
-type StrikeEntry = { id: string; email: string; role: string; strikeCount: number; suspended: boolean };
+type StrikeEntry = {
+  id: string;
+  email: string;
+  role: string;
+  strikeCount: number;
+  suspended: boolean;
+  warningCount?: number;
+  suspensionReason?: string | null;
+};
 
 function StaffStrikesTab() {
   const [userSearch, setUserSearch] = useState("");
@@ -585,14 +602,13 @@ function StaffStrikesTab() {
         credentials: "include",
       });
       if (res.ok || res.status === 201) {
-        const updated = { ...selectedUser, strikeCount: selectedUser.strikeCount + 1 };
-        if (updated.strikeCount >= 3) updated.suspended = true;
+        const updated = await res.json() as StrikeEntry;
         setSelectedUser(updated);
-        setSearchResults((prev) => prev.map((u) => u.id === selectedUser.id ? updated : u));
+        setSearchResults((prev) => prev.map((u) => u.id === selectedUser.id ? { ...u, ...updated } : u));
         toast.success(`Strike donné à ${selectedUser.email} (${updated.strikeCount}/3)`);
         if (updated.suspended) toast.error("Compte suspendu automatiquement (3 strikes)");
       } else {
-        toast.error("Endpoint non disponible (POST /users/:id/strike)");
+        toast.error("Impossible d'appliquer le strike");
       }
     } catch {
       toast.error("Erreur réseau");
@@ -610,16 +626,39 @@ function StaffStrikesTab() {
         credentials: "include",
       });
       if (res.ok || res.status === 204) {
-        const updated = {
-          ...selectedUser,
-          strikeCount: Math.max(0, selectedUser.strikeCount - 1),
-          suspended: false,
-        };
+        const updated = await res.json() as StrikeEntry;
         setSelectedUser(updated);
-        setSearchResults((prev) => prev.map((u) => u.id === selectedUser.id ? updated : u));
+        setSearchResults((prev) => prev.map((u) => u.id === selectedUser.id ? { ...u, ...updated } : u));
         toast.success(`Strike retiré de ${selectedUser.email}`);
       } else {
         toast.error("Erreur lors de la révocation");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setSubmitting(false);
+  };
+
+  const toggleSuspension = async (suspended: boolean) => {
+    if (!selectedUser) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API}/users/${selectedUser.id}/suspension`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          suspended,
+          reason: suspended ? "Suspension manuelle staff" : ""
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json() as StrikeEntry;
+        setSelectedUser(updated);
+        setSearchResults((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
+        toast.success(suspended ? "Compte suspendu" : "Compte réactivé");
+      } else {
+        toast.error("Erreur lors de la mise à jour");
       }
     } catch {
       toast.error("Erreur réseau");
@@ -719,6 +758,10 @@ function StaffStrikesTab() {
                 <span className="text-sm font-semibold text-cream">{selectedUser.strikeCount} / 3</span>
               </div>
             </div>
+            <div className="space-y-1">
+              <p className="text-xs text-cream/50">Warnings</p>
+              <p className="text-sm font-semibold text-cream">{selectedUser.warningCount ?? 0}</p>
+            </div>
             {selectedUser.suspended && (
               <span className="rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300">
                 Compte suspendu
@@ -752,10 +795,18 @@ function StaffStrikesTab() {
                 Retirer un strike
               </Button>
             )}
+            <Button
+              onClick={() => void toggleSuspension(!selectedUser.suspended)}
+              disabled={submitting}
+              variant="outline"
+            >
+              {selectedUser.suspended ? "Réactiver le compte" : "Suspendre le compte"}
+            </Button>
           </div>
 
           <p className="text-[10px] text-cream/25">
             À 3 strikes, le compte est suspendu automatiquement. Un strike peut être retiré en cas d&apos;erreur.
+            {selectedUser.suspensionReason ? ` Raison: ${selectedUser.suspensionReason}` : ""}
           </p>
         </div>
       )}

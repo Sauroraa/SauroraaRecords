@@ -33,20 +33,6 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("fr-BE", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function waveForTrack(seed: string, count = 90) {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  const values: number[] = [];
-  for (let i = 0; i < count; i += 1) {
-    hash = (1664525 * hash + 1013904223) >>> 0;
-    const random = (hash % 100) / 100;
-    const sine = Math.sin((i / count) * Math.PI * 2) * 0.25;
-    const height = Math.max(0.1, Math.min(1, random * 0.8 + 0.1 + sine));
-    values.push(height);
-  }
-  return values;
-}
-
 type FollowerEntry = {
   userId: string;
   displayName: string;
@@ -222,7 +208,7 @@ function TipModal({
 }
 
 export default function ArtistPage({ params }: { params: { slug: string } }) {
-  const artistId = params.slug;
+  const artistSlug = params.slug;
   const [tab, setTab] = useState<"all" | "tracks" | "dubpacks" | "followers" | "following">("all");
   const [tipOpen, setTipOpen] = useState(false);
   const [freeDownload, setFreeDownload] = useState<ReleaseItem | null>(null);
@@ -233,9 +219,11 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const { setTrack, setPlaying, releaseId: activeReleaseId, playing, currentTime, duration, requestSeekPercent } = usePlayerStore();
 
   const { data: artist, isLoading: artistLoading } = useQuery({
-    queryKey: ["artist", artistId],
-    queryFn: () => fetchArtist(artistId)
+    queryKey: ["artist", artistSlug],
+    queryFn: () => fetchArtist(artistSlug)
   });
+
+  const resolvedArtistId = artist?.id ?? artistSlug;
 
   const { data: releases = [], isLoading: releasesLoading } = useQuery({
     queryKey: ["releases"],
@@ -243,18 +231,20 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   });
 
   const { data: artistStats } = useQuery({
-    queryKey: ["artist-stats", artistId],
-    queryFn: () => fetchArtistStats(artistId)
+    queryKey: ["artist-stats", resolvedArtistId],
+    queryFn: () => fetchArtistStats(resolvedArtistId),
+    enabled: Boolean(artist?.id)
   });
 
   const { data: liveFollowData } = useQuery({
-    queryKey: ["follow-status", artistId],
+    queryKey: ["follow-status", resolvedArtistId],
     queryFn: async () => {
-      const res = await fetch(`${API}/follows/artist/${artistId}`, { credentials: "include" });
+      const res = await fetch(`${API}/follows/artist/${resolvedArtistId}`, { credentials: "include" });
       if (!res.ok) return null;
       return res.json() as Promise<{ count: number; isFollowing: boolean }>;
     },
-    refetchInterval: 30000
+    refetchInterval: 30000,
+    enabled: Boolean(artist?.id)
   });
 
   const { data: dubpacks = [], isLoading: dubpacksLoading } = useQuery({
@@ -265,17 +255,17 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const artistReleases = useMemo(
     () =>
       releases
-        .filter((release) => release.artist?.id === artistId)
+        .filter((release) => release.artist?.id === resolvedArtistId)
         .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()),
-    [releases, artistId]
+    [releases, resolvedArtistId]
   );
 
   const artistDubpacks = useMemo(
     () =>
       dubpacks
-        .filter((dubpack) => dubpack.artist?.id === artistId)
+        .filter((dubpack) => dubpack.artist?.id === resolvedArtistId)
         .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()),
-    [dubpacks, artistId]
+    [dubpacks, resolvedArtistId]
   );
 
   if (artistLoading) {
@@ -324,9 +314,6 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const followersCount = liveFollowData?.count ?? artist._count?.followers ?? 0;
   const releasesCount = artistReleases.length;
   const dubpacksCount = artistDubpacks.length;
-  const agencies = (artist.agencyLinks ?? [])
-    .map((link: { agency?: { displayName?: string | null } }) => link.agency?.displayName)
-    .filter(Boolean) as string[];
   const viewsByTrack = new Map((artistStats?.tracks ?? []).map((track) => [track.id, track.views]));
   const totalTrackViews = artistStats?.totalViews ?? artistReleases.reduce((sum, track) => sum + (track._count?.downloadSessions ?? 0), 0);
 
@@ -385,7 +372,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <FollowButton artistId={artistId} />
+                <FollowButton artistId={resolvedArtistId} />
                 <Button variant="outline" size="sm" onClick={() => setTipOpen(true)} className="gap-1.5">
                   <Heart className="h-4 w-4" />
                   Tip
@@ -549,12 +536,12 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
           {/* Followers tab */}
           {tab === "followers" && (
-            <FollowersTab artistId={artistId} />
+            <FollowersTab artistId={resolvedArtistId} />
           )}
 
           {/* Following tab */}
           {tab === "following" && (
-            <FollowingTab artistId={artistId} />
+            <FollowingTab artistId={resolvedArtistId} />
           )}
         </div>
 
@@ -659,7 +646,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         onClose={() => setFreeDownload(null)}
       />
 
-      <TipModal artistId={artistId} artistName={artistName} open={tipOpen} onClose={() => setTipOpen(false)} />
+      <TipModal artistId={resolvedArtistId} artistName={artistName} open={tipOpen} onClose={() => setTipOpen(false)} />
     </div>
   );
 }

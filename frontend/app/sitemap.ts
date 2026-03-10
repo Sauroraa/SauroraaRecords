@@ -43,11 +43,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Dynamic: artists
-  const artists = await apiFetch<{ id: string; displayName?: string | null }>("/artists");
+  const artists = await apiFetch<{ id: string; slug?: string | null; displayName?: string | null }>("/artists");
   const artistRoutes: MetadataRoute.Sitemap = artists
     .filter(a => a.displayName)
     .map(a => ({
-      url: `${BASE}/artist/${a.id}`,
+      url: `${BASE}/artist/${a.slug ?? a.id}`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.75

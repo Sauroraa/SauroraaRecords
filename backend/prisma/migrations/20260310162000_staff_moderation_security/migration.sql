@@ -1,0 +1,5 @@
+ALTER TABLE `User`
+    ADD COLUMN `warningCount` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `strikeCount` INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN `suspended` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `suspensionReason` VARCHAR(191) NULL;

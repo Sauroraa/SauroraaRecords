@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { fetchReleases, fetchArtists, fetchHomeOverviewStats } from "@/lib/api";
 import { HomeHero } from "@/components/home-hero";

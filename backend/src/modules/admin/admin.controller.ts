@@ -1,6 +1,6 @@
 import {
   Body, Controller, Delete, Get, NotFoundException,
-  Patch, Param, BadRequestException, UseGuards
+  Patch, Param, BadRequestException, Query, UseGuards
 } from "@nestjs/common";
 import { IsEnum } from "class-validator";
 import { SubscriptionPlan } from "@prisma/client";
@@ -32,31 +32,45 @@ class UpdateUserDto {
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class AdminController {
   constructor(private readonly prisma: PrismaService) {}
 
   // ─── Users ─────────────────────────────────────────────────────────────────
 
   @Get("users")
-  async listUsers() {
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async listUsers(@Query("search") search?: string) {
+    const normalized = search?.trim();
     return this.prisma.user.findMany({
+      where: normalized
+        ? {
+            OR: [
+              { email: { contains: normalized } },
+              { firstName: { contains: normalized } },
+              { lastName: { contains: normalized } }
+            ]
+          }
+        : undefined,
       select: {
         id: true, email: true, firstName: true, lastName: true,
         role: true, isStaff: true, createdAt: true, country: true,
+        warningCount: true, strikeCount: true, suspended: true,
         _count: { select: { orders: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: normalized ? 25 : undefined
     });
   }
 
   @Get("users/:id")
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   async getUser(@Param("id") id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true, email: true, firstName: true, lastName: true,
         role: true, createdAt: true, dateOfBirth: true,
+        warningCount: true, strikeCount: true, suspended: true, suspensionReason: true,
         addressLine1: true, addressLine2: true, postalCode: true,
         city: true, country: true, hasSociete: true,
         societeName: true, vatNumber: true, billingAddress: true,
@@ -84,6 +98,7 @@ export class AdminController {
   }
 
   @Patch("users/:id")
+  @Roles(UserRole.ADMIN)
   async updateUser(@Param("id") id: string, @Body() dto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException("User not found");
@@ -122,6 +137,7 @@ export class AdminController {
   }
 
   @Patch("users/:id/role")
+  @Roles(UserRole.ADMIN)
   async changeRole(@Param("id") id: string, @Body() dto: ChangeRoleDto) {
     if (!Object.values(UserRole).includes(dto.role)) {
       throw new BadRequestException("Invalid role");
@@ -137,12 +153,14 @@ export class AdminController {
   }
 
   @Patch("users/:id/staff")
+  @Roles(UserRole.ADMIN)
   async toggleStaff(@Param("id") id: string, @Body() dto: { isStaff: boolean }) {
     const user = await this.prisma.user.update({ where: { id }, data: { isStaff: dto.isStaff } });
     return { id: user.id, email: user.email, role: user.role, isStaff: user.isStaff };
   }
 
   @Delete("users/:id")
+  @Roles(UserRole.ADMIN)
   async deleteUser(@Param("id") id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException("User not found");
@@ -154,6 +172,7 @@ export class AdminController {
   // ─── Artists ───────────────────────────────────────────────────────────────
 
   @Get("artists")
+  @Roles(UserRole.ADMIN)
   async listArtists() {
     return this.prisma.artist.findMany({
       include: {
@@ -166,6 +185,7 @@ export class AdminController {
   }
 
   @Patch("artists/:id/verify")
+  @Roles(UserRole.ADMIN)
   async verifyArtist(@Param("id") id: string, @Body() dto: { verified: boolean }) {
     const artist = await this.prisma.artist.findUnique({ where: { id } });
     if (!artist) throw new NotFoundException("Artist not found");
@@ -181,6 +201,7 @@ export class AdminController {
   // ─── Agencies ──────────────────────────────────────────────────────────────
 
   @Get("agencies")
+  @Roles(UserRole.ADMIN)
   async listAgencies() {
     return this.prisma.agency.findMany({
       include: {
@@ -192,6 +213,7 @@ export class AdminController {
   }
 
   @Get("agencies/:id")
+  @Roles(UserRole.ADMIN)
   async getAgency(@Param("id") id: string) {
     const agency = await this.prisma.agency.findUnique({
       where: { id },
@@ -215,6 +237,7 @@ export class AdminController {
   }
 
   @Patch("agencies/:id")
+  @Roles(UserRole.ADMIN)
   async updateAgency(@Param("id") id: string, @Body() dto: UpdateAgencyDto) {
     const agency = await this.prisma.agency.findUnique({ where: { id } });
     if (!agency) throw new NotFoundException("Agency not found");
@@ -222,6 +245,7 @@ export class AdminController {
   }
 
   @Delete("agencies/:id")
+  @Roles(UserRole.ADMIN)
   async deleteAgency(@Param("id") id: string) {
     const agency = await this.prisma.agency.findUnique({ where: { id } });
     if (!agency) throw new NotFoundException("Agency not found");
@@ -232,6 +256,7 @@ export class AdminController {
   // ─── Revenue ────────────────────────────────────────────────────────────────
 
   @Get("revenue")
+  @Roles(UserRole.ADMIN)
   async listRevenue() {
     const rows = await this.prisma.artistRevenue.findMany({
       include: { artist: { include: { user: { select: { email: true } } } } },
@@ -252,6 +277,7 @@ export class AdminController {
   // ─── Invoices ──────────────────────────────────────────────────────────────
 
   @Get("invoices")
+  @Roles(UserRole.ADMIN)
   async listInvoices() {
     return this.prisma.artistRevenue.findMany({
       include: { artist: { include: { user: { select: { email: true } } } } }
@@ -259,6 +285,7 @@ export class AdminController {
   }
 
   @Patch("invoices/:id/paid")
+  @Roles(UserRole.ADMIN)
   async markInvoicePaid(@Param("id") id: string) {
     return this.prisma.artistRevenue.update({ where: { id }, data: { status: "PAID" } });
   }
@@ -266,6 +293,7 @@ export class AdminController {
   // ─── Subscriptions ─────────────────────────────────────────────────────────
 
   @Get("subscriptions")
+  @Roles(UserRole.ADMIN)
   async listSubscriptions() {
     return this.prisma.subscription.findMany({
       include: {
@@ -276,6 +304,7 @@ export class AdminController {
   }
 
   @Patch("users/:id/subscription")
+  @Roles(UserRole.ADMIN)
   async upsertSubscription(
     @Param("id") id: string,
     @Body() dto: { plan: string; status?: string }
@@ -293,10 +322,25 @@ export class AdminController {
   }
 
   @Delete("users/:id/subscription")
+  @Roles(UserRole.ADMIN)
   async deleteSubscription(@Param("id") id: string) {
     const sub = await this.prisma.subscription.findUnique({ where: { userId: id } });
     if (!sub) throw new NotFoundException("No subscription found");
     await this.prisma.subscription.delete({ where: { userId: id } });
     return { success: true };
+  }
+
+  @Get("comments")
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async listComments() {
+    return this.prisma.comment.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        user: { select: { id: true, email: true, firstName: true, lastName: true } },
+        release: { select: { id: true, title: true, slug: true } },
+        dubpack: { select: { id: true, title: true, slug: true } }
+      }
+    });
   }
 }

@@ -230,6 +230,10 @@ model User {
   passwordHash   String
   role           UserRole  @default(CLIENT)
   isStaff        Boolean   @default(false)
+  warningCount   Int       @default(0)
+  strikeCount    Int       @default(0)
+  suspended      Boolean   @default(false)
+  suspensionReason String?
   firstName      String?
   lastName       String?
   avatarUrl      String?

@@ -62,6 +62,7 @@ export class AuthService {
     const email = this.normalizeEmail(dto.email);
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new UnauthorizedException("Invalid credentials");
+    if (user.suspended) throw new UnauthorizedException("Account suspended");
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException("Invalid credentials");
@@ -95,6 +96,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException("User not found");
+    if (user.suspended) throw new UnauthorizedException("Account suspended");
 
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
     return this.buildTokens(user.id, user.email, user.role);
@@ -174,8 +176,12 @@ export class AuthService {
 
   private async buildTokens(sub: string, email: string, role: UserRole) {
     // Fetch isStaff from DB to include in token
-    const dbUser = await this.prisma.user.findUnique({ where: { id: sub }, select: { isStaff: true } });
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: sub },
+      select: { isStaff: true, suspended: true, warningCount: true, strikeCount: true }
+    });
     const isStaff = dbUser?.isStaff ?? false;
+    if (dbUser?.suspended) throw new UnauthorizedException("Account suspended");
 
     const accessToken = await this.jwtService.signAsync(
       { sub, email, role, isStaff },
@@ -204,7 +210,15 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: sub, email, role, isStaff }
+      user: {
+        id: sub,
+        email,
+        role,
+        isStaff,
+        suspended: dbUser?.suspended ?? false,
+        warningCount: dbUser?.warningCount ?? 0,
+        strikeCount: dbUser?.strikeCount ?? 0
+      }
     };
   }
 

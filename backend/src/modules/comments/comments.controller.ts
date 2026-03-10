@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  BadRequestException,
   Query,
   Req,
   UseGuards
@@ -73,6 +74,10 @@ export class CommentsController {
     @Req() req: Request & { user?: { userId: string } }
   ) {
     const userId = req.user!.userId;
+    const body = dto.body.trim();
+    if (body.length < 2 || body.length > 2000) {
+      throw new BadRequestException("Comment length invalid");
+    }
 
     // Check if user has purchased the release/dubpack for verified badge
     let isVerifiedPurchase = false;
@@ -95,7 +100,7 @@ export class CommentsController {
         releaseId: dto.releaseId,
         dubpackId: dto.dubpackId,
         parentId: dto.parentId,
-        body: dto.body,
+        body,
         isVerifiedPurchase
       },
       include: { user: { select: { id: true, email: true, firstName: true, artist: { select: { displayName: true, avatar: true } } } } }
@@ -164,10 +169,21 @@ export class CommentsController {
     @Param("id") id: string,
     @Req() req: Request & { user?: { userId: string; role: string } }
   ) {
-    const comment = await this.prisma.comment.findUnique({ where: { id } });
+    const comment = await this.prisma.comment.findUnique({
+      where: { id },
+      include: {
+        release: { select: { artist: { select: { userId: true } } } },
+        dubpack: { select: { artist: { select: { userId: true } } } }
+      }
+    });
     if (!comment) throw new NotFoundException("Comment not found");
 
-    if (comment.userId !== req.user!.userId && req.user!.role !== UserRole.ADMIN) {
+    const isOwner = comment.userId === req.user!.userId;
+    const isStaff = req.user!.role === UserRole.ADMIN || req.user!.role === UserRole.STAFF;
+    const isReleaseOwner = comment.release?.artist.userId === req.user!.userId;
+    const isDubpackOwner = comment.dubpack?.artist.userId === req.user!.userId;
+
+    if (!isOwner && !isStaff && !isReleaseOwner && !isDubpackOwner) {
       throw new ForbiddenException("Not authorized");
     }
 

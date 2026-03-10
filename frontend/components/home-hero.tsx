@@ -37,6 +37,12 @@ interface HomeHeroProps {
   stats?: HomeOverviewStats;
 }
 
+function isSauroraaAgency(name?: string | null) {
+  if (!name) return false;
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "sauroraaagency" || normalized.includes("sauroraaagency");
+}
+
 export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) {
   const { t } = useLanguage();
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
@@ -179,8 +185,14 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
 
       {/* ── SAURORAA AGENCY SPOTLIGHT ── */}
       {(() => {
-        const agencyArtists = artists.filter(a => (a.agencyLinks?.length ?? 0) > 0);
-        const agencyReleases = releases.filter(r => (r.artist?.agencyLinks?.length ?? 0) > 0).slice(0, 4);
+        const agencyArtists = artists.filter((artist) =>
+          (artist.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName))
+        );
+        const agencyReleases = releases
+          .filter((release) =>
+            (release.artist?.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName))
+          )
+          .slice(0, 4);
         if (agencyArtists.length === 0) return null;
         return (
           <section className="mx-auto max-w-7xl px-6 py-12 space-y-6">
@@ -188,10 +200,10 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" />
-                  Sauroraa Agency
+                  SauroraaAgency
                 </p>
-                <h2 className="text-3xl font-bold text-cream">Artistes de l&apos;agence</h2>
-                <p className="text-sm text-cream/40 mt-1">Artistes signés — releases prioritaires</p>
+                <h2 className="text-3xl font-bold text-cream">Mise en avant agence</h2>
+                <p className="text-sm text-cream/40 mt-1">Les profils et releases de SauroraaAgency passent en avant automatiquement.</p>
               </div>
             </div>
 
@@ -351,7 +363,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                 {...fadeIn(i * 0.07)}
                 className="shrink-0"
               >
-                <Link href={`/artist/${artist.id}`} className="group flex flex-col items-center gap-3 w-28">
+                <Link href={`/artist/${artist.slug ?? artist.id}`} className="group flex flex-col items-center gap-3 w-28">
                   <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-[rgba(255,255,255,0.08)] group-hover:border-violet/50 transition-all duration-300">
                     {artist.avatar ? (
                       <Image src={artist.avatar} alt={artist.displayName ?? ""} fill className="object-cover" />
