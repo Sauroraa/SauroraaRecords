@@ -43,7 +43,7 @@ export class AdminController {
     return this.prisma.user.findMany({
       select: {
         id: true, email: true, firstName: true, lastName: true,
-        role: true, createdAt: true, country: true,
+        role: true, isStaff: true, createdAt: true, country: true,
         _count: { select: { orders: true } }
       },
       orderBy: { createdAt: "desc" }
@@ -134,6 +134,12 @@ export class AdminController {
       await this.prisma.artist.upsert({ where: { userId: id }, update: {}, create: { userId: id } });
     }
     return user;
+  }
+
+  @Patch("users/:id/staff")
+  async toggleStaff(@Param("id") id: string, @Body() dto: { isStaff: boolean }) {
+    const user = await this.prisma.user.update({ where: { id }, data: { isStaff: dto.isStaff } });
+    return { id: user.id, email: user.email, role: user.role, isStaff: user.isStaff };
   }
 
   @Delete("users/:id")

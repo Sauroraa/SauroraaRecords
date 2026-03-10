@@ -218,7 +218,7 @@ function ArtistsTab() {
 
 // ─── Users ─────────────────────────────────────────────────────────────────────
 
-type AdminUser = { id: string; email: string; role: string; createdAt: string; _count?: { orders: number } };
+type AdminUser = { id: string; email: string; role: string; isStaff?: boolean; createdAt: string; _count?: { orders: number } };
 
 function UsersTab() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -234,6 +234,22 @@ function UsersTab() {
       setLoading(false);
     })();
   }, []);
+
+  const toggleStaff = async (userId: string, currentIsStaff: boolean) => {
+    try {
+      const res = await fetch(`${API}/admin/users/${userId}/staff`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ isStaff: !currentIsStaff })
+      });
+      if (!res.ok) throw new Error();
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, isStaff: !currentIsStaff } : u));
+      toast.success(currentIsStaff ? "Staff retiré" : "Staff accordé");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
 
   const changeRole = async (userId: string, role: string) => {
     try {
@@ -294,15 +310,15 @@ function UsersTab() {
                 {u.role}
               </Badge>
               <button
-                onClick={() => void changeRole(u.id, u.role === "STAFF" ? "CLIENT" : "STAFF")}
-                title={u.role === "STAFF" ? "Révoquer Staff" : "Accorder Staff"}
+                onClick={() => void toggleStaff(u.id, u.isStaff ?? false)}
+                title={(u.isStaff) ? "Révoquer Staff" : "Accorder Staff"}
                 className={`rounded-[6px] border px-2 py-1 text-xs font-medium transition-colors ${
-                  u.role === "STAFF"
+                  u.isStaff
                     ? "border-red-500/40 bg-red-500/15 text-red-300 hover:bg-red-500/25"
                     : "border-[rgba(255,255,255,0.12)] bg-surface2 text-cream/50 hover:text-cream hover:border-red-500/30"
                 }`}
               >
-                {u.role === "STAFF" ? "- Staff" : "+ Staff"}
+                {u.isStaff ? "- Staff" : "+ Staff"}
               </button>
               <select
                 value={u.role}

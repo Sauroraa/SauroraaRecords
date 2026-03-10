@@ -173,15 +173,19 @@ export class AuthService {
   }
 
   private async buildTokens(sub: string, email: string, role: UserRole) {
+    // Fetch isStaff from DB to include in token
+    const dbUser = await this.prisma.user.findUnique({ where: { id: sub }, select: { isStaff: true } });
+    const isStaff = dbUser?.isStaff ?? false;
+
     const accessToken = await this.jwtService.signAsync(
-      { sub, email, role },
+      { sub, email, role, isStaff },
       {
         secret: process.env.JWT_SECRET || "change_me_jwt",
         expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m"
       }
     );
     const refreshToken = await this.jwtService.signAsync(
-      { sub, email, role, type: "refresh" },
+      { sub, email, role, isStaff, type: "refresh" },
       {
         secret: process.env.JWT_REFRESH_SECRET || "change_me_refresh",
         expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d"
@@ -200,7 +204,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: sub, email, role }
+      user: { id: sub, email, role, isStaff }
     };
   }
 

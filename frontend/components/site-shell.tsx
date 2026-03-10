@@ -38,7 +38,7 @@ function UserDropdown({
   const username = user.email.split("@")[0];
 
   // Only ARTIST and STAFF can have an artist profile in the dropdown
-  const shouldFetchArtist = user.role === "ARTIST" || user.role === "STAFF";
+  const shouldFetchArtist = user.role === "ARTIST" || user.role === "STAFF" || user.isStaff;
 
   useEffect(() => {
     if (!shouldFetchArtist) return;
@@ -205,7 +205,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     user?.role === "ARTIST" ? "/dashboard/artist" :
     user?.role === "ADMIN" ? "/dashboard/admin" :
     user?.role === "AGENCY" ? "/dashboard/agency" :
-    user?.role === "STAFF" ? "/dashboard/artist" :
+    user?.isStaff ? "/dashboard/artist" :
     "/dashboard";
 
   return (

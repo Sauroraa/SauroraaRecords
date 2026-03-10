@@ -2087,7 +2087,7 @@ export default function ArtistDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
 
-  const canModerate = user?.role === "STAFF";
+  const canModerate = user?.isStaff === true || user?.role === "STAFF";
 
   useEffect(() => {
     if (!user) {
@@ -2097,12 +2097,12 @@ export default function ArtistDashboard() {
     // ADMIN → leur propre dashboard admin, AGENCY → dashboard agency
     if (user.role === "ADMIN") { router.replace("/dashboard/admin"); return; }
     if (user.role === "AGENCY") { router.replace("/dashboard/agency"); return; }
-    if (user.role !== "ARTIST" && user.role !== "STAFF") {
+    if (user.role !== "ARTIST" && !user.isStaff) {
       router.replace("/dashboard");
     }
   }, [user, router]);
 
-  if (!user || (user.role !== "ARTIST" && user.role !== "STAFF")) {
+  if (!user || (user.role !== "ARTIST" && !user.isStaff)) {
     return <LoadingSpinner />;
   }
 

@@ -9,6 +9,7 @@ interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  isStaff?: boolean;
 }
 
 interface AuthState {
