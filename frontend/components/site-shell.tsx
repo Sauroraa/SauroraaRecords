@@ -27,7 +27,7 @@ function UserDropdown({
   unreadCount,
   onLogout,
 }: {
-  user: { email: string; role?: string };
+  user: { email: string; role?: string; isStaff?: boolean };
   dashboardHref: string;
   unreadCount: number;
   onLogout: () => void;
