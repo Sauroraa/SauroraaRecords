@@ -36,7 +36,7 @@ function UserDropdown({
   const [artistProfile, setArtistProfile] = useState<{ id: string; displayName: string | null; avatar: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const username = user.email.split("@")[0];
-  const isArtist = user.role === "ARTIST";
+  const isArtist = user.role === "ARTIST" || user.role === "STAFF";
 
   // Fetch artist profile for avatar + profile link
   useEffect(() => {
