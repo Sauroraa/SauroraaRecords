@@ -56,7 +56,8 @@ export class ArtistsController {
     return this.prisma.artist.findMany({
       include: {
         user: { select: { email: true, firstName: true, lastName: true } },
-        _count: { select: { followers: true } }
+        agencyLinks: { include: { agency: { select: { displayName: true } } }, take: 1 },
+        _count: { select: { followers: true, releases: true, dubpacks: true } }
       }
     });
   }

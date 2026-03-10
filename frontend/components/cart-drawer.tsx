@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 import { useCartStore } from "@/store/cart-store";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -13,6 +14,7 @@ import { Input } from "./ui/input";
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 export function CartDrawer() {
+  const { t } = useLanguage();
   const { items, removeItem, clear, isOpen, closeCart, promoCode, promoDiscount, setPromo, clearPromo, total } =
     useCartStore();
   const [promoInput, setPromoInput] = useState("");
@@ -30,12 +32,12 @@ export function CartDrawer() {
         body: JSON.stringify({ code: promoInput.trim() })
       });
       if (!res.ok) {
-        toast.error("Invalid promo code");
+        toast.error(t.cart.promo_invalid);
         return;
       }
       const data = (await res.json()) as { code: string; discount: number };
       setPromo(data.code, data.discount);
-      toast.success(`${data.discount}% discount applied!`);
+      toast.success(`${data.discount}${t.cart.promo_applied}`);
     } finally {
       setPromoLoading(false);
     }
@@ -60,7 +62,7 @@ export function CartDrawer() {
 
       if (!res.ok) {
         const err = (await res.json()) as { message?: string };
-        toast.error(err.message ?? "Checkout failed");
+        toast.error(err.message ?? t.cart.checkout_failed);
         return;
       }
 
@@ -100,7 +102,7 @@ export function CartDrawer() {
             <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-6 py-5">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-violet-light" />
-                <h2 className="text-base font-semibold text-cream">Cart</h2>
+                <h2 className="text-base font-semibold text-cream">{t.cart.title}</h2>
                 <span className="rounded-full bg-violet/20 px-2 py-0.5 text-xs text-violet-light">
                   {items.length}
                 </span>
@@ -118,7 +120,7 @@ export function CartDrawer() {
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center">
                   <ShoppingBag className="h-10 w-10 text-cream/20 mb-3" />
-                  <p className="text-sm text-cream/40">Your cart is empty</p>
+                  <p className="text-sm text-cream/40">{t.cart.empty}</p>
                 </div>
               ) : (
                 items.map((item) => (
@@ -175,7 +177,7 @@ export function CartDrawer() {
                   ) : (
                     <>
                       <Input
-                        placeholder="Promo code"
+                        placeholder={t.cart.promo_placeholder}
                         value={promoInput}
                         onChange={(e) => setPromoInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && void handlePromo()}
@@ -187,7 +189,7 @@ export function CartDrawer() {
                         onClick={() => void handlePromo()}
                         disabled={promoLoading}
                       >
-                        Apply
+                        {t.cart.apply}
                       </Button>
                     </>
                   )}
@@ -195,7 +197,7 @@ export function CartDrawer() {
 
                 {/* Total */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-cream/60">Total</span>
+                  <span className="text-sm text-cream/60">{t.common.total}</span>
                   <span className="text-xl font-bold text-cream">€{cartTotal.toFixed(2)}</span>
                 </div>
 
@@ -204,7 +206,7 @@ export function CartDrawer() {
                   onClick={() => void handleCheckout()}
                   disabled={checkoutLoading}
                 >
-                  {checkoutLoading ? "Redirecting..." : "Checkout with Stripe"}
+                  {checkoutLoading ? t.cart.redirecting : t.cart.checkout}
                 </Button>
               </div>
             )}

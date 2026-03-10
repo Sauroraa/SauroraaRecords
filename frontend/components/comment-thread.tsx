@@ -3,6 +3,7 @@
 import { Heart, MessageCircle, ShieldCheck, Clock } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 import type { CommentItem } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "./ui/button";
@@ -51,7 +52,15 @@ interface CommentRowProps {
   seekToTimestamp?: (seconds: number) => void;
 }
 
-function CommentBody({ body, seekToTimestamp }: { body: string; seekToTimestamp?: (s: number) => void }) {
+function CommentBody({
+  body,
+  seekToTimestamp,
+  jumpToLabel
+}: {
+  body: string;
+  seekToTimestamp?: (s: number) => void;
+  jumpToLabel: string;
+}) {
   const parts = parseTimestamps(body);
 
   return (
@@ -62,7 +71,7 @@ function CommentBody({ body, seekToTimestamp }: { body: string; seekToTimestamp?
           <button
             key={i}
             onClick={() => seekToTimestamp?.(part.seconds)}
-            title={`Jump to ${part.label}`}
+            title={`${jumpToLabel} ${part.label}`}
             className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-mono bg-violet/20 text-violet-light hover:bg-violet/30 transition-colors mx-0.5"
           >
             <Clock className="h-2.5 w-2.5" />
@@ -76,6 +85,7 @@ function CommentBody({ body, seekToTimestamp }: { body: string; seekToTimestamp?
 
 function CommentRow({ comment, onLike, onReply, depth = 0, seekToTimestamp }: CommentRowProps) {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   return (
     <div className={`${depth > 0 ? "ml-10 border-l border-[rgba(255,255,255,0.06)] pl-4" : ""}`}>
       <div className="flex gap-3">
@@ -87,7 +97,7 @@ function CommentRow({ comment, onLike, onReply, depth = 0, seekToTimestamp }: Co
             <span className="text-xs font-medium text-cream/70">{comment.user.email.split("@")[0]}</span>
             {comment.isVerifiedPurchase && (
               <span className="flex items-center gap-0.5 text-[10px] text-violet-light">
-                <ShieldCheck className="h-3 w-3" /> Verified
+                <ShieldCheck className="h-3 w-3" /> {t.comments.verified}
               </span>
             )}
             <span className="text-[11px] text-cream/30">
@@ -95,7 +105,7 @@ function CommentRow({ comment, onLike, onReply, depth = 0, seekToTimestamp }: Co
             </span>
           </div>
           <p className="mt-1 text-sm text-cream/80 leading-relaxed">
-            <CommentBody body={comment.body} seekToTimestamp={seekToTimestamp} />
+            <CommentBody body={comment.body} seekToTimestamp={seekToTimestamp} jumpToLabel={t.comments.jump_to} />
           </p>
           <div className="mt-2 flex items-center gap-3">
             <button
@@ -111,7 +121,7 @@ function CommentRow({ comment, onLike, onReply, depth = 0, seekToTimestamp }: Co
                 className="flex items-center gap-1 text-xs text-cream/40 hover:text-cream/70 transition-colors"
               >
                 <MessageCircle className="h-3.5 w-3.5" />
-                Reply
+                {t.comments.reply}
               </button>
             )}
           </div>
@@ -135,6 +145,7 @@ export function CommentThread({
   seekToTimestamp,
 }: CommentThreadProps) {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const [comments, setComments] = useState(initialComments);
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -150,7 +161,7 @@ export function CommentThread({
         credentials: "include",
         body: JSON.stringify({ releaseId, dubpackId, parentId: replyTo, body }),
       });
-      if (!res.ok) throw new Error("Failed to post");
+      if (!res.ok) throw new Error("COMMENT_POST_FAILED");
       const newComment = (await res.json()) as CommentItem;
       if (replyTo) {
         setComments((prev) =>
@@ -164,16 +175,16 @@ export function CommentThread({
       setBody("");
       setReplyTo(null);
       onCommentPosted?.();
-      toast.success("Comment posted!");
+      toast.success(t.comments.posted);
     } catch {
-      toast.error("Failed to post comment");
+      toast.error(t.comments.post_failed);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleLike = async (id: string) => {
-    if (!user) { toast.error("Sign in to like"); return; }
+    if (!user) { toast.error(t.comments.sign_in_to_like); return; }
     try {
       await fetch(`${API}/comments/${id}/like`, {
         method: "POST",
@@ -190,7 +201,7 @@ export function CommentThread({
   return (
     <div className="space-y-6">
       <h3 className="text-base font-semibold text-cream">
-        Comments{" "}
+        {t.comments.title}{" "}
         <span className="text-cream/40 text-sm font-normal">({comments.length})</span>
       </h3>
 
@@ -198,14 +209,14 @@ export function CommentThread({
         <div className="space-y-2">
           {replyTo && (
             <div className="flex items-center gap-2 text-xs text-cream/50">
-              <span>Replying to comment</span>
+              <span>{t.comments.reply_to_comment}</span>
               <button onClick={() => setReplyTo(null)} className="text-violet-light hover:underline">
-                Cancel
+                {t.common.cancel}
               </button>
             </div>
           )}
           <Textarea
-            placeholder={`Share your thoughts... (tip: use @1:23 to timestamp)`}
+            placeholder={t.comments.share_placeholder}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={3}
@@ -216,7 +227,7 @@ export function CommentThread({
               onClick={() => void submitComment()}
               disabled={submitting || !body.trim()}
             >
-              {submitting ? "Posting..." : "Post Comment"}
+              {submitting ? t.comments.posting : t.comments.post}
             </Button>
           </div>
         </div>
@@ -224,7 +235,7 @@ export function CommentThread({
 
       {!user && (
         <p className="text-sm text-cream/40">
-          <a href="/login" className="text-violet-light hover:underline">Sign in</a> to leave a comment
+          <a href="/login" className="text-violet-light hover:underline">{t.comments.sign_in_to_comment}</a>
         </p>
       )}
 
@@ -239,7 +250,7 @@ export function CommentThread({
           />
         ))}
         {comments.length === 0 && (
-          <p className="text-sm text-cream/30">No comments yet. Be the first!</p>
+          <p className="text-sm text-cream/30">{t.comments.none}</p>
         )}
       </div>
     </div>

@@ -11,6 +11,7 @@ import { useCartStore } from "@/store/cart-store";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 
 interface ReleaseCardProps {
   release: ReleaseItem;
@@ -18,7 +19,14 @@ interface ReleaseCardProps {
   index?: number;
 }
 
+function isSauroraaAgency(name?: string | null) {
+  if (!name) return false;
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "sauroraaagency" || normalized.includes("sauroraaagency");
+}
+
 export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardProps) {
+  const { t } = useLanguage();
   const [hovering, setHovering] = useState(false);
   const { setTrack, setPlaying, addToQueue, openDetailPanel } = usePlayerStore();
   const { addItem, openCart } = useCartStore();
@@ -151,7 +159,9 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
             </Badge>
             {genreLabel && <Badge variant="gray">{genreLabel}</Badge>}
             {release.artist?.agencyLinks && release.artist.agencyLinks.length > 0 && (
-              <Badge variant="gray" className="!bg-amber-500/20 !text-amber-300 !border-amber-500/30">Agency</Badge>
+              <Badge variant="gray" className="!bg-amber-500/20 !text-amber-300 !border-amber-500/30">
+                {release.artist.agencyLinks.some((link) => isSauroraaAgency(link.agency?.displayName)) ? "SauroraaAgency" : "Agency"}
+              </Badge>
             )}
             {release.exclusiveFollowersOnly && <Badge variant="exclusive">Exclusive</Badge>}
           </div>
@@ -165,7 +175,7 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
           </h3>
         </Link>
         {release.artist && (
-          <Link href={`/artist/${release.artist.id}`}>
+          <Link href={`/artist/${release.artist.slug ?? release.artist.id}`}>
             <p className="text-xs text-cream/50 hover:text-cream/70 transition-colors">{artistName}</p>
           </Link>
         )}
@@ -184,12 +194,12 @@ export function ReleaseCard({ release, onDownloadFree, index = 0 }: ReleaseCardP
               className="flex-1 gap-1.5"
             >
               <Download className="h-3.5 w-3.5" />
-              Download
+              {t.common.download}
             </Button>
           ) : (
             <Button size="sm" onClick={handleBuy} className="flex-1 gap-1.5">
               <ShoppingCart className="h-3.5 w-3.5" />
-              Buy
+              {t.common.buy}
             </Button>
           )}
         </div>

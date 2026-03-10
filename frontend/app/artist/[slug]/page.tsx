@@ -8,6 +8,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { fetchArtist, fetchArtistStats, fetchDubpacks, fetchReleases } from "@/lib/api";
 import type { ReleaseItem } from "@/lib/types";
+import { useLanguage } from "@/context/language-context";
 import { useAuthStore } from "@/store/auth-store";
 import { usePlayerStore } from "@/store/player-store";
 import { ArtistBadges } from "@/components/artist-badges";
@@ -26,11 +27,11 @@ function formatCompact(value: number) {
   return `${value}`;
 }
 
-function formatDate(value?: string | null) {
+function formatDate(value: string | null | undefined, locale: string) {
   if (!value) return "Recently";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recently";
-  return date.toLocaleDateString("fr-BE", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 type FollowerEntry = {
@@ -42,6 +43,7 @@ type FollowerEntry = {
 };
 
 function FollowersTab({ artistId }: { artistId: string }) {
+  const { t, locale } = useLanguage();
   const [followers, setFollowers] = useState<FollowerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +62,7 @@ function FollowersTab({ artistId }: { artistId: string }) {
 
   if (followers.length === 0) return (
     <div className="flex h-40 items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-surface">
-      <p className="text-sm text-cream/30">Aucun follower pour le moment.</p>
+      <p className="text-sm text-cream/30">{t.artist.no_followers}</p>
     </div>
   );
 
@@ -79,7 +81,7 @@ function FollowersTab({ artistId }: { artistId: string }) {
               ? <Link href={`/artist/${f.artistId}`} className="text-sm font-medium text-cream hover:text-violet-light transition-colors">{f.displayName}</Link>
               : <p className="text-sm font-medium text-cream">{f.displayName}</p>
             }
-            <p className="text-xs text-cream/30">{new Date(f.followedAt).toLocaleDateString("fr-BE")}</p>
+            <p className="text-xs text-cream/30">{new Date(f.followedAt).toLocaleDateString(locale === "fr" ? "fr-BE" : locale === "nl" ? "nl-BE" : "en-GB")}</p>
           </div>
         </div>
       ))}
@@ -97,6 +99,7 @@ type FollowingEntry = {
 };
 
 function FollowingTab({ artistId }: { artistId: string }) {
+  const { t } = useLanguage();
   const [following, setFollowing] = useState<FollowingEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -115,7 +118,7 @@ function FollowingTab({ artistId }: { artistId: string }) {
 
   if (following.length === 0) return (
     <div className="flex h-40 items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-surface">
-      <p className="text-sm text-cream/30">Ne suit personne pour le moment.</p>
+      <p className="text-sm text-cream/30">{t.artist.not_following_anyone}</p>
     </div>
   );
 
@@ -133,7 +136,7 @@ function FollowingTab({ artistId }: { artistId: string }) {
             <Link href={`/artist/${f.slug ?? f.artistId}`} className="text-sm font-medium text-cream hover:text-violet-light transition-colors">
               {f.displayName ?? f.artistId}
             </Link>
-            <p className="text-xs text-cream/30">{f.followersCount} follower{f.followersCount !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-cream/30">{f.followersCount} {t.common.followers}</p>
           </div>
         </div>
       ))}
@@ -153,12 +156,13 @@ function TipModal({
   onClose: () => void;
 }) {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const [amount, setAmount] = useState(5);
   const [loading, setLoading] = useState(false);
 
   const handleTip = async () => {
     if (!user) {
-      toast.error("Connecte-toi pour laisser un tip");
+      toast.error(t.follow_button.signin_required);
       return;
     }
     setLoading(true);
@@ -173,16 +177,16 @@ function TipModal({
       const { sessionUrl } = (await res.json()) as { sessionUrl: string };
       window.location.href = sessionUrl;
     } catch {
-      toast.error("Impossible d'envoyer le tip");
+      toast.error(t.common.error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Tip ${artistName}`} size="sm">
+    <Modal open={open} onClose={onClose} title={`${t.artist.tip} ${artistName}`} size="sm">
       <div className="space-y-5">
-        <p className="text-sm text-cream/60">Soutiens l'artiste avec un tip unique.</p>
+        <p className="text-sm text-cream/60">{t.artist.tip_support}</p>
         <div className="flex flex-wrap gap-2">
           {TIP_AMOUNTS.map((amountOption) => (
             <button
@@ -200,7 +204,7 @@ function TipModal({
         </div>
         <Button onClick={() => void handleTip()} disabled={loading} className="w-full gap-2">
           <Heart className="h-4 w-4" />
-          {loading ? "Redirection..." : `Envoyer EUR ${amount}`}
+          {loading ? t.cart.redirecting : `${t.artist.send_tip} EUR ${amount}`}
         </Button>
       </div>
     </Modal>
@@ -208,6 +212,7 @@ function TipModal({
 }
 
 export default function ArtistPage({ params }: { params: { slug: string } }) {
+  const { t, locale } = useLanguage();
   const artistSlug = params.slug;
   const [tab, setTab] = useState<"all" | "tracks" | "dubpacks" | "followers" | "following">("all");
   const [tipOpen, setTipOpen] = useState(false);
@@ -271,7 +276,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   if (artistLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-sm text-cream/40">Chargement du profil artiste...</p>
+        <p className="text-sm text-cream/40">{t.artist.loading}</p>
       </div>
     );
   }
@@ -279,7 +284,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   if (!artist) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-sm text-cream/40">Artiste introuvable.</p>
+        <p className="text-sm text-cream/40">{t.artist.not_found}</p>
       </div>
     );
   }
@@ -300,10 +305,10 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         credentials: "include",
         body: JSON.stringify({ bannerUrl: path })
       });
-      toast.success("Bannière mise à jour !");
+      toast.success(t.common.save);
       window.location.reload();
     } catch {
-      toast.error("Impossible d'uploader la bannière");
+      toast.error(t.common.error);
     } finally {
       setBannerUploading(false);
     }
@@ -346,7 +351,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 className="absolute right-3 top-3 flex items-center gap-1.5 rounded-[8px] bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm hover:bg-black/80 transition-colors disabled:opacity-50"
               >
                 <Camera className="h-3.5 w-3.5" />
-                {bannerUploading ? "Upload..." : "Modifier la bannière"}
+                {bannerUploading ? t.artist.updating_banner : t.artist.edit_banner}
               </button>
             </>
           )}
@@ -375,7 +380,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 <FollowButton artistId={resolvedArtistId} />
                 <Button variant="outline" size="sm" onClick={() => setTipOpen(true)} className="gap-1.5">
                   <Heart className="h-4 w-4" />
-                  Tip
+                  {t.artist.tip}
                 </Button>
               </div>
             </div>
@@ -386,11 +391,11 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
       <section className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
         <div className="flex items-center gap-1">
           {[
-            { key: "all", label: "Tout" },
-            { key: "tracks", label: `Titres (${releasesCount})` },
-            { key: "dubpacks", label: `Dubpacks (${dubpacksCount})` },
-            { key: "followers", label: `Followers (${followersCount})` },
-            { key: "following", label: "Suivis" },
+            { key: "all", label: t.artist.all },
+            { key: "tracks", label: `${t.artist.tracks} (${releasesCount})` },
+            { key: "dubpacks", label: `${t.artist.dubpacks} (${dubpacksCount})` },
+            { key: "followers", label: `${t.artist.followers_label} (${followersCount})` },
+            { key: "following", label: t.artist.following },
           ].map((item) => (
             <button
               key={item.key}
@@ -406,9 +411,9 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           ))}
         </div>
         <div className="flex items-center gap-5 text-xs text-cream/45">
-          <span>{formatCompact(followersCount)} followers</span>
-          <span>{releasesCount} releases</span>
-          <span>{dubpacksCount} dubpacks</span>
+          <span>{formatCompact(followersCount)} {t.artist.followers}</span>
+          <span>{releasesCount} {t.artist.releases_count}</span>
+          <span>{dubpacksCount} {t.artist.dubpacks_count}</span>
         </div>
       </section>
 
@@ -416,9 +421,9 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         <div className="space-y-4">
           {(tab === "all" || tab === "tracks") && (
             <div className="space-y-4">
-              {releasesLoading && <p className="text-sm text-cream/35">Chargement des titres...</p>}
+              {releasesLoading && <p className="text-sm text-cream/35">{t.artist.loading_tracks}</p>}
               {!releasesLoading && visibleReleases.length === 0 && (
-                <p className="text-sm text-cream/35">Aucun titre publié pour le moment.</p>
+                <p className="text-sm text-cream/35">{t.artist.no_tracks}</p>
               )}
 
               {visibleReleases.map((release) => {
@@ -451,7 +456,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                         <Link href={`/release/${release.slug}`} className="text-sm font-bold text-white hover:text-violet-light transition-colors line-clamp-1">
                           {release.title}
                         </Link>
-                        <p className="text-[11px] text-white/50 mt-0.5">{formatDate(release.createdAt)}</p>
+                        <p className="text-[11px] text-white/50 mt-0.5">{formatDate(release.createdAt, locale === "fr" ? "fr-BE" : locale === "nl" ? "nl-BE" : "en-GB")}</p>
                       </div>
 
                       {/* Price badge (top-right) */}
@@ -461,7 +466,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                             ? "bg-green-500/20 text-green-300 border border-green-500/30"
                             : "bg-violet/20 text-violet-light border border-violet/30"
                         }`}>
-                          {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
+                          {release.type === "FREE" ? t.common.free : `€${Number(release.price).toFixed(2)}`}
                         </span>
                       </div>
 
@@ -495,15 +500,15 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     {/* Bottom bar */}
                     <div className="flex items-center justify-between px-4 py-2.5 text-xs text-cream/40">
                       <span>
-                        {release._count?.comments ?? 0} commentaires · {viewsByTrack.get(release.id) ?? 0} vues
+                        {release._count?.comments ?? 0} {t.comments.title.toLowerCase()} · {viewsByTrack.get(release.id) ?? 0} {t.artist.views.toLowerCase()}
                       </span>
                       {release.type === "FREE" ? (
                         <button onClick={() => setFreeDownload(release)} className="text-violet-light hover:text-violet hover:underline transition-colors">
-                          Télécharger
+                          {t.common.download}
                         </button>
                       ) : (
                         <Link href={`/release/${release.slug}`} className="text-violet-light hover:text-violet hover:underline transition-colors">
-                          Acheter
+                          {t.common.buy}
                         </Link>
                       )}
                     </div>
@@ -515,9 +520,9 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
           {tab === "dubpacks" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {dubpacksLoading && <p className="text-sm text-cream/35">Chargement des dubpacks...</p>}
+              {dubpacksLoading && <p className="text-sm text-cream/35">{t.artist.loading_dubpacks}</p>}
               {!dubpacksLoading && artistDubpacks.length === 0 && (
-                <p className="text-sm text-cream/35">Aucun dubpack publié pour le moment.</p>
+                <p className="text-sm text-cream/35">{t.artist.no_dubpacks}</p>
               )}
               {artistDubpacks.map((dubpack) => (
                 <Link
@@ -527,7 +532,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 >
                   <p className="text-sm font-semibold text-cream">{dubpack.title}</p>
                   <p className="mt-1 text-xs text-cream/45">
-                    {dubpack.type === "FREE" ? "Free" : `EUR ${Number(dubpack.price).toFixed(2)}`}
+                    {dubpack.type === "FREE" ? t.common.free : `EUR ${Number(dubpack.price).toFixed(2)}`}
                   </p>
                 </Link>
               ))}
@@ -547,31 +552,31 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
         <aside className="space-y-4">
           <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
-            <h3 className="text-sm font-semibold text-cream">Stats</h3>
+            <h3 className="text-sm font-semibold text-cream">{t.artist.stats_title}</h3>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center">
               <div className="rounded-[10px] bg-black/20 py-2">
                 <p className="text-lg font-bold text-cream">{formatCompact(followersCount)}</p>
-                <p className="text-[10px] uppercase tracking-wide text-cream/40">Followers</p>
+                <p className="text-[10px] uppercase tracking-wide text-cream/40">{t.artist.followers_label}</p>
               </div>
               <div className="rounded-[10px] bg-black/20 py-2">
                 <p className="text-lg font-bold text-cream">{releasesCount}</p>
-                <p className="text-[10px] uppercase tracking-wide text-cream/40">Tracks</p>
+                <p className="text-[10px] uppercase tracking-wide text-cream/40">{t.artist.tracks_label}</p>
               </div>
               <div className="rounded-[10px] bg-black/20 py-2">
                 <p className="text-lg font-bold text-cream">{dubpacksCount}</p>
-                <p className="text-[10px] uppercase tracking-wide text-cream/40">Dubpacks</p>
+                <p className="text-[10px] uppercase tracking-wide text-cream/40">{t.artist.dubpacks_label}</p>
               </div>
               <div className="rounded-[10px] bg-black/20 py-2">
                 <p className="text-lg font-bold text-cream">{formatCompact(totalTrackViews)}</p>
-                <p className="text-[10px] uppercase tracking-wide text-cream/40">Vues</p>
+                <p className="text-[10px] uppercase tracking-wide text-cream/40">{t.artist.views}</p>
               </div>
             </div>
           </div>
 
           <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
-            <h3 className="text-sm font-semibold text-cream">Bio & Contact</h3>
+            <h3 className="text-sm font-semibold text-cream">{t.artist.bio_title}</h3>
             <p className="mt-3 text-sm leading-relaxed text-cream/60">
-              {artist.bio?.trim() || "Aucune bio renseignée pour le moment."}
+              {artist.bio?.trim() || t.artist.no_bio}
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -599,7 +604,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           </div>
 
           <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
-            <h3 className="text-sm font-semibold text-cream">Top tracks</h3>
+            <h3 className="text-sm font-semibold text-cream">{t.artist.top_tracks}</h3>
             <div className="mt-3 space-y-2">
               {artistReleases.slice(0, 5).map((release, index) => (
                 <Link
@@ -623,7 +628,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 </Link>
               ))}
               {artistReleases.length === 0 && (
-                <p className="text-xs text-cream/40">Aucun titre pour le moment.</p>
+                <p className="text-xs text-cream/40">{t.artist.no_tracks}</p>
               )}
             </div>
           </div>
@@ -631,10 +636,10 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-4">
             <div className="flex items-center gap-2 text-cream/70">
               <Users className="h-4 w-4 text-violet-light" />
-              <p className="text-sm">Découvre les autres artistes Sauroraa</p>
+              <p className="text-sm">{t.artist.discover}</p>
             </div>
             <Link href="/catalog" className="mt-3 inline-block text-sm text-violet-light hover:text-violet-300 transition-colors">
-              Explorer le catalogue →
+              {t.artist.explore_catalog}
             </Link>
           </div>
         </aside>

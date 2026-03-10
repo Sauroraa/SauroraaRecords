@@ -4,6 +4,7 @@ import { UserCheck, UserPlus, UserMinus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 import { useAuthStore } from "@/store/auth-store";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
@@ -15,6 +16,7 @@ interface FollowButtonProps {
 
 export function FollowButton({ artistId, showCount = true }: FollowButtonProps) {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -34,7 +36,7 @@ export function FollowButton({ artistId, showCount = true }: FollowButtonProps) 
   const count = data?.count ?? 0;
 
   const doToggle = async () => {
-    if (!user) { toast.error("Connecte-toi pour suivre des artistes"); return; }
+    if (!user) { toast.error(t.follow_button.signin_required); return; }
     setLoading(true);
     setConfirming(false);
     queryClient.setQueryData(["follow-status", artistId], {
@@ -46,7 +48,7 @@ export function FollowButton({ artistId, showCount = true }: FollowButtonProps) 
       const res = await fetch(`${API}/follows/artist/${artistId}`, { method, credentials: "include" });
       if (res.ok) {
         void queryClient.invalidateQueries({ queryKey: ["follow-status", artistId] });
-        toast.success(isFollowing ? "Désabonné" : "Abonné !");
+        toast.success(isFollowing ? t.follow_button.unfollowed_success : t.follow_button.followed_success);
       } else {
         queryClient.setQueryData(["follow-status", artistId], data);
       }
@@ -86,19 +88,19 @@ export function FollowButton({ artistId, showCount = true }: FollowButtonProps) 
         {loading ? (
           <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
         ) : confirming ? (
-          <><UserMinus className="h-4 w-4" /> Confirmer</>
+          <><UserMinus className="h-4 w-4" /> {t.follow_button.unfollow_confirm}</>
         ) : isFollowing ? (
           hovering
-            ? <><UserMinus className="h-4 w-4" /> Se désabonner</>
-            : <><UserCheck className="h-4 w-4" /> Suivi</>
+            ? <><UserMinus className="h-4 w-4" /> {t.follow_button.unfollow}</>
+            : <><UserCheck className="h-4 w-4" /> {t.follow_button.following}</>
         ) : (
-          <><UserPlus className="h-4 w-4" /> Suivre</>
+          <><UserPlus className="h-4 w-4" /> {t.common.follow}</>
         )}
       </button>
 
       {showCount && (
         <span className="text-sm text-cream/50">
-          {count.toLocaleString()} follower{count !== 1 ? "s" : ""}
+          {count.toLocaleString()} {t.common.followers}
         </span>
       )}
     </div>

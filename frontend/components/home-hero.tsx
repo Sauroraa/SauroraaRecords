@@ -43,6 +43,14 @@ function isSauroraaAgency(name?: string | null) {
   return normalized === "sauroraaagency" || normalized.includes("sauroraaagency");
 }
 
+function artistIsFromAgency(artist?: ArtistProfile | null) {
+  return (artist?.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName));
+}
+
+function releaseIsFromAgency(release?: ReleaseItem | null) {
+  return (release?.artist?.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName));
+}
+
 export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) {
   const { t } = useLanguage();
   const [freeDownloadRelease, setFreeDownloadRelease] = useState<ReleaseItem | null>(null);
@@ -51,9 +59,16 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
   const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
   const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
-  const featured = trending.length ? trending.slice(0, 3) : releases.slice(0, 3);
-  const latest = releases.slice(0, 8);
-  const topArtists = artists.slice(0, 3);
+  const prioritizedArtists = [...artists].sort((a, b) => Number(artistIsFromAgency(b)) - Number(artistIsFromAgency(a)));
+  const prioritizedReleases = [...releases].sort((a, b) => Number(releaseIsFromAgency(b)) - Number(releaseIsFromAgency(a)));
+  const agencyArtists = prioritizedArtists.filter((artist) => artistIsFromAgency(artist));
+  const agencyArtistIds = new Set(agencyArtists.map((artist) => artist.id));
+  const agencyReleases = prioritizedReleases.filter(
+    (release) => releaseIsFromAgency(release) || (release.artist?.id ? agencyArtistIds.has(release.artist.id) : false)
+  );
+  const featured = trending.length ? trending.slice(0, 3) : prioritizedReleases.slice(0, 3);
+  const latest = prioritizedReleases.slice(0, 8);
+  const topArtists = prioritizedArtists.slice(0, 3);
   const maxRevenue = topArtists.length > 0
     ? Math.max(...topArtists.map((a) => Number(a._count?.releases ?? 0) + Number(a._count?.followers ?? 0)))
     : 1;
@@ -185,31 +200,37 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
 
       {/* ── SAURORAA AGENCY SPOTLIGHT ── */}
       {(() => {
-        const agencyArtists = artists.filter((artist) =>
-          (artist.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName))
-        );
-        const agencyReleases = releases
-          .filter((release) =>
-            (release.artist?.agencyLinks ?? []).some((link) => isSauroraaAgency(link.agency?.displayName))
-          )
-          .slice(0, 4);
-        if (agencyArtists.length === 0) return null;
+        const fallbackArtists = agencyReleases
+          .map((release) => release.artist)
+          .filter((artist): artist is ReleaseItem["artist"] & { id: string } => Boolean(artist?.id))
+          .filter((artist, index, source) => source.findIndex((item) => item.id === artist.id) === index);
+        const spotlightArtists = agencyArtists.length > 0 ? agencyArtists : fallbackArtists;
+
+        if (spotlightArtists.length === 0 && agencyReleases.length === 0) return null;
         return (
-          <section className="mx-auto max-w-7xl px-6 py-12 space-y-6">
+          <section className="mx-auto max-w-7xl px-6 py-12 space-y-8">
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" />
-                  SauroraaAgency
+                  SAURORAA AGENCY
                 </p>
-                <h2 className="text-3xl font-bold text-cream">Mise en avant agence</h2>
-                <p className="text-sm text-cream/40 mt-1">Les profils et releases de SauroraaAgency passent en avant automatiquement.</p>
+                <h2 className="text-3xl font-bold text-cream">Chez SauroraaAgency</h2>
+                <p className="text-sm text-cream/40 mt-1">
+                  Les artistes SauroraaAgency et toutes leurs sorties sont mises en avant ici en premier.
+                </p>
               </div>
+              <Link
+                href="/catalog"
+                className="text-sm text-amber-300/70 hover:text-amber-200 transition-colors flex items-center gap-1.5"
+              >
+                Voir toutes les sorties <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
 
             {/* Agency artists avatars */}
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6">
-              {agencyArtists.map((artist, i) => {
+              {spotlightArtists.map((artist, i) => {
                 const name = artist.displayName ?? "Artiste";
                 const href = `/artist/${artist.slug ?? artist.id}`;
                 return (
@@ -235,10 +256,10 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
 
             {/* Agency releases */}
             {agencyReleases.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {agencyReleases.map((release, i) => (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                {agencyReleases.slice(0, 8).map((release, i) => (
                   <motion.div key={release.id} {...fadeIn(i * 0.06)}>
-                    <ReleaseCard release={release} />
+                    <ReleaseCard release={release} onDownloadFree={setFreeDownloadRelease} index={i} />
                   </motion.div>
                 ))}
               </div>
@@ -357,7 +378,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             </Link>
           </div>
           <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-none -mx-6 px-6">
-            {artists.slice(0, 10).map((artist, i) => (
+            {prioritizedArtists.slice(0, 10).map((artist, i) => (
               <motion.div
                 key={artist.id}
                 {...fadeIn(i * 0.07)}
@@ -459,7 +480,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             </div>
 
             {/* Rest of list */}
-            {artists.slice(3, 6).map((artist, i) => (
+            {prioritizedArtists.slice(3, 6).map((artist, i) => (
               <div key={artist.id} className="flex items-center gap-4 px-8 py-3 border-t border-[rgba(255,255,255,0.05)] last:border-b-0">
                 <span className="w-5 text-center text-sm font-bold text-cream/30">#{i + 4}</span>
                 <div className="h-8 w-8 overflow-hidden rounded-full bg-surface2 shrink-0">

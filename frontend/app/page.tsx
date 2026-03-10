@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchReleases, fetchArtists, fetchHomeOverviewStats } from "@/lib/api";
 import { HomeHero } from "@/components/home-hero";
+import { LanguageChooserModal } from "@/components/language-chooser-modal";
 import { useRankings } from "@/lib/hooks/use-rankings";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { jsonLd } from "./metadata";
@@ -34,6 +35,7 @@ export default function HomePage() {
 
   return (
     <>
+      <LanguageChooserModal />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

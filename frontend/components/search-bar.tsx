@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/language-context";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
@@ -18,6 +19,7 @@ type SearchRelease = {
 
 type SearchArtist = {
   id: string;
+  slug?: string | null;
   displayName: string | null;
   avatar?: string | null;
 };
@@ -31,6 +33,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" }: { className?: string }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,7 +104,7 @@ export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" 
           ref={inputRef}
           type="text"
           value={query}
-          placeholder="Recherche..."
+          placeholder={t.search.placeholder}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
@@ -118,23 +121,23 @@ export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" 
       {showDropdown && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#0d0d12] shadow-2xl">
           {loading && !hasResults && (
-            <div className="px-4 py-3 text-xs text-cream/30">Searching...</div>
+            <div className="px-4 py-3 text-xs text-cream/30">{t.search.searching}</div>
           )}
 
           {!loading && !hasResults && query.trim() && (
-            <div className="px-4 py-3 text-xs text-cream/30">No results for &ldquo;{query}&rdquo;</div>
+            <div className="px-4 py-3 text-xs text-cream/30">{t.search.no_results} &ldquo;{query}&rdquo;</div>
           )}
 
           {/* Artists */}
           {results && results.artists.length > 0 && (
             <div>
               <p className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wider text-cream/25">
-                Artists
+                {t.search.artists}
               </p>
               {results.artists.map((artist) => (
                 <Link
                   key={artist.id}
-                  href={`/artist/${artist.id}`}
+                  href={`/artist/${artist.slug ?? artist.id}`}
                   onClick={() => { setOpen(false); setQuery(""); }}
                   className="flex items-center gap-2.5 px-3 py-2 hover:bg-white/5 transition-colors"
                 >
@@ -158,7 +161,7 @@ export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" 
           {results && results.releases.length > 0 && (
             <div>
               <p className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wider text-cream/25">
-                Releases
+                {t.search.releases}
               </p>
               {results.releases.slice(0, 6).map((release) => (
                 <Link
@@ -194,7 +197,7 @@ export function SearchBar({ className = "relative hidden md:block w-56 lg:w-72" 
               onClick={() => { setOpen(false); }}
               className="flex items-center justify-center border-t border-[rgba(255,255,255,0.06)] px-4 py-2.5 text-xs text-violet-light hover:text-violet hover:bg-violet/5 transition-colors"
             >
-              See all results for &ldquo;{query}&rdquo;
+              {t.search.see_all} &ldquo;{query}&rdquo;
             </Link>
           )}
         </div>

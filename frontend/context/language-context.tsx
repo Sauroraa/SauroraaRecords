@@ -14,20 +14,33 @@ interface LanguageContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: Dict;
+  initialized: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
   locale: "fr",
   setLocale: () => {},
-  t: fr
+  t: fr,
+  initialized: false
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("fr");
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("locale") as Locale | null;
-    if (stored && dicts[stored]) setLocaleState(stored);
+    if (stored && dicts[stored]) {
+      setLocaleState(stored);
+      setInitialized(true);
+      return;
+    }
+
+    const browser = navigator.language.slice(0, 2).toLowerCase() as Locale;
+    if (dicts[browser]) {
+      setLocaleState(browser);
+    }
+    setInitialized(true);
   }, []);
 
   const setLocale = (l: Locale) => {
@@ -36,7 +49,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <LanguageContext.Provider value={{ locale, setLocale, t: dicts[locale] }}>
+    <LanguageContext.Provider value={{ locale, setLocale, t: dicts[locale], initialized }}>
       {children}
     </LanguageContext.Provider>
   );

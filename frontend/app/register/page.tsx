@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ type Role = "CLIENT" | "ARTIST";
 
 export default function RegisterPage() {
   const { register, isLoading } = useAuthStore();
+  const { t } = useLanguage();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState("");
@@ -35,11 +37,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error("Prénom et nom obligatoires");
+      toast.error(t.auth.first_last_required);
       return;
     }
     if (password.length < 8) {
-      toast.error("Mot de passe : 8 caractères minimum");
+      toast.error(t.auth.password_too_short);
       return;
     }
     try {
@@ -57,10 +59,10 @@ export default function RegisterPage() {
         vatNumber: hasSociete ? vatNumber || undefined : undefined,
         billingAddress: hasSociete ? billingAddress || undefined : undefined
       });
-      toast.success("Compte créé ! Bienvenue sur Sauroraa.");
+      toast.success(t.auth.account_created);
       router.push(role === "ARTIST" ? "/dashboard/artist" : "/");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Échec de l'inscription");
+      toast.error(err instanceof Error ? err.message : t.auth.register_failed);
     }
   };
 
@@ -74,17 +76,17 @@ export default function RegisterPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-light mb-3">
           Sauroraa Records
         </p>
-        <h1 className="text-3xl font-bold text-cream">Créer un compte</h1>
+        <h1 className="text-3xl font-bold text-cream">{t.auth.register_title}</h1>
         <p className="mt-2 text-sm text-cream/50">
-          Rejoins la plateforme et commence à publier ta musique
+          {t.auth.register_sub}
         </p>
       </motion.div>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
         {/* Identity */}
-        <FormSection icon={User} title="Identité" delay={0.05}>
+        <FormSection icon={User} title={t.auth.identity} delay={0.05}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Prénom *">
+            <Field label={`${t.auth.first_name} *`}>
               <Input
                 placeholder="Jean"
                 value={firstName}
@@ -92,7 +94,7 @@ export default function RegisterPage() {
                 required
               />
             </Field>
-            <Field label="Nom *">
+            <Field label={`${t.auth.last_name} *`}>
               <Input
                 placeholder="Dupont"
                 value={lastName}
@@ -101,7 +103,7 @@ export default function RegisterPage() {
               />
             </Field>
           </div>
-          <Field label="Date de naissance">
+          <Field label={t.auth.birth_date}>
             <Input
               type="date"
               value={dateOfBirth}
@@ -111,8 +113,8 @@ export default function RegisterPage() {
         </FormSection>
 
         {/* Contact */}
-        <FormSection icon={MapPin} title="Coordonnées" delay={0.1}>
-          <Field label="Email *">
+        <FormSection icon={MapPin} title={t.auth.contact} delay={0.1}>
+          <Field label={`${t.auth.email} *`}>
             <Input
               type="email"
               placeholder="tu@example.com"
@@ -122,14 +124,14 @@ export default function RegisterPage() {
               autoComplete="email"
             />
           </Field>
-          <Field label="Adresse">
+          <Field label={t.auth.address}>
             <Input
               placeholder="Rue de l'exemple 1"
               value={addressLine1}
               onChange={(e) => setAddressLine1(e.target.value)}
             />
           </Field>
-          <Field label="Complément d'adresse">
+          <Field label={t.auth.address_extra}>
             <Input
               placeholder="Apt, étage, bât…"
               value={addressLine2}
@@ -137,14 +139,14 @@ export default function RegisterPage() {
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Code postal">
+            <Field label={t.auth.postal_code}>
               <Input
                 placeholder="1000"
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
               />
             </Field>
-            <Field label="Ville">
+            <Field label={t.auth.city}>
               <Input
                 placeholder="Bruxelles"
                 value={city}
@@ -152,7 +154,7 @@ export default function RegisterPage() {
               />
             </Field>
           </div>
-          <Field label="Pays">
+          <Field label={t.auth.country}>
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
@@ -170,13 +172,17 @@ export default function RegisterPage() {
         </FormSection>
 
         {/* Account type */}
-        <FormSection icon={Mic2} title="Type de compte" delay={0.15}>
+        <FormSection icon={Mic2} title={t.auth.account_type} delay={0.15}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(["CLIENT", "ARTIST"] as const).map((k) => {
               const info = {
                 CLIENT: { name: "Fan / Auditeur", desc: "Accède aux releases et dubpacks" },
-                ARTIST: { name: "Artiste", desc: "Publie et vends ta musique" }
+                ARTIST: { name: t.auth.artist, desc: t.auth.artist_desc }
               }[k];
+              if (k === "CLIENT") {
+                info.name = t.auth.fan_listener;
+                info.desc = t.auth.fan_listener_desc;
+              }
               return (
                 <button
                   key={k}
@@ -199,8 +205,8 @@ export default function RegisterPage() {
         </FormSection>
 
         {/* Password */}
-        <FormSection icon={Lock} title="Sécurité" delay={0.2}>
-          <Field label="Mot de passe *">
+        <FormSection icon={Lock} title={t.auth.security} delay={0.2}>
+          <Field label={`${t.auth.password} *`}>
             <Input
               type="password"
               placeholder="8 caractères minimum"
@@ -213,7 +219,7 @@ export default function RegisterPage() {
         </FormSection>
 
         {/* Société */}
-        <FormSection icon={Building2} title="Société / Entreprise" delay={0.25}>
+        <FormSection icon={Building2} title={t.auth.company} delay={0.25}>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -228,7 +234,7 @@ export default function RegisterPage() {
                 }`}
               />
             </button>
-            <span className="text-sm text-cream/70">J&apos;ai une société / entreprise</span>
+            <span className="text-sm text-cream/70">{t.auth.company_toggle}</span>
           </div>
 
           <AnimatePresence>
@@ -241,21 +247,21 @@ export default function RegisterPage() {
                 className="overflow-hidden"
               >
                 <div className="space-y-4 pt-2">
-                  <Field label="Nom de la société">
+                  <Field label={t.auth.society_name}>
                     <Input
                       placeholder="Sauroraa SNC"
                       value={societeName}
                       onChange={(e) => setSocieteName(e.target.value)}
                     />
                   </Field>
-                  <Field label="Numéro TVA">
+                  <Field label={t.auth.vat_number}>
                     <Input
                       placeholder="BE0123456789"
                       value={vatNumber}
                       onChange={(e) => setVatNumber(e.target.value)}
                     />
                   </Field>
-                  <Field label="Siège / Adresse de facturation">
+                  <Field label={t.auth.billing_address}>
                     <Input
                       placeholder="Rue du commerce 1, 1000 Bruxelles"
                       value={billingAddress}
@@ -273,25 +279,25 @@ export default function RegisterPage() {
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           ) : (
             <>
-              Créer mon compte
+              {t.auth.create_account}
               <ChevronRight className="h-4 w-4" />
             </>
           )}
         </Button>
 
         <p className="text-center text-sm text-cream/50">
-          Déjà un compte ?{" "}
+          {t.auth.account_exists}{" "}
           <Link href="/login" className="text-violet-light hover:underline">
-            Se connecter
+            {t.auth.connect}
           </Link>
         </p>
 
         <p className="text-center text-xs text-cream/30">
-          En créant un compte, vous acceptez nos{" "}
-          <Link href="/legal/cgu" className="text-cream/50 hover:underline">CGU</Link>
-          {" "}et notre{" "}
-          <Link href="/legal/confidentialite" className="text-cream/50 hover:underline">
-            Politique de confidentialité
+          {t.auth.terms_prefix}{" "}
+          <Link href="/legal/cgu" className="text-cream/50 hover:underline">{t.auth.terms}</Link>
+          {" "}{t.auth.and}{" "}
+          <Link href="/legal/rgpd" className="text-cream/50 hover:underline">
+            {t.auth.privacy}
           </Link>
           .
         </p>

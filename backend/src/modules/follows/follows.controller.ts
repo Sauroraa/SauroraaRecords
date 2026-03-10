@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/optional-jwt-auth.guard";
 import { NotificationsService } from "../notifications/notifications.service";
 import { Request } from "express";
 
@@ -38,6 +39,7 @@ export class FollowsController {
   }
 
   @Get("artist/:artistId")
+  @UseGuards(OptionalJwtAuthGuard)
   async getFollowInfo(
     @Param("artistId") artistId: string,
     @Req() req: Request & { user?: { userId?: string } }

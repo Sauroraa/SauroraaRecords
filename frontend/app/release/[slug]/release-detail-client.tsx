@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { useLanguage } from "@/context/language-context";
 import { usePlayerStore } from "@/store/player-store";
 import { useCartStore } from "@/store/cart-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -196,6 +197,7 @@ interface ReleaseDetailClientProps {
 }
 
 export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailClientProps) {
+  const { t, locale } = useLanguage();
   const {
     setTrack,
     setPlaying,
@@ -230,7 +232,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
   const genreLabel = release.genre ? release.genre.replace(/_/g, " ") : null;
 
   const handlePreorder = async () => {
-    if (!user) { toast.error("Sign in to pre-order"); return; }
+    if (!user) { toast.error(t.auth.sign_in); return; }
     setPreordering(true);
     try {
       const res = await fetch(`${API}/preorders`, {
@@ -240,9 +242,9 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
         body: JSON.stringify({ releaseId: release.id })
       });
       if (!res.ok) throw new Error();
-      toast.success("Pre-order confirmed! You'll be notified on release day.");
+      toast.success(t.release.preorder);
     } catch {
-      toast.error("Failed to pre-order");
+      toast.error(t.common.error);
     } finally {
       setPreordering(false);
     }
@@ -293,7 +295,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
     <div className="space-y-12">
       <Link href="/catalog" className="inline-flex items-center gap-1.5 text-sm text-cream/50 hover:text-cream transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        Back to Releases
+        {t.release.back}
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[2fr_3fr]">
@@ -325,12 +327,12 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
             <div className="rounded-[12px] border border-violet/30 bg-violet/10 p-4 flex items-center gap-3">
               <Lock className="h-5 w-5 text-violet-light shrink-0" />
               <div>
-                <p className="text-sm font-medium text-cream">Exclusive Follower Drop</p>
+                <p className="text-sm font-medium text-cream">{t.release.exclusive_title}</p>
                 <p className="text-xs text-cream/60 mt-0.5">
-                  Follow the artist to unlock this release.{" "}
+                  {t.release.exclusive_sub}{" "}
                   {release.artist && (
                     <Link href={`/artist/${release.artist.id}`} className="text-violet-light hover:underline">
-                      View artist
+                      {t.release.view_artist}
                     </Link>
                   )}
                 </p>
@@ -341,16 +343,16 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               <Badge variant={release.type === "FREE" ? "green" : "violet"}>
-                {release.type === "FREE" ? "Free" : `€${Number(release.price).toFixed(2)}`}
+                {release.type === "FREE" ? t.common.free : `€${Number(release.price).toFixed(2)}`}
               </Badge>
               {genreLabel && (
                 <Badge variant="gray">{genreLabel}</Badge>
               )}
               {release.exclusiveFollowersOnly && (
-                <Badge variant="exclusive">Exclusive Drop</Badge>
+                <Badge variant="exclusive">{t.release.exclusive_title}</Badge>
               )}
               {isPreorder && (
-                <Badge variant="gray">Pre-order</Badge>
+                <Badge variant="gray">{t.release.preorder}</Badge>
               )}
               {release.bpm && (
                 <Badge variant="gray">{release.bpm} BPM</Badge>
@@ -407,33 +409,33 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
               <>
                 <Button onClick={() => void handlePreorder()} disabled={preordering} className="gap-2">
                   <Clock className="h-4 w-4" />
-                  {preordering ? "Processing..." : `Pre-order — €${Number(release.price).toFixed(2)}`}
+                  {preordering ? t.common.loading : `${t.release.preorder} — €${Number(release.price).toFixed(2)}`}
                 </Button>
                 <p className="w-full text-xs text-cream/40 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Releases {new Date(release.releaseDate!).toLocaleDateString("en-BE", { year: "numeric", month: "long", day: "numeric" })}
+                  {t.release.preorder_msg} {new Date(release.releaseDate!).toLocaleDateString(locale === "fr" ? "fr-BE" : locale === "nl" ? "nl-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </>
             ) : release.type === "FREE" ? (
               <Button onClick={() => setFreeDownloadOpen(true)} className="gap-2">
                 <Download className="h-4 w-4" />
-                Download Free
+                {t.release.download_free}
               </Button>
             ) : (
               <Button onClick={handleBuy} className="gap-2">
                 <ShoppingCart className="h-4 w-4" />
-                Buy — €{Number(release.price).toFixed(2)}
+                {t.release.buy} — €{Number(release.price).toFixed(2)}
               </Button>
             )}
             <Button variant="outline" className="gap-2">
               <Heart className="h-4 w-4" />
-              Favorite
+              {t.release.favorite}
             </Button>
           </div>
 
           {release.createdAt && (
             <p className="text-xs text-cream/30">
-              Released {new Date(release.createdAt).toLocaleDateString("en-BE", { year: "numeric", month: "long", day: "numeric" })}
+              {t.release.released_on} {new Date(release.createdAt).toLocaleDateString(locale === "fr" ? "fr-BE" : locale === "nl" ? "nl-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" })}
             </p>
           )}
 
@@ -457,7 +459,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
                   </div>
                 </div>
                 <Link href={`/artist/${release.artist.id}`} className="ml-auto">
-                  <Button size="sm" variant="outline">View profile</Button>
+                  <Button size="sm" variant="outline">{t.release.view_profile}</Button>
                 </Link>
               </div>
 
@@ -494,7 +496,7 @@ export function ReleaseDetailClient({ release, initialComments }: ReleaseDetailC
       {/* Heatmap */}
       {heatmap.length > 0 && (
         <div className="border-t border-[rgba(255,255,255,0.06)] pt-10">
-          <h3 className="text-lg font-semibold text-cream mb-4">Listening Heatmap</h3>
+          <h3 className="text-lg font-semibold text-cream mb-4">{t.release.heatmap_title}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={heatmap}>
               <XAxis dataKey="secondMark" />

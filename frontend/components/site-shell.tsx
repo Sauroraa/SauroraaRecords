@@ -26,11 +26,22 @@ function UserDropdown({
   dashboardHref,
   unreadCount,
   onLogout,
+  labels,
 }: {
   user: { email: string; role?: string; isStaff?: boolean };
   dashboardHref: string;
   unreadCount: number;
   onLogout: () => void;
+  labels: {
+    profile: string;
+    dashboard: string;
+    releases: string;
+    rankings: string;
+    subscription: string;
+    settings: string;
+    notifications: string;
+    logout: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [artistProfile, setArtistProfile] = useState<{ id: string; slug?: string | null; displayName: string | null; avatar: string | null } | null>(null);
@@ -66,15 +77,15 @@ function UserDropdown({
 
   const menuItems = [
     // "Mon Profil" only if user actually has an artist profile
-    ...(hasArtistProfile ? [{ href: profileHref, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
-    { href: dashboardHref, label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+    ...(hasArtistProfile ? [{ href: profileHref, label: labels.profile, icon: <User className="h-4 w-4" /> }] : []),
+    { href: dashboardHref, label: labels.dashboard, icon: <LayoutDashboard className="h-4 w-4" /> },
     ...(!isAdminLike ? [
-      { href: "/catalog", label: "Releases", icon: <Music className="h-4 w-4" /> },
-      { href: "/rankings", label: "Charts", icon: <Trophy className="h-4 w-4" /> },
-      { href: "/pricing", label: "Abonnement", icon: <CreditCard className="h-4 w-4" /> },
+      { href: "/catalog", label: labels.releases, icon: <Music className="h-4 w-4" /> },
+      { href: "/rankings", label: labels.rankings, icon: <Trophy className="h-4 w-4" /> },
+      { href: "/pricing", label: labels.subscription, icon: <CreditCard className="h-4 w-4" /> },
     ] : []),
-    { href: "/settings", label: "Paramètres", icon: <Settings className="h-4 w-4" /> },
-    { href: "/notifications", label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: <Bell className="h-4 w-4" /> },
+    { href: "/settings", label: labels.settings, icon: <Settings className="h-4 w-4" /> },
+    { href: "/notifications", label: `${labels.notifications}${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: <Bell className="h-4 w-4" /> },
   ];
 
   return (
@@ -154,7 +165,7 @@ function UserDropdown({
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                Déconnexion
+                {labels.logout}
               </button>
             </div>
           </motion.div>
@@ -297,6 +308,16 @@ export function SiteShell({ children }: { children: ReactNode }) {
                 dashboardHref={dashboardHref}
                 unreadCount={unreadCount}
                 onLogout={() => void handleLogout()}
+                labels={{
+                  profile: t.shell.profile,
+                  dashboard: t.shell.dashboard,
+                  releases: t.nav.releases,
+                  rankings: t.nav.rankings,
+                  subscription: t.shell.subscription,
+                  settings: t.shell.settings,
+                  notifications: t.shell.notifications,
+                  logout: t.shell.logout
+                }}
               />
             ) : (
               <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-[rgba(255,255,255,0.08)]">
@@ -313,7 +334,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
             <button
               onClick={() => setMobileOpen(v => !v)}
               className="md:hidden p-2 text-cream/60 hover:text-cream transition-colors"
-              aria-label="Menu"
+              aria-label={t.shell.menu}
             >
               {mobileOpen ? <XIcon className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -414,15 +435,15 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap gap-4 justify-center">
             {[
               { href: "/legal/mentions-legales", label: "Mentions légales" },
+              { href: "/legal/cookies", label: "Cookies" },
+              { href: "/patchnotes", label: t.shell.patchnotes },
+              { href: "/legal/rgpd", label: t.shell.privacy },
+              { href: "/pricing", label: t.nav.pricing },
               { href: "/legal/cgu", label: "CGU" },
               { href: "/legal/cgv", label: "CGV" },
-              { href: "/legal/rgpd", label: "Confidentialité" },
-              { href: "/legal/cookies", label: "Cookies" },
-              { href: "/pricing", label: t.nav.pricing },
-              { href: "/patchnotes", label: "Patch Notes" },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="text-xs text-cream/30 hover:text-cream/60 transition-colors">
-                {l.label}
+                {l.label === "Mentions légales" ? t.shell.legal : l.label}
               </Link>
             ))}
           </div>

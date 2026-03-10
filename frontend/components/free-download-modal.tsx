@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import type { ReleaseItem, DubpackItem } from "@/lib/types";
+import { useLanguage } from "@/context/language-context";
 import { useAuthStore } from "@/store/auth-store";
 import { Modal } from "./ui/modal";
 import { Button } from "./ui/button";
@@ -586,31 +587,32 @@ function SessionFlow({
 
 export function FreeDownloadModal({ open, onClose, release, dubpack }: FreeDownloadModalProps) {
   const { user } = useAuthStore();
+  const { t } = useLanguage();
   const useGate = !!release?.gateEnabled;
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={useGate ? "Débloquer le téléchargement" : "Get Your Free Download"}
+      title={useGate ? t.common.download : t.release.download_free}
       size="md"
     >
       {!user ? (
         <div className="space-y-4 text-center py-4">
           <p className="text-cream/60 text-sm">
             {useGate
-              ? "Connecte-toi pour débloquer ce téléchargement."
-              : "You need to be signed in to download for free."}
+              ? t.auth.login_sub
+              : t.comments.sign_in_to_comment}
           </p>
           <div className="flex gap-3 justify-center">
             <Button asChild>
               <Link href="/login" onClick={onClose}>
-                {useGate ? "Se connecter" : "Sign In"}
+                {t.auth.sign_in}
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/register" onClick={onClose}>
-                {useGate ? "Créer un compte" : "Create Account"}
+                {t.auth.create_account}
               </Link>
             </Button>
           </div>

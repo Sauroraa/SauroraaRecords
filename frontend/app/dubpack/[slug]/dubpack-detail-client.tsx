@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCartStore } from "@/store/cart-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useLanguage } from "@/context/language-context";
 import type { DubpackItem, CommentItem } from "@/lib/types";
 import { FreeDownloadModal } from "@/components/free-download-modal";
 import { CommentThread } from "@/components/comment-thread";
@@ -22,6 +23,7 @@ interface DubpackDetailClientProps {
 }
 
 export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailClientProps) {
+  const { t, locale } = useLanguage();
   const { addItem, openCart } = useCartStore();
   const { user } = useAuthStore();
   const [freeDownloadOpen, setFreeDownloadOpen] = useState(false);
@@ -68,7 +70,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
       }
       setFreeDownloadOpen(true);
     } catch {
-      toast.error("Could not initiate download");
+      toast.error(t.common.error);
     } finally {
       setDownloading(false);
     }
@@ -78,7 +80,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
     <div className="space-y-12">
       <Link href="/dubpacks" className="inline-flex items-center gap-1.5 text-sm text-cream/50 hover:text-cream transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        Back to Dubpacks
+        {t.nav.dubpacks}
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[2fr_3fr]">
@@ -109,7 +111,7 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
             <div className="flex flex-wrap gap-2">
               <Badge variant="violet">DUBPACK</Badge>
               {dubpack.type === "FREE" ? (
-                <Badge variant="green">Free</Badge>
+                <Badge variant="green">{t.common.free}</Badge>
               ) : (
                 <Badge variant="gray">€{Number(dubpack.price).toFixed(2)}</Badge>
               )}
@@ -133,10 +135,10 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
           <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-surface p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm text-cream/70">
               <Package className="h-4 w-4 text-violet-light" />
-              <span>ZIP Archive — includes all samples and stems</span>
+              <span>ZIP Archive</span>
             </div>
             <p className="text-xs text-cream/40 pl-6">
-              Download includes high-quality WAV files, stems, and license documentation.
+              WAV, stems et licence inclus.
             </p>
           </div>
 
@@ -145,19 +147,19 @@ export function DubpackDetailClient({ dubpack, initialComments }: DubpackDetailC
             {dubpack.type === "FREE" ? (
               <Button onClick={handleDirectDownload} disabled={downloading} className="gap-2">
                 <Download className="h-4 w-4" />
-                {downloading ? "Preparing..." : "Download Free"}
+                {downloading ? t.cart.redirecting : t.common.download}
               </Button>
             ) : (
               <Button onClick={handleBuy} className="gap-2">
                 <ShoppingCart className="h-4 w-4" />
-                Buy — €{Number(dubpack.price).toFixed(2)}
+                {t.common.buy} — €{Number(dubpack.price).toFixed(2)}
               </Button>
             )}
           </div>
 
           {dubpack.createdAt && (
             <p className="text-xs text-cream/30">
-              Released {new Date(dubpack.createdAt).toLocaleDateString("en-BE", { year: "numeric", month: "long", day: "numeric" })}
+              {t.release.released_on} {new Date(dubpack.createdAt).toLocaleDateString(locale === "fr" ? "fr-BE" : locale === "nl" ? "nl-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" })}
             </p>
           )}
         </motion.div>
