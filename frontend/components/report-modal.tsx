@@ -3,17 +3,18 @@
 import { Flag, X } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 import { useAuthStore } from "@/store/auth-store";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 const REASONS = [
-  { id: "COPYRIGHT", label: "Copyright violation" },
-  { id: "FAKE_ARTIST", label: "Fake artist / impersonation" },
-  { id: "SPAM", label: "Spam or misleading" },
-  { id: "OFFENSIVE", label: "Offensive content" },
-  { id: "WRONG_CATEGORY", label: "Wrong category / mislabelled" },
-  { id: "DUPLICATE", label: "Duplicate release" },
+  { id: "COPYRIGHT", key: "copyright" },
+  { id: "FAKE_ARTIST", key: "fake_artist" },
+  { id: "SPAM", key: "spam" },
+  { id: "OFFENSIVE", key: "offensive" },
+  { id: "WRONG_CATEGORY", key: "wrong_category" },
+  { id: "DUPLICATE", key: "duplicate" },
 ] as const;
 
 type ReasonId = (typeof REASONS)[number]["id"];
@@ -26,6 +27,7 @@ interface ReportModalProps {
 }
 
 export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportModalProps) {
+  const { t } = useLanguage();
   const { user } = useAuthStore();
   const [selected, setSelected] = useState<ReasonId | null>(null);
   const [detail, setDetail] = useState("");
@@ -43,12 +45,12 @@ export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportMo
         credentials: "include",
         body: JSON.stringify({ releaseId, reason: selected, detail }),
       });
-      toast.success("Report submitted. Thank you!");
+      toast.success(t.report.success);
       onClose();
       setSelected(null);
       setDetail("");
     } catch {
-      toast.error("Failed to submit report");
+      toast.error(t.report.error);
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +70,7 @@ export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportMo
           <div>
             <h3 className="flex items-center gap-2 text-base font-semibold text-cream">
               <Flag className="h-4 w-4 text-red-400" />
-              Report
+              {t.report.title}
             </h3>
             <p className="mt-0.5 text-xs text-cream/40 truncate max-w-[220px]">{releaseTitle}</p>
           </div>
@@ -82,7 +84,7 @@ export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportMo
 
         {!user ? (
           <p className="text-sm text-cream/50">
-            <a href="/login" className="text-violet-light hover:underline">Sign in</a> to submit a report.
+            <a href="/login" className="text-violet-light hover:underline">{t.report.sign_in}</a> {t.report.sign_in_suffix}
           </p>
         ) : (
           <>
@@ -97,13 +99,13 @@ export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportMo
                       : "border-[rgba(255,255,255,0.08)] text-cream/60 hover:text-cream hover:bg-white/5"
                   }`}
                 >
-                  {r.label}
+                  {t.report.reasons[r.key]}
                 </button>
               ))}
             </div>
 
             <textarea
-              placeholder="Optional details..."
+              placeholder={t.report.details_placeholder}
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
               rows={2}
@@ -115,7 +117,7 @@ export function ReportModal({ open, onClose, releaseId, releaseTitle }: ReportMo
               disabled={!selected || submitting}
               className="mt-3 w-full rounded-xl bg-red-500/80 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-40"
             >
-              {submitting ? "Submitting..." : "Submit report"}
+              {submitting ? t.report.submitting : t.report.submit}
             </button>
           </>
         )}

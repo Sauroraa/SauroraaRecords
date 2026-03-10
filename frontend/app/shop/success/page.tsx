@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/language-context";
 
 function SuccessContent() {
+  const { t } = useLanguage();
   const params = useSearchParams();
   const sessionId = params.get("session_id");
 
@@ -26,25 +28,25 @@ function SuccessContent() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-cream">Payment Successful!</h1>
+          <h1 className="text-3xl font-bold text-cream">{t.shop_success.title}</h1>
           <p className="text-cream/60 text-sm leading-relaxed">
-            Your order has been confirmed. You can now access your downloads from your dashboard.
+            {t.shop_success.sub}
           </p>
         </div>
 
         {sessionId && (
           <p className="text-xs text-cream/30 font-mono">
-            Order ref: {sessionId.slice(0, 24)}...
+            {t.shop_success.order_ref} {sessionId.slice(0, 24)}...
           </p>
         )}
 
         <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3 text-left">
-          <p className="text-sm font-medium text-cream">What happens next?</p>
+          <p className="text-sm font-medium text-cream">{t.shop_success.next_title}</p>
           <ul className="space-y-2">
             {[
-              "Your purchase is now available in your dashboard",
-              "A confirmation email has been sent to your inbox",
-              "Download your files anytime from your Purchases tab"
+              t.shop_success.next_1,
+              t.shop_success.next_2,
+              t.shop_success.next_3
             ].map((item) => (
               <li key={item} className="flex items-start gap-2 text-xs text-cream/60">
                 <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-violet-light" />
@@ -58,13 +60,13 @@ function SuccessContent() {
           <Button asChild>
             <Link href="/dashboard" className="gap-2">
               <Download className="h-4 w-4" />
-              Go to My Purchases
+              {t.shop_success.purchases}
             </Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/catalog" className="gap-2">
               <ShoppingBag className="h-4 w-4" />
-              Continue Shopping
+              {t.shop_success.continue}
             </Link>
           </Button>
         </div>
@@ -74,10 +76,11 @@ function SuccessContent() {
 }
 
 export default function ShopSuccessPage() {
+  const { t } = useLanguage();
   return (
     <Suspense fallback={
       <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-cream/40 text-sm">Loading...</p>
+        <p className="text-cream/40 text-sm">{t.shop_success.loading}</p>
       </div>
     }>
       <SuccessContent />

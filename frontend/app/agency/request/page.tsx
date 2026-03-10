@@ -6,6 +6,7 @@ import { Building2, Send, CheckCircle2, Users, BarChart3, Headphones } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
@@ -16,6 +17,7 @@ const PERKS = [
 ];
 
 export default function AgencyRequestPage() {
+  const { t } = useLanguage();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,7 +29,7 @@ export default function AgencyRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !company) {
-      toast.error("Email et nom du label obligatoires");
+      toast.error(t.agency_request.required_error);
       return;
     }
     setLoading(true);
@@ -40,7 +42,7 @@ export default function AgencyRequestPage() {
       if (!res.ok) throw new Error();
       setSent(true);
     } catch {
-      toast.error("Une erreur est survenue. Réessaie ou contacte contact@sauroraa.be");
+      toast.error(t.agency_request.submit_error);
     } finally {
       setLoading(false);
     }
@@ -58,14 +60,13 @@ export default function AgencyRequestPage() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-violet/15 border border-violet/30">
             <CheckCircle2 className="h-10 w-10 text-violet-light" />
           </div>
-          <h1 className="text-2xl font-bold text-cream">Demande envoyée !</h1>
+          <h1 className="text-2xl font-bold text-cream">{t.agency_request.sent_title}</h1>
           <p className="text-cream/50 text-sm leading-relaxed">
-            Notre équipe examinera ta demande dans les <span className="text-cream">48h ouvrables</span>.
-            Tu recevras une réponse à{" "}
+            {t.agency_request.sent_sub_prefix} <span className="text-cream">{t.agency_request.sent_sub_highlight}</span>. {t.agency_request.sent_sub_suffix}{" "}
             <span className="text-violet-light font-medium">{email}</span>.
           </p>
           <p className="text-xs text-cream/30">
-            Questions ? <a href="mailto:contact@sauroraa.be" className="text-cream/50 hover:underline">contact@sauroraa.be</a>
+            {t.agency_request.questions} <a href="mailto:contact@sauroraa.be" className="text-cream/50 hover:underline">contact@sauroraa.be</a>
           </p>
         </motion.div>
       </div>
@@ -88,12 +89,11 @@ export default function AgencyRequestPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-light">
               Sauroraa Records
             </p>
-            <h1 className="text-2xl font-bold text-cream">Compte Agence</h1>
+            <h1 className="text-2xl font-bold text-cream">{t.agency_request.title}</h1>
           </div>
         </div>
         <p className="text-sm text-cream/50 leading-relaxed">
-          Les comptes agences permettent de gérer plusieurs artistes depuis un seul tableau de bord.
-          Remplis ce formulaire pour soumettre ta candidature — nous reviendrons vers toi sous 48h.
+          {t.agency_request.sub}
         </p>
       </motion.div>
 
@@ -112,7 +112,7 @@ export default function AgencyRequestPage() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet/10">
               <perk.icon className="h-4 w-4 text-violet-light" />
             </div>
-            <p className="text-sm text-cream/70">{perk.label}</p>
+            <p className="text-sm text-cream/70">{t.agency_request.perks[i]}</p>
           </div>
         ))}
       </motion.div>
@@ -126,11 +126,11 @@ export default function AgencyRequestPage() {
           className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-surface p-6 space-y-4"
         >
           <h2 className="text-xs font-semibold uppercase tracking-widest text-cream/40 pb-2 border-b border-[rgba(255,255,255,0.05)]">
-            Contact
+            {t.agency_request.contact}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/70">Prénom</label>
+              <label className="text-xs font-medium text-cream/70">{t.agency_request.first_name}</label>
               <Input
                 placeholder="Jean"
                 value={firstName}
@@ -138,7 +138,7 @@ export default function AgencyRequestPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-cream/70">Nom</label>
+              <label className="text-xs font-medium text-cream/70">{t.agency_request.last_name}</label>
               <Input
                 placeholder="Dupont"
                 value={lastName}
@@ -147,7 +147,7 @@ export default function AgencyRequestPage() {
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-cream/70">Email professionnel *</label>
+            <label className="text-xs font-medium text-cream/70">{t.agency_request.business_email}</label>
             <Input
               type="email"
               placeholder="contact@monlabel.be"
@@ -165,10 +165,10 @@ export default function AgencyRequestPage() {
           className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-surface p-6 space-y-4"
         >
           <h2 className="text-xs font-semibold uppercase tracking-widest text-cream/40 pb-2 border-b border-[rgba(255,255,255,0.05)]">
-            Label / Agence
+            {t.agency_request.agency}
           </h2>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-cream/70">Nom du label / société *</label>
+            <label className="text-xs font-medium text-cream/70">{t.agency_request.company}</label>
             <Input
               placeholder="Mon Label Music"
               value={company}
@@ -178,10 +178,10 @@ export default function AgencyRequestPage() {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-cream/70">
-              Message / présentation
+              {t.agency_request.message}
             </label>
             <textarea
-              placeholder="Décris ton activité, le nombre d'artistes représentés, tes besoins spécifiques…"
+              placeholder={t.agency_request.message_placeholder}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
@@ -201,13 +201,13 @@ export default function AgencyRequestPage() {
             ) : (
               <>
                 <Send className="h-4 w-4" />
-                Envoyer la demande
+                {t.agency_request.submit}
               </>
             )}
           </Button>
 
           <p className="text-center text-xs text-cream/30 mt-4">
-            Réponse sous 48h ouvrables.{" "}
+            {t.agency_request.response_hint}{" "}
             <a href="mailto:contact@sauroraa.be" className="text-cream/50 hover:underline">
               contact@sauroraa.be
             </a>

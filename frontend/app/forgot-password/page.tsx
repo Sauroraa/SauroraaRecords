@@ -7,8 +7,10 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/context/language-context";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,13 +29,13 @@ export default function ForgotPasswordPage() {
 
       if (!res.ok) {
         const err = (await res.json()) as { message?: string };
-        throw new Error(err.message ?? "Échec de l'envoi");
+        throw new Error(err.message ?? t.forgot_password.send_failed);
       }
 
       setIsSubmitted(true);
-      toast.success("Email de réinitialisation envoyé !");
+      toast.success(t.forgot_password.sent_success);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de l'envoi");
+      toast.error(err instanceof Error ? err.message : t.forgot_password.sent_error);
     } finally {
       setIsLoading(false);
     }
@@ -43,18 +45,18 @@ export default function ForgotPasswordPage() {
     return (
       <section className="mx-auto w-full max-w-sm pt-8">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-cream">Email envoyé !</h1>
+          <h1 className="text-2xl font-semibold text-cream">{t.forgot_password.sent_title}</h1>
           <p className="mt-1.5 text-sm text-muted">
-            Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation.
+            {t.forgot_password.sent_sub}
           </p>
         </div>
         <Card className="p-6">
           <p className="text-sm text-cream/70 mb-4">
-            Vérifiez votre boîte de réception et vos spams. Le lien expire dans 1 heure.
+            {t.forgot_password.sent_hint}
           </p>
           <Link href="/login" className="block">
             <Button variant="outline" className="w-full">
-              Retour à la connexion
+              {t.forgot_password.back_login}
             </Button>
           </Link>
         </Card>
@@ -65,16 +67,16 @@ export default function ForgotPasswordPage() {
   return (
     <section className="mx-auto w-full max-w-sm pt-8">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold text-cream">Mot de passe oublié</h1>
+        <h1 className="text-2xl font-semibold text-cream">{t.forgot_password.title}</h1>
         <p className="mt-1.5 text-sm text-muted">
-          Entrez votre adresse email pour recevoir un lien de réinitialisation
+          {t.forgot_password.sub}
         </p>
       </div>
 
       <Card className="p-6">
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-cream/70">Adresse email</label>
+            <label className="text-xs font-medium text-cream/70">{t.forgot_password.email}</label>
             <Input
               type="email"
               placeholder="vous@example.com"
@@ -86,13 +88,13 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+            {isLoading ? t.forgot_password.sending : t.forgot_password.submit}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-cream/50">
           <Link href="/login" className="text-violet-light hover:underline">
-            Retour à la connexion
+            {t.forgot_password.back_login}
           </Link>
         </p>
       </Card>

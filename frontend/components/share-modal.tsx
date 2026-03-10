@@ -2,6 +2,7 @@
 
 import { Copy, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLanguage } from "@/context/language-context";
 
 interface ShareModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ const TwitterIcon = () => (
 );
 
 export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlug }: ShareModalProps) {
+  const { t } = useLanguage();
   if (!open) return null;
 
   const url = `${RECORDS_BASE}/release/${releaseSlug}`;
@@ -34,7 +36,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
   const shareDiscord = () => {
     const text = `🎵 **${releaseTitle}** by *${artistName}*\n${url}`;
     void navigator.clipboard.writeText(text);
-    toast.success("Discord message copied!");
+    toast.success(t.share.discord_copied);
     onClose();
   };
 
@@ -46,7 +48,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
 
   const copyLink = () => {
     void navigator.clipboard.writeText(url);
-    toast.success("Link copied!");
+    toast.success(t.share.link_copied);
     onClose();
   };
 
@@ -62,7 +64,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
       >
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <h3 className="text-base font-semibold text-cream">Share</h3>
+            <h3 className="text-base font-semibold text-cream">{t.share.title}</h3>
             <p className="mt-0.5 text-xs text-cream/40 truncate max-w-[220px]">
               {releaseTitle}
             </p>
@@ -81,7 +83,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
             className="flex w-full items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#5865F2]/10 px-4 py-3 text-sm font-medium text-[#5865F2] hover:bg-[#5865F2]/20 transition-colors"
           >
             <DiscordIcon />
-            <span>Copy Discord message</span>
+            <span>{t.share.copy_discord}</span>
           </button>
 
           <button
@@ -89,7 +91,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
             className="flex w-full items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-white/5 px-4 py-3 text-sm font-medium text-cream/80 hover:bg-white/10 transition-colors"
           >
             <TwitterIcon />
-            <span>Share on X / Twitter</span>
+            <span>{t.share.share_twitter}</span>
           </button>
 
           <button
@@ -97,7 +99,7 @@ export function ShareModal({ open, onClose, releaseTitle, artistName, releaseSlu
             className="flex w-full items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-violet/10 px-4 py-3 text-sm font-medium text-violet-light hover:bg-violet/20 transition-colors"
           >
             <Copy className="h-5 w-5" />
-            <span>Copy link</span>
+            <span>{t.share.copy_link}</span>
           </button>
         </div>
       </div>

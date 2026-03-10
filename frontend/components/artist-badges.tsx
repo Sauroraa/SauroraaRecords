@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, Star, Building2, Shield } from "lucide-react";
+import { useLanguage } from "@/context/language-context";
 import type { ArtistProfile } from "@/lib/types";
 
 interface ArtistBadgesProps {
@@ -9,6 +10,7 @@ interface ArtistBadgesProps {
 }
 
 export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
+  const { t } = useLanguage();
   const iconSize = size === "sm" ? 12 : 14;
   const textSize = size === "sm" ? "text-[10px]" : "text-xs";
   const px = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-0.5";
@@ -20,7 +22,7 @@ export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
 
   if (artist.isVerified) {
     badges.push({
-      label: "Vérifié",
+      label: t.artist_badges.verified,
       icon: <BadgeCheck size={iconSize} />,
       className: "bg-blue-600/20 text-blue-400 border border-blue-500/30"
     });
@@ -28,19 +30,19 @@ export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
 
   if (plan === "ARTIST_PRO") {
     badges.push({
-      label: "Pro",
+      label: t.artist_badges.pro,
       icon: <Star size={iconSize} />,
       className: "bg-violet-600/20 text-violet-300 border border-violet-500/30"
     });
   } else if (plan === "ARTIST_BASIC") {
     badges.push({
-      label: "Basic",
+      label: t.artist_badges.basic,
       icon: <Star size={iconSize} />,
       className: "bg-zinc-700/40 text-zinc-300 border border-zinc-600/30"
     });
   } else if (plan === "AGENCY_PRO" || plan === "AGENCY_START") {
     badges.push({
-      label: "Agency",
+      label: t.artist_badges.agency,
       icon: <Building2 size={iconSize} />,
       className: "bg-amber-600/20 text-amber-300 border border-amber-500/30"
     });
@@ -71,7 +73,7 @@ export function ArtistBadges({ artist, size = "md" }: ArtistBadgesProps) {
       ))}
       {isStaff && (
         <span className={`inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 font-medium ${textSize} ${px} text-red-300`}>
-          <Shield size={iconSize} /> Staff
+          <Shield size={iconSize} /> {t.artist_badges.staff}
         </span>
       )}
     </div>

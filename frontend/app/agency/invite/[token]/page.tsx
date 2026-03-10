@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/context/language-context";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
@@ -18,6 +19,7 @@ type InviteDetails = {
 type State = "loading" | "valid" | "invalid" | "accepted" | "error";
 
 export default function AcceptInvitePage() {
+  const { t } = useLanguage();
   const { token } = useParams<{ token: string }>();
   const router = useRouter();
 
@@ -50,7 +52,7 @@ export default function AcceptInvitePage() {
   async function handleAccept() {
     if (!details) return;
     if (details.isNewUser && (!password || password.length < 8)) {
-      setErrorMsg("Le mot de passe doit faire au moins 8 caractères.");
+      setErrorMsg(t.agency_invite.password_too_short);
       return;
     }
     setErrorMsg("");
@@ -64,10 +66,10 @@ export default function AcceptInvitePage() {
         )
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Erreur");
+      if (!res.ok) throw new Error(data.message || t.agency_invite.generic_error);
       setState("accepted");
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setErrorMsg(err instanceof Error ? err.message : t.agency_invite.generic_error);
       setState("error");
     } finally {
       setSubmitting(false);
@@ -81,7 +83,7 @@ export default function AcceptInvitePage() {
         <div className="mb-10 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-[#f5f3ef]">Sauroraa Records</h1>
           <p className="mt-1 text-xs text-[#7c3aed] tracking-[0.25em] uppercase">
-            Plateforme musicale indépendante
+            {t.agency_invite.brand_sub}
           </p>
         </div>
 
@@ -96,7 +98,7 @@ export default function AcceptInvitePage() {
               className="flex flex-col items-center gap-4 rounded-[16px] border border-white/8 bg-[#111] p-10"
             >
               <Loader2 className="h-8 w-8 animate-spin text-[#7c3aed]" />
-              <p className="text-sm text-[#f5f3ef]/50">Vérification de l'invitation…</p>
+              <p className="text-sm text-[#f5f3ef]/50">{t.agency_invite.checking}</p>
             </motion.div>
           )}
 
@@ -109,12 +111,12 @@ export default function AcceptInvitePage() {
               className="rounded-[16px] border border-white/8 bg-[#111] p-8 text-center space-y-4"
             >
               <XCircle className="mx-auto h-12 w-12 text-red-500" />
-              <h2 className="text-xl font-bold text-[#f5f3ef]">Invitation invalide</h2>
+              <h2 className="text-xl font-bold text-[#f5f3ef]">{t.agency_invite.invalid_title}</h2>
               <p className="text-sm text-[#f5f3ef]/50">
-                Ce lien d'invitation est expiré, déjà utilisé, ou incorrect.
+                {t.agency_invite.invalid_sub}
               </p>
               <Button variant="outline" onClick={() => router.push("/")}>
-                Retour à l'accueil
+                {t.agency_invite.back_home}
               </Button>
             </motion.div>
           )}
@@ -130,18 +132,18 @@ export default function AcceptInvitePage() {
               <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
               <div>
                 <h2 className="text-xl font-bold text-[#f5f3ef]">
-                  Bienvenue dans {details?.agencyName} !
+                  {t.agency_invite.welcome_prefix} {details?.agencyName} !
                 </h2>
                 <p className="mt-2 text-sm text-[#f5f3ef]/50">
-                  Tu fais maintenant partie du roster. Tu peux accéder à ton espace artiste.
+                  {t.agency_invite.accepted_sub}
                 </p>
               </div>
               <div className="flex flex-col gap-2">
                 <Button onClick={() => router.push("/login?redirect=/dashboard")}>
-                  Se connecter
+                  {t.agency_invite.sign_in}
                 </Button>
                 <Button variant="outline" onClick={() => router.push("/")}>
-                  Accueil
+                  {t.agency_invite.home}
                 </Button>
               </div>
             </motion.div>
@@ -157,18 +159,18 @@ export default function AcceptInvitePage() {
             >
               {/* Agency badge */}
               <div className="rounded-[10px] bg-[#7c3aed]/10 border border-[#7c3aed]/25 p-4 text-center">
-                <p className="text-xs text-[#7c3aed] uppercase tracking-widest mb-1">Invitation de</p>
+                <p className="text-xs text-[#7c3aed] uppercase tracking-widest mb-1">{t.agency_invite.from}</p>
                 <p className="font-bold text-[#f5f3ef] text-lg">{details.agencyName}</p>
               </div>
 
               <div>
                 <h2 className="text-lg font-bold text-[#f5f3ef]">
-                  {details.isNewUser ? "Créer ton compte artiste" : "Rejoindre l'agence"}
+                  {details.isNewUser ? t.agency_invite.create_artist_account : t.agency_invite.join_agency}
                 </h2>
                 <p className="mt-1 text-sm text-[#f5f3ef]/50">
                   {details.isNewUser
-                    ? `Un compte sera créé pour ${details.email}.`
-                    : `Ton compte ${details.email} sera lié à ${details.agencyName}.`}
+                    ? t.agency_invite.new_user_email.replace("{email}", details.email)
+                    : t.agency_invite.existing_user_email.replace("{email}", details.email).replace("{agency}", details.agencyName)}
                 </p>
               </div>
 
@@ -177,17 +179,17 @@ export default function AcceptInvitePage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs text-[#f5f3ef]/40 uppercase tracking-widest">Prénom</label>
+                      <label className="text-xs text-[#f5f3ef]/40 uppercase tracking-widest">{t.agency_invite.first_name}</label>
                       <Input
-                        placeholder="Prénom"
+                        placeholder={t.agency_invite.first_name}
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-[#f5f3ef]/40 uppercase tracking-widest">Nom</label>
+                      <label className="text-xs text-[#f5f3ef]/40 uppercase tracking-widest">{t.agency_invite.last_name}</label>
                       <Input
-                        placeholder="Nom"
+                        placeholder={t.agency_invite.last_name}
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                       />
@@ -196,12 +198,12 @@ export default function AcceptInvitePage() {
 
                   <div className="space-y-1">
                     <label className="text-xs text-[#f5f3ef]/40 uppercase tracking-widest">
-                      Mot de passe
+                      {t.agency_invite.password}
                     </label>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="8 caractères minimum"
+                        placeholder={t.agency_invite.password_placeholder}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pr-10"
@@ -241,21 +243,21 @@ export default function AcceptInvitePage() {
                   {submitting ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Traitement…
+                      {t.agency_invite.processing}
                     </span>
                   ) : details.isNewUser ? (
-                    "Créer mon compte & rejoindre"
+                    t.agency_invite.create_and_join
                   ) : (
-                    "Rejoindre l'agence"
+                    t.agency_invite.join_agency
                   )}
                 </Button>
                 <Button variant="outline" onClick={() => router.push("/")} className="w-full">
-                  Décliner
+                  {t.agency_invite.decline}
                 </Button>
               </div>
 
               <p className="text-center text-xs text-[#f5f3ef]/20">
-                En acceptant, tu rejoins le roster de {details.agencyName} sur Sauroraa Records.
+                {t.agency_invite.footer.replace("{agency}", details.agencyName)}
               </p>
             </motion.div>
           )}

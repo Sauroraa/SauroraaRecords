@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotificationsStore } from "@/store/notifications-store";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/language-context";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
@@ -20,15 +21,15 @@ type Notification = {
   sourceType?: "notification" | "broadcast";
 };
 
-function timeAgo(date: string) {
+function timeAgo(date: string, t: ReturnType<typeof useLanguage>["t"]) {
   const diff = Date.now() - new Date(date).getTime();
   const min = Math.floor(diff / 60000);
   const hr = Math.floor(diff / 3600000);
   const day = Math.floor(diff / 86400000);
-  if (min < 1) return "à l'instant";
-  if (min < 60) return `il y a ${min}m`;
-  if (hr < 24) return `il y a ${hr}h`;
-  return `il y a ${day}j`;
+  if (min < 1) return t.notifications.just_now;
+  if (min < 60) return t.notifications.minutes_ago.replace("{count}", String(min));
+  if (hr < 24) return t.notifications.hours_ago.replace("{count}", String(hr));
+  return t.notifications.days_ago.replace("{count}", String(day));
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -40,6 +41,7 @@ const TYPE_ICONS: Record<string, string> = {
 };
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const { user } = useAuthStore();
   const { fetchUnread } = useNotificationsStore();
   const router = useRouter();
@@ -77,7 +79,7 @@ export default function NotificationsPage() {
         className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-violet-light" />
-          <h1 className="text-2xl font-bold text-cream">Notifications</h1>
+          <h1 className="text-2xl font-bold text-cream">{t.notifications.title}</h1>
           {unread > 0 && (
             <span className="rounded-full bg-violet px-2 py-0.5 text-xs font-bold text-white">{unread}</span>
           )}
@@ -86,7 +88,7 @@ export default function NotificationsPage() {
           <button onClick={() => void markAllRead()}
             className="flex items-center gap-1.5 text-xs text-cream/50 hover:text-violet-light transition-colors">
             <CheckCheck className="h-3.5 w-3.5" />
-            Tout marquer comme lu
+            {t.notifications.mark_all_read}
           </button>
         )}
       </motion.div>
@@ -101,7 +103,7 @@ export default function NotificationsPage() {
         <div className="flex h-48 items-center justify-center rounded-2xl border border-[rgba(255,255,255,0.06)] bg-surface">
           <div className="text-center">
             <Bell className="mx-auto mb-2 h-10 w-10 text-cream/10" />
-            <p className="text-sm text-cream/30">Aucune notification pour le moment</p>
+            <p className="text-sm text-cream/30">{t.notifications.empty}</p>
           </div>
         </div>
       ) : (
@@ -129,12 +131,12 @@ export default function NotificationsPage() {
                     {n.body}
                   </p>
                 )}
-                <p className="mt-0.5 text-xs text-cream/30">{timeAgo(n.createdAt)}</p>
+                <p className="mt-0.5 text-xs text-cream/30">{timeAgo(n.createdAt, t)}</p>
               </div>
               {!n.isRead && (
                 <button
                   onClick={() => void markRead(n.id)}
-                  title="Marquer comme lu"
+                  title={t.notifications.mark_read}
                   className="shrink-0 p-1 text-cream/30 hover:text-violet-light transition-colors"
                 >
                   <Check className="h-3.5 w-3.5" />

@@ -134,9 +134,9 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             {/* Stats row */}
             <motion.div {...fade(0.4)} className="grid grid-cols-3 gap-4 pt-2 sm:flex sm:gap-8 sm:justify-center lg:justify-start">
               {[
-                { value: artistCount, label: "Artistes" },
-                { value: releaseCount, label: "Releases" },
-                { value: `${maxCommissionPercent}%`, label: "Commission max" }
+                { value: artistCount, label: t.home.stats_artists },
+                { value: releaseCount, label: t.home.stats_releases },
+                { value: `${maxCommissionPercent}%`, label: t.home.stats_commission }
               ].map((s) => (
                 <div key={s.label} className="text-center lg:text-left">
                   <p className="text-2xl font-bold text-cream">{s.value}</p>
@@ -213,25 +213,23 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
               <div className="max-w-2xl">
                 <p className="text-xs font-medium uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" />
-                  SAURORAA AGENCY
+                  {t.home.agency_overline}
                 </p>
-                <h2 className="text-2xl font-bold text-cream sm:text-3xl">Chez SauroraaAgency</h2>
-                <p className="text-sm text-cream/40 mt-1">
-                  Les artistes SauroraaAgency et toutes leurs sorties sont mises en avant ici en premier.
-                </p>
+                <h2 className="text-2xl font-bold text-cream sm:text-3xl">{t.home.agency_title}</h2>
+                <p className="text-sm text-cream/40 mt-1">{t.home.agency_sub}</p>
               </div>
               <Link
                 href="/catalog"
                 className="text-sm text-amber-300/70 hover:text-amber-200 transition-colors inline-flex items-center gap-1.5"
               >
-                Voir toutes les sorties <ArrowRight className="h-4 w-4" />
+                {t.home.agency_cta} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
             {/* Agency artists avatars */}
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6">
               {spotlightArtists.map((artist, i) => {
-                const name = artist.displayName ?? "Artiste";
+                const name = artist.displayName ?? t.home.stats_artists;
                 const href = `/artist/${artist.slug ?? artist.id}`;
                 return (
                   <motion.div key={artist.id} {...fadeIn(i * 0.07)} className="shrink-0 flex flex-col items-center gap-2 w-16">
@@ -273,18 +271,18 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
         <section className="mx-auto max-w-7xl px-6 py-16 space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
-                <Flame className="h-3.5 w-3.5" />
-                Trending cette semaine
-              </p>
-              <h2 className="text-3xl font-bold text-cream">En ce moment</h2>
+                <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
+                  <Flame className="h-3.5 w-3.5" />
+                  {t.home.trending_overline}
+                </p>
+              <h2 className="text-3xl font-bold text-cream">{t.home.trending_title}</h2>
               <LiveRankingsIndicator className="mt-2" />
             </div>
             <Link
               href="/catalog"
               className="text-sm text-cream/40 hover:text-cream/70 transition-colors inline-flex items-center gap-1.5"
             >
-              Voir tout <ArrowRight className="h-4 w-4" />
+              {t.home.trending_cta} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -361,7 +359,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
             ))}
           </div>
         ) : (
-          <EmptyState icon={Disc3} label="Aucune sortie pour l'instant — revenez bientôt" />
+          <EmptyState icon={Disc3} label={t.home.empty_latest} />
         )}
       </section>
 
@@ -370,11 +368,11 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
         <section className="mx-auto max-w-7xl px-6 py-16 space-y-8">
           <div className="flex flex-col gap-4 px-6 pt-8 pb-4 sm:px-8 sm:flex-row sm:items-end sm:justify-between md:pt-10">
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">Artistes</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2">{t.home.featured_artists_overline}</p>
               <h2 className="text-3xl font-bold text-cream">{t.home.featured_artists}</h2>
             </div>
             <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 transition-colors flex items-center gap-1.5">
-              Top Charts <ArrowRight className="h-4 w-4" />
+              {t.home.featured_artists_cta} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-none -mx-6 px-6">
@@ -401,7 +399,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                   </div>
                   <div className="text-center space-y-1">
                     <p className="text-xs font-semibold text-cream truncate w-full group-hover:text-violet-light transition-colors">
-                      {artist.displayName ?? "Artist"}
+                      {artist.displayName ?? t.home.stats_artists}
                     </p>
                     <p className="text-[10px] text-cream/35">
                       {artist._count?.followers ?? 0} {t.common.followers}
@@ -423,12 +421,12 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
               <div>
                 <p className="text-xs font-medium uppercase tracking-widest text-violet-light mb-2 flex items-center gap-1.5">
                   <Trophy className="h-3.5 w-3.5" />
-                  Top artistes ce mois
+                  {t.home.charts_teaser_overline}
                 </p>
-                <h2 className="text-2xl font-bold text-cream">Classement</h2>
+                <h2 className="text-2xl font-bold text-cream">{t.home.charts_teaser_title}</h2>
               </div>
               <Link href="/rankings" className="text-sm text-cream/40 hover:text-cream/70 inline-flex items-center gap-1.5 transition-colors">
-                Classement complet <ArrowRight className="h-4 w-4" />
+                {t.home.charts_teaser_cta} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
@@ -493,7 +491,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                   )}
                 </div>
                 <p className="flex-1 text-sm text-cream/70 truncate">{artist.displayName ?? "—"}</p>
-                <p className="text-xs text-cream/30">{artist._count?.releases ?? 0} releases</p>
+                <p className="text-xs text-cream/30">{artist._count?.releases ?? 0} {t.home.charts_teaser_releases}</p>
               </div>
             ))}
           </div>
@@ -503,7 +501,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
       {/* ── HOW IT WORKS ── */}
       <section className="mx-auto max-w-7xl px-6 py-24">
         <div className="text-center mb-16 space-y-3">
-          <p className="text-xs font-medium uppercase tracking-widest text-violet-light">Pour les artistes</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-violet-light">{t.home.how_overline}</p>
           <h2 className="text-3xl font-bold text-cream">{t.home.how_title}</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -536,17 +534,17 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
           <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <p className="text-xs font-medium uppercase tracking-widest text-violet-light">Plans</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-violet-light">{t.home.pricing_overline}</p>
                 <span className="rounded-full bg-violet/20 px-2.5 py-0.5 text-[10px] font-semibold text-violet-light border border-violet/30">
-                  −50% Mars 2026
+                  {t.home.pricing_promo_badge}
                 </span>
               </div>
               <h2 className="text-3xl font-bold text-cream">{t.home.pricing_title}</h2>
               <div className="flex flex-col gap-2">
                 {[
                   { plan: "Artist Free", price: "0€", commission: "70/30" },
-                  { plan: "Artist Basic", price: "4,99€/mo", commission: "80/20" },
-                  { plan: "Artist Pro", price: "~~9,99€~~ 4,99€/mo", commission: "90/10", promo: true }
+                  { plan: "Artist Basic", price: `4,99€${t.home.pricing_month_suffix}`, commission: "80/20" },
+                  { plan: "Artist Pro", price: `~~9,99€~~ 4,99€${t.home.pricing_month_suffix}`, commission: "90/10", promo: true }
                 ].map((p) => (
                   <div key={p.plan} className="flex items-center gap-3">
                     <CheckCircle2 className="h-4 w-4 text-violet-light shrink-0" />
@@ -556,12 +554,12 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
                       {p.promo ? (
                         <>
                           <span className="line-through text-cream/40">9,99€</span>
-                          <span className="text-violet-light font-semibold ml-1">4,99€/mo ce mois</span>
+                          <span className="text-violet-light font-semibold ml-1">4,99€{t.home.pricing_month_suffix} {t.home.pricing_promo_now}</span>
                         </>
                       ) : (
                         p.price
                       )}
-                      {" · commission "}{p.commission}
+                      {" · "}{t.home.pricing_commission_label} {p.commission}
                     </span>
                   </div>
                 ))}
@@ -604,7 +602,7 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2 px-8">
                 <Link href="/agency/request">
-                  Rejoindre une agence
+                  {t.home.join_agency_cta}
                 </Link>
               </Button>
             </div>
