@@ -1,20 +1,22 @@
 import { Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
-import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Request } from "express";
+import { NotificationsService } from "./notifications.service";
 
 @Controller("notifications")
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly notifications: NotificationsService) {}
 
   @Get()
   async list(@Req() req: Request & { user?: { userId: string } }) {
-    return this.prisma.notification.findMany({
-      where: { userId: req.user!.userId },
-      orderBy: [{ isRead: "asc" }, { createdAt: "desc" }],
-      take: 50
-    });
+    return this.notifications.listForUser(req.user!.userId);
+  }
+
+  @Get("unread-count")
+  async unreadCount(@Req() req: Request & { user?: { userId: string } }) {
+    const unreadCount = await this.notifications.unreadCount(req.user!.userId);
+    return { unreadCount };
   }
 
   @Patch(":id/read")
@@ -22,19 +24,11 @@ export class NotificationsController {
     @Param("id") id: string,
     @Req() req: Request & { user?: { userId: string } }
   ) {
-    await this.prisma.notification.updateMany({
-      where: { id, userId: req.user!.userId },
-      data: { isRead: true }
-    });
-    return { success: true };
+    return this.notifications.markRead(req.user!.userId, id);
   }
 
   @Patch("read-all/all")
   async markAllRead(@Req() req: Request & { user?: { userId: string } }) {
-    await this.prisma.notification.updateMany({
-      where: { userId: req.user!.userId, isRead: false },
-      data: { isRead: true }
-    });
-    return { success: true };
+    return this.notifications.markAllRead(req.user!.userId);
   }
 }

@@ -17,6 +17,7 @@ import { Roles } from "../../common/roles.decorator";
 import { RolesGuard } from "../../common/roles.guard";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { NotificationsService } from "../notifications/notifications.service";
 import { Request } from "express";
 
 class CreateCommentDto {
@@ -38,7 +39,10 @@ class CreateCommentDto {
 
 @Controller("comments")
 export class CommentsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService
+  ) {}
 
   @Get()
   async list(
@@ -85,7 +89,7 @@ export class CommentsController {
       isVerifiedPurchase = !!purchase;
     }
 
-    return this.prisma.comment.create({
+    const created = await this.prisma.comment.create({
       data: {
         userId,
         releaseId: dto.releaseId,
@@ -96,6 +100,32 @@ export class CommentsController {
       },
       include: { user: { select: { id: true, email: true, firstName: true, artist: { select: { displayName: true, avatar: true } } } } }
     });
+
+    if (dto.releaseId) {
+      const release = await this.prisma.release.findUnique({
+        where: { id: dto.releaseId },
+        select: {
+          title: true,
+          artist: { select: { userId: true } }
+        }
+      });
+
+      if (release?.artist.userId && release.artist.userId !== userId) {
+        const authorName =
+          created.user.artist?.displayName ??
+          created.user.firstName ??
+          created.user.email.split("@")[0];
+
+        await this.notifications.create({
+          userId: release.artist.userId,
+          type: "NEW_COMMENT",
+          body: `${authorName} commented on ${release.title}.`,
+          releaseId: dto.releaseId
+        });
+      }
+    }
+
+    return created;
   }
 
   @Post(":id/like")

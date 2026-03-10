@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "SauroraaMusic",
+    "slug": "sauroraa-music",
+    "scheme": "sauroraamusic",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "be.sauroraarecords.music"
+    },
+    "ios": {
+      "bundleIdentifier": "be.sauroraarecords.music"
+    }
+  }
+}

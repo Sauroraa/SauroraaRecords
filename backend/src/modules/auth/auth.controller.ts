@@ -2,7 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Post, Req, Res, Unauthorized
 import { Request, Response } from "express";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthService } from "./auth.service";
-import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from "./dto";
+import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto, RefreshDto } from "./dto";
 
 const COOKIE_ACCESS = "access_token";
 const COOKIE_REFRESH = "refresh_token";
@@ -45,23 +45,39 @@ export class AuthController {
 
     const tokens = await this.authService.register(dto);
     setCookies(res, tokens.accessToken, tokens.refreshToken);
-    return { user: tokens.user };
+    return {
+      user: tokens.user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    };
   }
 
   @Post("login")
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const tokens = await this.authService.login(dto);
     setCookies(res, tokens.accessToken, tokens.refreshToken);
-    return { user: tokens.user };
+    return {
+      user: tokens.user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    };
   }
 
   @Post("refresh")
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = (req.cookies as Record<string, string>)?.[COOKIE_REFRESH];
+  async refresh(
+    @Body() dto: RefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const refreshToken = dto.refreshToken || (req.cookies as Record<string, string>)?.[COOKIE_REFRESH];
     if (!refreshToken) throw new UnauthorizedException("No refresh token");
     const tokens = await this.authService.refresh(refreshToken);
     setCookies(res, tokens.accessToken, tokens.refreshToken);
-    return { user: tokens.user };
+    return {
+      user: tokens.user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    };
   }
 
   @Post("logout")

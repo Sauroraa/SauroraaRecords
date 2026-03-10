@@ -15,14 +15,19 @@ export class AuthService {
     private readonly emailService: EmailService
   ) {}
 
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
   async register(dto: RegisterDto) {
-    const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = this.normalizeEmail(dto.email);
+    const exists = await this.prisma.user.findUnique({ where: { email } });
     if (exists) throw new BadRequestException("Email already used");
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         passwordHash,
         role: dto.role,
         firstName: dto.firstName,
@@ -54,7 +59,8 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = this.normalizeEmail(dto.email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new UnauthorizedException("Invalid credentials");
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
@@ -100,7 +106,8 @@ export class AuthService {
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = this.normalizeEmail(dto.email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       // Return success even if user doesn't exist to prevent email enumeration
       return { success: true };

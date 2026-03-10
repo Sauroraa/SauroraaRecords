@@ -98,6 +98,24 @@ class AddPlaylistTrackDto {
 export class PremiumController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getOrCreateFavoritesPlaylist(userId: string) {
+    const existing = await this.prisma.playlist.findFirst({
+      where: { userId, title: "Favorites" },
+      select: { id: true, userId: true, title: true }
+    });
+    if (existing) return existing;
+
+    return this.prisma.playlist.create({
+      data: {
+        userId,
+        title: "Favorites",
+        description: "Saved tracks from SauroraaMusic",
+        isPublic: false
+      },
+      select: { id: true, userId: true, title: true }
+    });
+  }
+
   @Post("private-links")
   @Roles(UserRole.ARTIST, UserRole.ADMIN)
   async createPrivateLink(
@@ -178,6 +196,107 @@ export class PremiumController {
         position: nextPosition + 1
       }
     });
+  }
+
+  @Get("favorites/me")
+  @Roles(UserRole.CLIENT, UserRole.ARTIST, UserRole.ADMIN)
+  async myFavorites(@Req() req: Request & { user?: { userId: string } }) {
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { userId: req.user!.userId, title: "Favorites" },
+      include: {
+        tracks: {
+          include: {
+            release: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                coverPath: true,
+                artist: { select: { id: true, displayName: true, avatar: true } }
+              }
+            }
+          },
+          orderBy: { position: "asc" }
+        }
+      }
+    });
+
+    return playlist ?? { id: null, title: "Favorites", tracks: [] };
+  }
+
+  @Get("favorites/:releaseId/status")
+  @Roles(UserRole.CLIENT, UserRole.ARTIST, UserRole.ADMIN)
+  async favoriteStatus(
+    @Param("releaseId") releaseId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { userId: req.user!.userId, title: "Favorites" },
+      select: { id: true }
+    });
+    if (!playlist) return { saved: false };
+
+    const track = await this.prisma.playlistTrack.findUnique({
+      where: {
+        playlistId_releaseId: {
+          playlistId: playlist.id,
+          releaseId
+        }
+      }
+    });
+
+    return { saved: Boolean(track), playlistId: playlist.id };
+  }
+
+  @Post("favorites/:releaseId")
+  @Roles(UserRole.CLIENT, UserRole.ARTIST, UserRole.ADMIN)
+  async saveFavorite(
+    @Param("releaseId") releaseId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const playlist = await this.getOrCreateFavoritesPlaylist(req.user!.userId);
+    const existing = await this.prisma.playlistTrack.findUnique({
+      where: {
+        playlistId_releaseId: {
+          playlistId: playlist.id,
+          releaseId
+        }
+      }
+    });
+    if (existing) return { saved: true, playlistId: playlist.id };
+
+    const nextPosition = await this.prisma.playlistTrack.count({ where: { playlistId: playlist.id } });
+    await this.prisma.playlistTrack.create({
+      data: {
+        playlistId: playlist.id,
+        releaseId,
+        position: nextPosition + 1
+      }
+    });
+
+    return { saved: true, playlistId: playlist.id };
+  }
+
+  @Post("favorites/:releaseId/remove")
+  @Roles(UserRole.CLIENT, UserRole.ARTIST, UserRole.ADMIN)
+  async removeFavorite(
+    @Param("releaseId") releaseId: string,
+    @Req() req: Request & { user?: { userId: string } }
+  ) {
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { userId: req.user!.userId, title: "Favorites" },
+      select: { id: true }
+    });
+    if (!playlist) return { saved: false };
+
+    await this.prisma.playlistTrack.deleteMany({
+      where: {
+        playlistId: playlist.id,
+        releaseId
+      }
+    });
+
+    return { saved: false, playlistId: playlist.id };
   }
 
   @Get("private-links/:token")

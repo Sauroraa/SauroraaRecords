@@ -18,7 +18,9 @@
       "Bash(grep -n \"isActiveTrack\\\\|isActive\\\\b\\\\|src === release\" frontend/app/release/[slug]/release-detail-client.tsx frontend/app/artist/[slug]/page.tsx)",
       "Bash(grep -n \"followers\\\\|artist.*tab\\\\|followers.*tab\\\\|FollowersList\" frontend/app/artist/[slug]/page.tsx)",
       "Bash(cat frontend/app/release/[slug]/page.tsx)",
-      "Bash(grep -n \"Agence\\\\|agencies\\\\|Sauroraa Artist Profile\" frontend/app/artist/[slug]/page.tsx)"
+      "Bash(grep -n \"Agence\\\\|agencies\\\\|Sauroraa Artist Profile\" frontend/app/artist/[slug]/page.tsx)",
+      "Bash(sed -n '33,50p' frontend/components/home-hero.tsx)",
+      "Bash(sed -n '190,220p' frontend/components/home-hero.tsx)"
     ],
     "additionalDirectories": [
       "f:\\Sauroraa 2k26\\Sites\\SauroraaRecords\\frontend\\app\\agency\\invite",

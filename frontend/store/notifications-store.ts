@@ -14,11 +14,10 @@ export const useNotificationsStore = create<NotificationsState>()((set) => ({
 
   fetchUnread: async () => {
     try {
-      const res = await fetch(`${API}/notifications`, { credentials: "include" });
+      const res = await fetch(`${API}/notifications/unread-count`, { credentials: "include" });
       if (!res.ok) return;
-      const data = (await res.json()) as { isRead: boolean }[];
-      const unread = data.filter((n) => !n.isRead).length;
-      set({ unreadCount: unread });
+      const data = (await res.json()) as { unreadCount: number };
+      set({ unreadCount: data.unreadCount ?? 0 });
     } catch {
       // Not logged in or error — ignore
     }

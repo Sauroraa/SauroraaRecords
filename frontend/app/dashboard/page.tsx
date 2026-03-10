@@ -227,7 +227,7 @@ function NotificationsTab() {
   };
 
   const markAllRead = async () => {
-    await fetch(`${API}/notifications/read-all`, { method: "PATCH", credentials: "include" });
+    await fetch(`${API}/notifications/read-all/all`, { method: "PATCH", credentials: "include" });
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 

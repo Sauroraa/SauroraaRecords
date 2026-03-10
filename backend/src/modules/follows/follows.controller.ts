@@ -9,11 +9,15 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { NotificationsService } from "../notifications/notifications.service";
 import { Request } from "express";
 
 @Controller("follows")
 export class FollowsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService
+  ) {}
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
@@ -94,6 +98,35 @@ export class FollowsController {
     await this.prisma.follow.create({
       data: { followerId: userId, artistId }
     });
+
+    const [artist, follower] = await Promise.all([
+      this.prisma.artist.findUnique({
+        where: { id: artistId },
+        select: { userId: true, displayName: true }
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          email: true,
+          firstName: true,
+          artist: { select: { displayName: true } }
+        }
+      })
+    ]);
+
+    if (artist?.userId && artist.userId !== userId && follower) {
+      const followerName =
+        follower.artist?.displayName ??
+        follower.firstName ??
+        follower.email.split("@")[0];
+
+      await this.notifications.create({
+        userId: artist.userId,
+        type: "NEW_FOLLOWER",
+        body: `${followerName} started following you.`
+      });
+    }
+
     return { following: true };
   }
 

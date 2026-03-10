@@ -16,6 +16,8 @@ type Notification = {
   body: string;
   isRead: boolean;
   createdAt: string;
+  link?: string;
+  sourceType?: "notification" | "broadcast";
 };
 
 function timeAgo(date: string) {
@@ -118,9 +120,15 @@ export default function NotificationsPage() {
             >
               <span className="mt-0.5 text-lg">{TYPE_ICONS[n.type] ?? "🔔"}</span>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm leading-relaxed ${n.isRead ? "text-cream/60" : "text-cream"}`}>
-                  {n.body}
-                </p>
+                {n.link ? (
+                  <Link href={n.link} className={`text-sm leading-relaxed hover:text-violet-light ${n.isRead ? "text-cream/60" : "text-cream"}`}>
+                    {n.body}
+                  </Link>
+                ) : (
+                  <p className={`text-sm leading-relaxed ${n.isRead ? "text-cream/60" : "text-cream"}`}>
+                    {n.body}
+                  </p>
+                )}
                 <p className="mt-0.5 text-xs text-cream/30">{timeAgo(n.createdAt)}</p>
               </div>
               {!n.isRead && (

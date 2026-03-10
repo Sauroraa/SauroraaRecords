@@ -22,6 +22,10 @@ import {
   CreditCard,
   User,
   Instagram,
+  Shield,
+  MessageSquareX,
+  AlertOctagon,
+  Siren,
   Globe,
   Save,
   Loader2,
@@ -66,9 +70,10 @@ type Tab =
   | "releases"
   | "analytics"
   | "private-links"
-  | "api-keys";
+  | "api-keys"
+  | "moderation";
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <BarChart2 className="h-4 w-4" /> },
   { id: "profile", label: "Mon Profil", icon: <User className="h-4 w-4" /> },
   { id: "subscription", label: "Subscription", icon: <CreditCard className="h-4 w-4" /> },
@@ -1818,6 +1823,189 @@ function ApiKeysTab() {
   );
 }
 
+// ─── Moderation Tab (Staff / Admin) ───────────────────────────────────────────
+
+function ModerationTab() {
+  const [modTab, setModTab] = useState<"support" | "comments" | "warnings">("support");
+  const [tickets, setTickets] = useState<{ id: string; subject: string; status: string; createdAt: string; user: { email: string }; _count?: { messages: number } }[]>([]);
+  const [statusFilter, setStatusFilter] = useState("OPEN");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<{ id: string; authorType: string; body: string; createdAt: string }[]>([]);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [comments, setComments] = useState<{ id: string; body: string; createdAt: string; user: { email: string }; release?: { title: string; slug: string } | null }[]>([]);
+  const [warnEmail, setWarnEmail] = useState("");
+  const [warnMsg, setWarnMsg] = useState("");
+
+  useEffect(() => {
+    if (modTab === "support") {
+      void fetch(`${API}/support/tickets/queue?status=${statusFilter}`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : []).then(setTickets).catch(() => {});
+    }
+    if (modTab === "comments") {
+      void fetch(`${API}/comments?limit=50`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : []).then(setComments).catch(() => {});
+    }
+  }, [modTab, statusFilter]);
+
+  const openTicket = async (id: string) => {
+    setSelectedId(id);
+    const r = await fetch(`${API}/support/tickets/${id}`, { credentials: "include" });
+    if (r.ok) { const d = await r.json() as { messages: typeof messages }; setMessages(d.messages ?? []); }
+  };
+
+  const sendReply = async () => {
+    if (!reply.trim() || !selectedId) return;
+    setSending(true);
+    const r = await fetch(`${API}/support/tickets/${selectedId}/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ body: reply })
+    });
+    if (r.ok) {
+      const d = await r.json() as { messages: typeof messages };
+      setMessages(d.messages ?? []);
+      setReply("");
+      toast.success("Réponse envoyée !");
+    }
+    setSending(false);
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    await fetch(`${API}/support/tickets/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ status })
+    });
+    setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  };
+
+  const deleteComment = async (id: string) => {
+    await fetch(`${API}/comments/${id}`, { method: "DELETE", credentials: "include" });
+    setComments(prev => prev.filter(c => c.id !== id));
+    toast.success("Commentaire supprimé");
+  };
+
+  const STATUSES = ["OPEN", "IN_PROGRESS", "WAITING_USER", "RESOLVED", "CLOSED"];
+
+  return (
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface p-1 w-fit">
+        {(["support", "comments", "warnings"] as const).map(t => (
+          <button key={t} onClick={() => setModTab(t)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${modTab === t ? "bg-violet text-white" : "text-cream/50 hover:text-cream"}`}>
+            {t === "support" ? "Support" : t === "comments" ? "Commentaires" : "Avertissements"}
+          </button>
+        ))}
+      </div>
+
+      {/* Support tickets */}
+      {modTab === "support" && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1.5">
+            {STATUSES.map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${statusFilter === s ? "bg-violet text-white" : "border border-[rgba(255,255,255,0.1)] text-cream/50 hover:text-cream"}`}>
+                {s.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {tickets.length === 0 && <p className="text-sm text-cream/30 py-4 text-center">Aucun ticket {statusFilter.toLowerCase()}</p>}
+              {tickets.map(ticket => (
+                <button key={ticket.id} onClick={() => void openTicket(ticket.id)}
+                  className={`w-full text-left rounded-xl border p-3 transition-all ${selectedId === ticket.id ? "border-violet/40 bg-violet/10" : "border-[rgba(255,255,255,0.06)] bg-surface hover:border-violet/20"}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-cream line-clamp-1">{ticket.subject}</p>
+                    <select value={ticket.status} onClick={e => e.stopPropagation()}
+                      onChange={e => void updateStatus(ticket.id, e.target.value)}
+                      className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-surface2 px-1.5 py-0.5 text-[10px] text-cream outline-none shrink-0">
+                      {STATUSES.map(s => <option key={s} value={s}>{s.replace("_"," ")}</option>)}
+                    </select>
+                  </div>
+                  <p className="text-xs text-cream/40 mt-0.5">{ticket.user.email} · {new Date(ticket.createdAt).toLocaleDateString("fr-BE")}</p>
+                </button>
+              ))}
+            </div>
+            {selectedId && (
+              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface flex flex-col" style={{ maxHeight: 500 }}>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {messages.map(m => (
+                    <div key={m.id} className={`flex ${m.authorType === "AGENT" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${m.authorType === "AGENT" ? "bg-violet/20 text-cream" : "bg-black/30 text-cream/80"}`}>
+                        {m.body}
+                        <p className="text-[10px] text-cream/30 mt-1">{new Date(m.createdAt).toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" })}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {messages.length === 0 && <p className="text-sm text-cream/30 text-center py-4">Aucun message.</p>}
+                </div>
+                <div className="border-t border-[rgba(255,255,255,0.08)] p-3 flex gap-2">
+                  <input value={reply} onChange={e => setReply(e.target.value)}
+                    placeholder="Répondre au ticket..."
+                    className="flex-1 rounded-xl border border-[rgba(255,255,255,0.1)] bg-surface2 px-3 py-2 text-sm text-cream outline-none focus:border-violet/40" />
+                  <button onClick={() => void sendReply()} disabled={sending || !reply.trim()}
+                    className="rounded-xl bg-violet px-3 py-2 text-sm text-white hover:bg-violet-hover disabled:opacity-40 transition-colors">
+                    {sending ? "..." : "Envoyer"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Comments moderation */}
+      {modTab === "comments" && (
+        <div className="space-y-2">
+          {comments.length === 0 && <p className="text-sm text-cream/30 py-4 text-center">Aucun commentaire récent.</p>}
+          {comments.map(c => (
+            <div key={c.id} className="flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.06)] bg-surface px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-cream/40 mb-0.5">
+                  {c.user.email}
+                  {c.release && <span className="ml-1 text-violet-light/70">· {c.release.title}</span>}
+                  <span className="ml-2">{new Date(c.createdAt).toLocaleDateString("fr-BE")}</span>
+                </p>
+                <p className="text-sm text-cream/80 line-clamp-2">{c.body}</p>
+              </div>
+              <button onClick={() => void deleteComment(c.id)}
+                className="shrink-0 rounded-lg border border-red-500/30 px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
+                Supprimer
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Warnings */}
+      {modTab === "warnings" && (
+        <div className="max-w-lg space-y-4">
+          <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-surface p-5 space-y-3">
+            <p className="text-sm font-semibold text-cream flex items-center gap-2">
+              <AlertOctagon className="h-4 w-4 text-orange-400" /> Envoyer un avertissement
+            </p>
+            <Input value={warnEmail} onChange={e => setWarnEmail(e.target.value)} placeholder="Email de l'utilisateur" />
+            <textarea value={warnMsg} onChange={e => setWarnMsg(e.target.value)} rows={3}
+              placeholder="Motif de l'avertissement..."
+              className="w-full resize-none rounded-xl border border-[rgba(255,255,255,0.12)] bg-surface2 px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:outline-none focus:ring-2 focus:ring-violet/50" />
+            <Button onClick={() => {
+              if (!warnEmail.trim() || !warnMsg.trim()) { toast.error("Email et motif requis"); return; }
+              void fetch(`${API}/support/tickets`, {
+                method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+                body: JSON.stringify({ subject: `Avertissement officiel`, message: warnMsg, category: "WARNING" })
+              }).then(() => { toast.success("Avertissement envoyé !"); setWarnEmail(""); setWarnMsg(""); }).catch(() => toast.error("Erreur"));
+            }}>
+              Envoyer l'avertissement
+            </Button>
+          </div>
+          <p className="text-xs text-cream/30">Note : 3 avertissements = suspension du compte. Les avertissements sont visibles dans le support.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ArtistDashboard() {
@@ -1825,19 +2013,26 @@ export default function ArtistDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
 
+  const canModerate = user?.role === "STAFF" || user?.role === "ADMIN";
+
   useEffect(() => {
     if (!user) {
       router.replace("/login?redirect=/dashboard/artist");
       return;
     }
-    if (user.role !== "ARTIST" && user.role !== "ADMIN") {
+    if (user.role !== "ARTIST" && user.role !== "ADMIN" && user.role !== "STAFF") {
       router.replace("/dashboard");
     }
   }, [user, router]);
 
-  if (!user || (user.role !== "ARTIST" && user.role !== "ADMIN")) {
+  if (!user || (user.role !== "ARTIST" && user.role !== "ADMIN" && user.role !== "STAFF")) {
     return <LoadingSpinner />;
   }
+
+  const TABS = [
+    ...BASE_TABS,
+    ...(canModerate ? [{ id: "moderation" as Tab, label: "Modération", icon: <Shield className="h-4 w-4 text-red-400" /> }] : [])
+  ];
 
   const TAB_CONTENT: Record<Tab, React.ReactNode> = {
     overview: <OverviewTab />,
@@ -1850,7 +2045,8 @@ export default function ArtistDashboard() {
     releases: <ReleasesTab />,
     analytics: <AdvancedAnalyticsTab />,
     "private-links": <PrivateLinksTab />,
-    "api-keys": <ApiKeysTab />
+    "api-keys": <ApiKeysTab />,
+    moderation: <ModerationTab />
   };
 
   return (

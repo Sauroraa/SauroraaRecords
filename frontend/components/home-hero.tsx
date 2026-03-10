@@ -6,7 +6,7 @@ import Image from "next/image";
 import {
   ArrowRight, Upload, Sparkles, TrendingUp,
   Disc3, Package, Music2, Users, CheckCircle2,
-  Flame, Trophy, Tag
+  Flame, Trophy, Tag, Building2
 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ReleaseItem, ArtistProfile, HomeOverviewStats } from "@/lib/types";
@@ -64,20 +64,6 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
 
   return (
     <div className="overflow-x-hidden">
-      {/* ── MARCH PROMO STRIP ── */}
-      <div className="relative z-10 overflow-hidden bg-gradient-to-r from-violet-700/90 via-violet-600/90 to-violet-500/90 py-2.5 text-center">
-        <div className="pointer-events-none absolute inset-0 opacity-30"
-          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
-        />
-        <p className="text-sm font-semibold text-white">
-          <Tag className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
-          Offre Découverte Mars 2026 — <strong>−50% sur le premier mois Artist Pro</strong>
-          <Link href="/pricing" className="ml-3 underline underline-offset-2 opacity-90 hover:opacity-100">
-            En profiter →
-          </Link>
-        </p>
-      </div>
-
       {/* ── HERO ── */}
       <motion.section
         ref={heroRef}
@@ -190,6 +176,64 @@ export function HomeHero({ releases, trending, artists, stats }: HomeHeroProps) 
           <div className="h-1 w-1 rounded-full bg-cream/30" />
         </motion.div>
       </motion.section>
+
+      {/* ── SAURORAA AGENCY SPOTLIGHT ── */}
+      {(() => {
+        const agencyArtists = artists.filter(a => (a.agencyLinks?.length ?? 0) > 0);
+        const agencyReleases = releases.filter(r => (r.artist?.agencyLinks?.length ?? 0) > 0).slice(0, 4);
+        if (agencyArtists.length === 0) return null;
+        return (
+          <section className="mx-auto max-w-7xl px-6 py-12 space-y-6">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Sauroraa Agency
+                </p>
+                <h2 className="text-3xl font-bold text-cream">Artistes de l&apos;agence</h2>
+                <p className="text-sm text-cream/40 mt-1">Artistes signés — releases prioritaires</p>
+              </div>
+            </div>
+
+            {/* Agency artists avatars */}
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6">
+              {agencyArtists.map((artist, i) => {
+                const name = artist.displayName ?? "Artiste";
+                const href = `/artist/${artist.slug ?? artist.id}`;
+                return (
+                  <motion.div key={artist.id} {...fadeIn(i * 0.07)} className="shrink-0 flex flex-col items-center gap-2 w-16">
+                    <Link href={href}>
+                      <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-amber-400/50 shadow-[0_0_16px_rgba(251,191,36,0.2)]">
+                        {artist.avatar ? (
+                          <Image src={artist.avatar} alt={name} fill className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-amber-500/20 text-base font-bold text-amber-300">
+                            {name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                    <Link href={href} className="text-[10px] text-cream/60 hover:text-cream transition-colors text-center truncate w-full">
+                      {name}
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Agency releases */}
+            {agencyReleases.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {agencyReleases.map((release, i) => (
+                  <motion.div key={release.id} {...fadeIn(i * 0.06)}>
+                    <ReleaseCard release={release} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* ── TRENDING NOW ── */}
       {trending.length > 0 && (

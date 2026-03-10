@@ -196,7 +196,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     user?.role === "ARTIST" ? "/dashboard/artist" :
     user?.role === "ADMIN" ? "/dashboard/admin" :
     user?.role === "AGENCY" ? "/dashboard/agency" :
-    user?.role === "STAFF" ? "/dashboard/staff" :
+    user?.role === "STAFF" ? "/dashboard/artist" :
     "/dashboard";
 
   return (

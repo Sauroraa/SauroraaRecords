@@ -3,6 +3,7 @@
 **/.env.local
 **/node_modules
 **/.next
+**/.expo
 **/dist
 **/coverage
 db_data
