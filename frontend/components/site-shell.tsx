@@ -33,19 +33,20 @@ function UserDropdown({
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [artistProfile, setArtistProfile] = useState<{ id: string; displayName: string | null; avatar: string | null } | null>(null);
+  const [artistProfile, setArtistProfile] = useState<{ id: string; slug?: string | null; displayName: string | null; avatar: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const username = user.email.split("@")[0];
-  const isArtist = user.role === "ARTIST" || user.role === "STAFF";
 
-  // Fetch artist profile for avatar + profile link
+  // Only ARTIST and STAFF can have an artist profile in the dropdown
+  const shouldFetchArtist = user.role === "ARTIST" || user.role === "STAFF";
+
   useEffect(() => {
-    if (!isArtist) return;
+    if (!shouldFetchArtist) return;
     void fetch(`${API_BASE}/artists/me`, { credentials: "include" })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setArtistProfile(data as typeof artistProfile); })
       .catch(() => {});
-  }, [isArtist]);
+  }, [shouldFetchArtist]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -55,15 +56,23 @@ function UserDropdown({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Display name: artist displayName > username from email
   const displayName = artistProfile?.displayName ?? username;
-  const profileHref = artistProfile ? `/artist/${artistProfile.id}` : dashboardHref;
+  const profileHref = artistProfile ? `/artist/${artistProfile.slug ?? artistProfile.id}` : dashboardHref;
+
+  // Build menu based on role — ADMIN and AGENCY get no artist-specific items
+  const isAdminLike = user.role === "ADMIN" || user.role === "AGENCY";
+  const hasArtistProfile = !isAdminLike && artistProfile !== null;
 
   const menuItems = [
-    ...(isArtist ? [{ href: profileHref, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
+    // "Mon Profil" only if user actually has an artist profile
+    ...(hasArtistProfile ? [{ href: profileHref, label: "Mon Profil", icon: <User className="h-4 w-4" /> }] : []),
     { href: dashboardHref, label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-    { href: "/catalog", label: "Releases", icon: <Music className="h-4 w-4" /> },
-    { href: "/rankings", label: "Charts", icon: <Trophy className="h-4 w-4" /> },
-    { href: "/pricing", label: "Abonnement", icon: <CreditCard className="h-4 w-4" /> },
+    ...(!isAdminLike ? [
+      { href: "/catalog", label: "Releases", icon: <Music className="h-4 w-4" /> },
+      { href: "/rankings", label: "Charts", icon: <Trophy className="h-4 w-4" /> },
+      { href: "/pricing", label: "Abonnement", icon: <CreditCard className="h-4 w-4" /> },
+    ] : []),
     { href: "/settings", label: "Paramètres", icon: <Settings className="h-4 w-4" /> },
     { href: "/notifications", label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: <Bell className="h-4 w-4" /> },
   ];
