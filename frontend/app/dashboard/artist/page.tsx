@@ -60,6 +60,8 @@ import type { ReleaseItem, DubpackItem, RevenueSeries } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sauroraarecords.be").replace(/\/$/, "");
+const DEFAULT_UPLOAD_CHUNK_SIZE = 1024 * 1024;
+const MIN_UPLOAD_CHUNK_SIZE = 256 * 1024;
 
 type Tab =
   | "overview"
@@ -706,63 +708,78 @@ function UploadReleaseTab() {
     kind: "audio" | "cover",
     onProgress: (percent: number) => void
   ): Promise<string> => {
-    const chunkSize = 5 * 1024 * 1024;
     const fingerprint = `${kind}:${file.name}:${file.size}:${file.lastModified}`;
+    let chunkSize = DEFAULT_UPLOAD_CHUNK_SIZE;
 
-    const initRes = await fetch(`${API}/upload/resumable/init`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        kind,
-        filename: file.name,
-        mimeType: file.type || "application/octet-stream",
-        totalSize: file.size,
-        chunkSize,
-        fingerprint
-      })
-    });
-    if (initRes.status === 401) throw new Error("AUTH_REQUIRED");
-    if (!initRes.ok) throw new Error("UPLOAD_INIT_FAILED");
-
-    let state = (await initRes.json()) as {
-      uploadId: string;
-      nextChunk: number;
-      chunkSize: number;
-      uploadedBytes: number;
-      totalSize: number;
-    };
-    onProgress(Math.round((state.uploadedBytes / state.totalSize) * 100));
-
-    const totalChunks = Math.ceil(file.size / state.chunkSize);
-    for (let chunkIndex = state.nextChunk; chunkIndex < totalChunks; chunkIndex += 1) {
-      const start = chunkIndex * state.chunkSize;
-      const end = Math.min(file.size, start + state.chunkSize);
-      const chunkBlob = file.slice(start, end);
-      const fd = new FormData();
-      fd.append("chunk", chunkBlob, file.name);
-      fd.append("chunkIndex", String(chunkIndex));
-
-      const chunkRes = await fetch(`${API}/upload/resumable/${state.uploadId}/chunk`, {
+    while (chunkSize >= MIN_UPLOAD_CHUNK_SIZE) {
+      const initRes = await fetch(`${API}/upload/resumable/init`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: fd
+        body: JSON.stringify({
+          kind,
+          filename: file.name,
+          mimeType: file.type || "application/octet-stream",
+          totalSize: file.size,
+          chunkSize,
+          fingerprint: `${fingerprint}:${chunkSize}`
+        })
       });
-      if (chunkRes.status === 401) throw new Error("AUTH_REQUIRED");
-      if (!chunkRes.ok) throw new Error("UPLOAD_CHUNK_FAILED");
-      state = (await chunkRes.json()) as typeof state;
+      if (initRes.status === 401) throw new Error("AUTH_REQUIRED");
+      if (!initRes.ok) throw new Error("UPLOAD_INIT_FAILED");
+
+      let state = (await initRes.json()) as {
+        uploadId: string;
+        nextChunk: number;
+        chunkSize: number;
+        uploadedBytes: number;
+        totalSize: number;
+      };
       onProgress(Math.round((state.uploadedBytes / state.totalSize) * 100));
+
+      let shouldRetryWithSmallerChunks = false;
+      const totalChunks = Math.ceil(file.size / state.chunkSize);
+      for (let chunkIndex = state.nextChunk; chunkIndex < totalChunks; chunkIndex += 1) {
+        const start = chunkIndex * state.chunkSize;
+        const end = Math.min(file.size, start + state.chunkSize);
+        const chunkBlob = file.slice(start, end);
+        const fd = new FormData();
+        fd.append("chunk", chunkBlob, file.name);
+        fd.append("chunkIndex", String(chunkIndex));
+
+        const chunkRes = await fetch(`${API}/upload/resumable/${state.uploadId}/chunk`, {
+          method: "POST",
+          credentials: "include",
+          body: fd
+        });
+        if (chunkRes.status === 401) throw new Error("AUTH_REQUIRED");
+        if (chunkRes.status === 413) {
+          shouldRetryWithSmallerChunks = true;
+          break;
+        }
+        if (!chunkRes.ok) throw new Error("UPLOAD_CHUNK_FAILED");
+        state = (await chunkRes.json()) as typeof state;
+        onProgress(Math.round((state.uploadedBytes / state.totalSize) * 100));
+      }
+
+      if (shouldRetryWithSmallerChunks) {
+        chunkSize = Math.floor(chunkSize / 2);
+        onProgress(0);
+        continue;
+      }
+
+      const completeRes = await fetch(`${API}/upload/resumable/${state.uploadId}/complete`, {
+        method: "POST",
+        credentials: "include"
+      });
+      if (completeRes.status === 401) throw new Error("AUTH_REQUIRED");
+      if (!completeRes.ok) throw new Error("UPLOAD_COMPLETE_FAILED");
+      const completeData = (await completeRes.json()) as { path: string };
+      onProgress(100);
+      return completeData.path;
     }
 
-    const completeRes = await fetch(`${API}/upload/resumable/${state.uploadId}/complete`, {
-      method: "POST",
-      credentials: "include"
-    });
-    if (completeRes.status === 401) throw new Error("AUTH_REQUIRED");
-    if (!completeRes.ok) throw new Error("UPLOAD_COMPLETE_FAILED");
-    const completeData = (await completeRes.json()) as { path: string };
-    onProgress(100);
-    return completeData.path;
+    throw new Error("UPLOAD_CHUNK_TOO_LARGE");
   };
 
   const handleSubmit = async () => {
@@ -820,6 +837,8 @@ function UploadReleaseTab() {
     } catch (error) {
       if (error instanceof Error && error.message === "AUTH_REQUIRED") {
         toast.error("Session expirée. Reconnecte-toi puis relance l'upload.");
+      } else if (error instanceof Error && error.message === "UPLOAD_CHUNK_TOO_LARGE") {
+        toast.error("Upload refusé par le serveur. La taille maximale des chunks a été réduite au minimum sans succès.");
       } else {
         toast.error("Failed to upload release");
       }
@@ -2224,13 +2243,14 @@ function ModerationTab() {
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ArtistDashboard() {
-  const { user } = useAuthStore();
+  const { user, initialized } = useAuthStore();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
 
   const canModerate = user?.isStaff === true || user?.role === "STAFF";
 
   useEffect(() => {
+    if (!initialized) return;
     if (!user) {
       router.replace("/login?redirect=/dashboard/artist");
       return;
@@ -2241,9 +2261,9 @@ export default function ArtistDashboard() {
     if (user.role !== "ARTIST" && !user.isStaff) {
       router.replace("/dashboard");
     }
-  }, [user, router]);
+  }, [initialized, user, router]);
 
-  if (!user || (user.role !== "ARTIST" && !user.isStaff)) {
+  if (!initialized || !user || (user.role !== "ARTIST" && !user.isStaff)) {
     return <LoadingSpinner />;
   }
 

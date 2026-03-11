@@ -178,7 +178,7 @@ function UserDropdown({
 export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, fetchMe } = useAuthStore();
+  const { user, logout, fetchMe, initialized } = useAuthStore();
   const { items, toggleCart } = useCartStore();
   const { unreadCount, fetchUnread } = useNotificationsStore();
   const { locale, setLocale, t } = useLanguage();
@@ -302,7 +302,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               </AnimatePresence>
             </button>
 
-            {user ? (
+            {meLoaded && user ? (
               <UserDropdown
                 user={user}
                 dashboardHref={dashboardHref}
@@ -396,7 +396,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
                       }`}>{l}</button>
                   ))}
                 </div>
-                {!user && (
+                {(!initialized || !user) && (
                   <div className="flex gap-2">
                     <Link href="/login" onClick={() => setMobileOpen(false)}
                       className="px-3 py-1.5 text-sm text-cream/60 hover:text-cream transition-colors">{t.nav.login}</Link>

@@ -10,8 +10,8 @@ async function bootstrap() {
   app.setGlobalPrefix("api");
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
   app.use(cookieParser());
-  app.use(bodyParser.json({ limit: "1mb" }));
-  app.use(bodyParser.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(bodyParser.json({ limit: "10mb" }));
+  app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,

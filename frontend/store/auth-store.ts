@@ -15,6 +15,7 @@ interface AuthUser {
 interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
+  initialized: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, role?: UserRole, extraData?: Record<string, unknown>) => Promise<void>;
   logout: () => Promise<void>;
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isLoading: false,
+      initialized: false,
 
       login: async (email, password) => {
         set({ isLoading: true });
@@ -45,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(err.message ?? "Login failed");
           }
           const data = (await res.json()) as { user: AuthUser };
-          set({ user: data.user });
+          set({ user: data.user, initialized: true });
         } finally {
           set({ isLoading: false });
         }
@@ -65,7 +67,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(err.message ?? "Registration failed");
           }
           const data = (await res.json()) as { user: AuthUser };
-          set({ user: data.user });
+          set({ user: data.user, initialized: true });
         } finally {
           set({ isLoading: false });
         }
@@ -76,7 +78,7 @@ export const useAuthStore = create<AuthState>()(
           method: "POST",
           credentials: "include"
         });
-        set({ user: null });
+        set({ user: null, initialized: true });
       },
 
       fetchMe: async () => {
@@ -84,12 +86,12 @@ export const useAuthStore = create<AuthState>()(
           const res = await fetch(`${API}/auth/me`, { credentials: "include" });
           if (res.ok) {
             const data = (await res.json()) as AuthUser;
-            set({ user: data });
+            set({ user: data, initialized: true });
           } else {
-            set({ user: null });
+            set({ user: null, initialized: true });
           }
         } catch {
-          set({ user: null });
+          set({ user: null, initialized: true });
         }
       },
 
